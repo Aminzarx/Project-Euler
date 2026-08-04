@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.viewmodel.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -121,7 +122,7 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(Spacing.screen)
         ) {
             Box(
                 modifier = Modifier

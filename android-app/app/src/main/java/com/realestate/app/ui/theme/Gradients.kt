@@ -5,28 +5,38 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-/** Diagonal three-point gradient for hero areas (headers, empty states, story card). */
+/** Deep, ink-black three-point gradient for hero surfaces (wallet card, auth header, story card). */
 @Composable
 fun heroGradient(): Brush {
-    val scheme = MaterialTheme.colorScheme
-    return Brush.linearGradient(
-        colorStops = arrayOf(
-            0f to scheme.primary,
-            0.55f to scheme.tertiary,
-            1f to scheme.secondary
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    return if (isDark) {
+        Brush.linearGradient(
+            colorStops = arrayOf(
+                0f to Color(0xFF3A3A3C),
+                0.55f to Color(0xFF1C1C1E),
+                1f to Color(0xFF000000)
+            )
         )
-    )
+    } else {
+        Brush.linearGradient(
+            colorStops = arrayOf(
+                0f to Color(0xFF2C2C2E),
+                0.55f to Color(0xFF161616),
+                1f to Color(0xFF000000)
+            )
+        )
+    }
 }
 
-/** Softer three-point gradient for special cards (wallet, highlights). */
+/** Soft, barely-there gradient for secondary surface cards. */
 @Composable
 fun cardGradient(): Brush {
     val scheme = MaterialTheme.colorScheme
     return Brush.linearGradient(
         colorStops = arrayOf(
-            0f to scheme.primaryContainer,
-            0.5f to scheme.tertiaryContainer,
-            1f to scheme.secondaryContainer
+            0f to scheme.surface,
+            0.5f to scheme.surfaceVariant,
+            1f to scheme.surface
         )
     )
 }
@@ -39,3 +49,5 @@ fun imageScrimGradient(): Brush = Brush.verticalGradient(
         1f to Color.Black.copy(alpha = 0.65f)
     )
 )
+
+private fun Color.luminance(): Float = (0.299f * red + 0.587f * green + 0.114f * blue)

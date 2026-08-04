@@ -26,7 +26,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -60,7 +59,9 @@ import com.realestate.app.data.DealType
 import com.realestate.app.data.Property
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
+import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.components.label
+import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.viewmodel.PropertyViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -155,7 +156,7 @@ fun AddEditPropertyScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(Spacing.screen)
         ) {
             Box(
                 modifier = Modifier
@@ -372,7 +373,8 @@ fun AddEditPropertyScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Button(
+            PrimaryButton(
+                text = if (isEditMode) "ذخیره تغییرات" else "افزودن ملک",
                 onClick = {
                     val newProperty = Property(
                         id = propertyId ?: 0,
@@ -406,9 +408,7 @@ fun AddEditPropertyScreen(
                 },
                 enabled = isFormValid,
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(if (isEditMode) "ذخیره تغییرات" else "افزودن ملک")
-            }
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
         }

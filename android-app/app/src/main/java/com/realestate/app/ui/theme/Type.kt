@@ -23,20 +23,22 @@ private fun style(size: Int, lineHeight: Int, weight: FontWeight, spacing: Doubl
     letterSpacing = spacing.sp
 )
 
+// Premium minimal hierarchy: Large Title 28-32/Bold, Page Title 24/SemiBold,
+// Section Title 18, Body 15-16, Caption 13 — generous line spacing throughout.
 val Typography = Typography(
-    displayLarge = style(48, 58, FontWeight.Bold),
-    displayMedium = style(38, 48, FontWeight.Bold),
-    displaySmall = style(32, 42, FontWeight.Bold),
-    headlineLarge = style(28, 38, FontWeight.Bold),
-    headlineMedium = style(26, 34, FontWeight.Bold),
-    headlineSmall = style(22, 30, FontWeight.SemiBold),
-    titleLarge = style(19, 26, FontWeight.SemiBold),
+    displayLarge = style(34, 44, FontWeight.Bold),
+    displayMedium = style(32, 42, FontWeight.Bold),
+    displaySmall = style(28, 38, FontWeight.Bold),
+    headlineLarge = style(24, 32, FontWeight.SemiBold),
+    headlineMedium = style(22, 30, FontWeight.SemiBold),
+    headlineSmall = style(20, 28, FontWeight.SemiBold),
+    titleLarge = style(18, 26, FontWeight.SemiBold),
     titleMedium = style(16, 24, FontWeight.Medium),
     titleSmall = style(14, 20, FontWeight.Medium),
     bodyLarge = style(16, 26, FontWeight.Normal),
-    bodyMedium = style(14, 22, FontWeight.Normal),
-    bodySmall = style(12, 18, FontWeight.Normal),
+    bodyMedium = style(15, 24, FontWeight.Normal),
+    bodySmall = style(13, 20, FontWeight.Normal),
     labelLarge = style(14, 20, FontWeight.Medium),
-    labelMedium = style(12, 16, FontWeight.Medium),
-    labelSmall = style(11, 14, FontWeight.Medium)
+    labelMedium = style(13, 18, FontWeight.Medium),
+    labelSmall = style(12, 16, FontWeight.Medium)
 )

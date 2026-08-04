@@ -9,21 +9,20 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.realestate.app.ui.components.BottomNavItem
+import com.realestate.app.ui.components.FloatingBottomNav
 import com.realestate.app.ui.navigation.Screen
 import com.realestate.app.ui.screens.AddEditPropertyScreen
 import com.realestate.app.ui.screens.EditProfileScreen
@@ -69,9 +68,11 @@ fun RealEstateApp(
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
-                    bottomTabs.forEach { tab ->
-                        NavigationBarItem(
+                FloatingBottomNav(
+                    items = bottomTabs.map { tab ->
+                        BottomNavItem(
+                            icon = tab.icon,
+                            label = tab.label,
                             selected = currentRoute == tab.screen.route,
                             onClick = {
                                 if (currentRoute != tab.screen.route) {
@@ -81,12 +82,11 @@ fun RealEstateApp(
                                         restoreState = true
                                     }
                                 }
-                            },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) }
+                            }
                         )
-                    }
-                }
+                    },
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+                )
             }
         }
     ) { innerPadding ->

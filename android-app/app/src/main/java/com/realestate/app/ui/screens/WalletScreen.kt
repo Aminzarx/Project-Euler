@@ -22,9 +22,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.HourglassEmpty
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -51,6 +48,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.data.wallet.TransactionStatus
 import com.realestate.app.data.wallet.TransactionType
 import com.realestate.app.data.wallet.WalletTransaction
+import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.PrimaryButton
+import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.ui.theme.extendedColors
 import com.realestate.app.ui.theme.heroGradient
 import com.realestate.app.viewmodel.RechargeStatus
@@ -85,11 +85,11 @@ fun WalletScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             Box(
                 modifier = Modifier
-                    .padding(16.dp)
+                    .padding(Spacing.screen)
                     .fillMaxWidth()
                     .clip(MaterialTheme.shapes.medium)
                     .background(heroGradient())
-                    .padding(20.dp)
+                    .padding(Spacing.cardPadding)
             ) {
                 Column {
                     Text(
@@ -104,26 +104,21 @@ fun WalletScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
                         style = MaterialTheme.typography.headlineMedium
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(
+                    PrimaryButton(
+                        text = "شارژ کیف پول",
                         onClick = { showRechargeSheet = true },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Icon(Icons.Filled.Add, contentDescription = null)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("شارژ کیف پول")
-                    }
+                        icon = Icons.Filled.Add,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 
             Text(
                 "تاریخچه تراکنش‌ها",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp)
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(horizontal = Spacing.screen)
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Spacing.md))
 
             if (transactions.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
@@ -132,8 +127,8 @@ fun WalletScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    contentPadding = PaddingValues(Spacing.screen),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     items(transactions, key = { it.id }) { tx ->
                         TransactionRow(tx)
@@ -157,14 +152,14 @@ fun WalletScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
 
 @Composable
 private fun TransactionRow(tx: WalletTransaction) {
-    Card {
+    AppCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(14.dp)) {
         Row(
-            modifier = Modifier.padding(14.dp).fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             val (icon, tint) = when (tx.status) {
                 TransactionStatus.SUCCESS -> Icons.Filled.CheckCircle to MaterialTheme.extendedColors.success
-                TransactionStatus.FAILED -> Icons.Filled.Error to MaterialTheme.colorScheme.error
+                TransactionStatus.FAILED -> Icons.Filled.Error to MaterialTheme.extendedColors.danger
                 TransactionStatus.PENDING -> Icons.Filled.HourglassEmpty to MaterialTheme.extendedColors.warning
             }
             Icon(icon, contentDescription = null, tint = tint)
@@ -184,7 +179,7 @@ private fun TransactionRow(tx: WalletTransaction) {
                 color = if (tx.type == TransactionType.RECHARGE) {
                     MaterialTheme.extendedColors.success
                 } else {
-                    MaterialTheme.colorScheme.error
+                    MaterialTheme.extendedColors.danger
                 }
             )
         }
@@ -224,13 +219,12 @@ private fun RechargeSheet(
                     )
                     Spacer(modifier = Modifier.height(20.dp))
                     val amount = selectedAmount ?: customAmount.toLongOrNull()
-                    Button(
+                    PrimaryButton(
+                        text = "پرداخت و شارژ",
                         onClick = { amount?.let(onConfirm) },
                         enabled = amount != null && amount > 0,
-                        modifier = Modifier.fillMaxWidth().height(52.dp)
-                    ) {
-                        Text("پرداخت و شارژ")
-                    }
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
                 RechargeStatus.PROCESSING -> {
@@ -255,7 +249,7 @@ private fun RechargeSheet(
                             Spacer(modifier = Modifier.height(12.dp))
                             Text("کیف پول با موفقیت شارژ شد")
                             Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = onDismiss) { Text("باشه") }
+                            PrimaryButton(text = "باشه", onClick = onDismiss, modifier = Modifier.fillMaxWidth())
                         }
                     }
                 }
@@ -266,13 +260,13 @@ private fun RechargeSheet(
                             Icon(
                                 Icons.Filled.Error,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error,
+                                tint = MaterialTheme.extendedColors.danger,
                                 modifier = Modifier.size(48.dp)
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text("پرداخت ناموفق بود")
                             Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = onDismiss) { Text("باشه") }
+                            PrimaryButton(text = "باشه", onClick = onDismiss, modifier = Modifier.fillMaxWidth())
                         }
                     }
                 }

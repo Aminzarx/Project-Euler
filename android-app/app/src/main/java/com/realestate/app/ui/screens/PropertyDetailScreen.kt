@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -32,8 +31,6 @@ import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -64,10 +61,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.code
+import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.PrimaryButton
+import com.realestate.app.ui.components.StatusPillBadge
 import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.ui.components.color
 import com.realestate.app.ui.components.formatPrice
 import com.realestate.app.ui.components.label
+import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.ui.theme.heroGradient
 import com.realestate.app.ui.theme.imageScrimGradient
 import com.realestate.app.viewmodel.PropertyViewModel
@@ -237,7 +238,13 @@ fun PropertyDetailScreen(
                             .fillMaxWidth()
                             .padding(20.dp)
                     ) {
-                        StatusPill(status = current.status, onClick = { showStatusSheet = true })
+                        StatusPillBadge(
+                            text = current.status.label(),
+                            color = current.status.color(),
+                            onClick = { showStatusSheet = true },
+                            containerColor = Color.White.copy(alpha = 0.92f),
+                            textColor = Color.Black
+                        )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
                             text = current.title,
@@ -259,44 +266,53 @@ fun PropertyDetailScreen(
                     }
                 }
 
-                Column(modifier = Modifier.padding(16.dp)) {
-                DetailRow(label = "شهر", value = current.city)
-                DetailRow(label = "آدرس", value = current.address)
-                DetailRow(label = "متراژ", value = "${current.area} متر مربع")
-                DetailRow(label = "تعداد اتاق", value = current.rooms.toString())
-                if (current.ownerName.isNotBlank()) {
-                    DetailRow(label = "مالک", value = current.ownerName)
+                Column(modifier = Modifier.padding(Spacing.screen)) {
+                AppCard(modifier = Modifier.fillMaxWidth()) {
+                    DetailRow(label = "شهر", value = current.city)
+                    DetailRow(label = "آدرس", value = current.address)
+                    DetailRow(label = "متراژ", value = "${current.area} متر مربع")
+                    DetailRow(label = "تعداد اتاق", value = current.rooms.toString())
+                    if (current.ownerName.isNotBlank()) {
+                        DetailRow(label = "مالک", value = current.ownerName)
+                    }
+                    DetailRow(label = "شماره تماس", value = current.ownerPhone)
                 }
-                DetailRow(label = "شماره تماس", value = current.ownerPhone)
 
-                Spacer(modifier = Modifier.height(20.dp))
-                SectionHeader(title = "برچسب‌ها") { showAddTagDialog = true }
-                Spacer(modifier = Modifier.height(8.dp))
-                if (current.tags.isEmpty()) {
-                    Text(
-                        "برچسبی اضافه نشده",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        current.tags.forEach { tag ->
-                            AssistChip(
-                                onClick = { viewModel.removeTag(current, tag) },
-                                label = { Text(tag) },
-                                trailingIcon = { Icon(Icons.Filled.Close, contentDescription = "حذف برچسب", modifier = Modifier.size(16.dp)) }
-                            )
+                Spacer(modifier = Modifier.height(Spacing.cardGap))
+                AppCard(modifier = Modifier.fillMaxWidth()) {
+                    SectionHeader(title = "برچسب‌ها") { showAddTagDialog = true }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (current.tags.isEmpty()) {
+                        Text(
+                            "برچسبی اضافه نشده",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            current.tags.forEach { tag ->
+                                AssistChip(
+                                    onClick = { viewModel.removeTag(current, tag) },
+                                    label = { Text(tag) },
+                                    trailingIcon = { Icon(Icons.Filled.Close, contentDescription = "حذف برچسب", modifier = Modifier.size(16.dp)) }
+                                )
+                            }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
-                Text(text = "توضیحات", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(text = current.description, style = MaterialTheme.typography.bodyMedium)
+                Spacer(modifier = Modifier.height(Spacing.cardGap))
+                AppCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(text = "توضیحات", style = MaterialTheme.typography.titleLarge)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = current.description, style = MaterialTheme.typography.bodyMedium)
+                }
 
-                Spacer(modifier = Modifier.height(20.dp))
-                Button(
+                Spacer(modifier = Modifier.height(Spacing.cardGap))
+                PrimaryButton(
+                    text = "اشتراک‌گذاری ملک",
+                    icon = Icons.Filled.Share,
+                    modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
@@ -304,28 +320,23 @@ fun PropertyDetailScreen(
                         }
                         context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری ملک"))
                         viewModel.markShared(current)
-                    },
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
-                ) {
-                    Icon(Icons.Filled.Share, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("اشتراک‌گذاری ملک")
-                }
+                    }
+                )
 
-                Spacer(modifier = Modifier.height(24.dp))
-                SectionHeader(title = "یادداشت‌ها") { showAddNoteDialog = true }
-                Spacer(modifier = Modifier.height(8.dp))
-                if (notes.isEmpty()) {
-                    Text(
-                        "یادداشتی ثبت نشده",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        notes.forEach { note ->
-                            Card {
-                                Column(modifier = Modifier.padding(12.dp)) {
+                Spacer(modifier = Modifier.height(Spacing.cardGap))
+                AppCard(modifier = Modifier.fillMaxWidth()) {
+                    SectionHeader(title = "یادداشت‌ها") { showAddNoteDialog = true }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (notes.isEmpty()) {
+                        Text(
+                            "یادداشتی ثبت نشده",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            notes.forEach { note ->
+                                Column {
                                     Text(note.content, style = MaterialTheme.typography.bodyMedium)
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
@@ -339,40 +350,42 @@ fun PropertyDetailScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(text = "تاریخچه", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                if (timeline.isEmpty()) {
-                    Text(
-                        "هنوز رویدادی ثبت نشده",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        timeline.forEach { event ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary)
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(event.description, style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                        formatDateTime(event.createdAt),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                Spacer(modifier = Modifier.height(Spacing.cardGap))
+                AppCard(modifier = Modifier.fillMaxWidth()) {
+                    Text(text = "تاریخچه", style = MaterialTheme.typography.titleLarge)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    if (timeline.isEmpty()) {
+                        Text(
+                            "هنوز رویدادی ثبت نشده",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            timeline.forEach { event ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(MaterialTheme.colorScheme.primary)
                                     )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(event.description, style = MaterialTheme.typography.bodyMedium)
+                                        Text(
+                                            formatDateTime(event.createdAt),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(Spacing.xl))
                 }
             }
 
@@ -472,31 +485,6 @@ private fun SectionHeader(title: String, onAddClick: () -> Unit) {
     ) {
         Text(text = title, style = MaterialTheme.typography.titleMedium)
         TextButton(onClick = onAddClick) { Text("افزودن") }
-    }
-}
-
-@Composable
-private fun StatusPill(status: PropertyStatus, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(Color.White.copy(alpha = 0.92f))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(status.color())
-        )
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(
-            text = status.label(),
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.Black
-        )
     }
 }
 

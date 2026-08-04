@@ -21,8 +21,6 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,7 +36,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.components.PropertyMiniCard
+import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.ui.theme.heroGradient
 import com.realestate.app.viewmodel.PropertyViewModel
 import com.realestate.app.viewmodel.WalletViewModel
@@ -63,7 +64,12 @@ fun HomeScreen(
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddClick) {
+            FloatingActionButton(
+                onClick = onAddClick,
+                shape = androidx.compose.foundation.shape.CircleShape,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
                 Icon(Icons.Filled.Add, contentDescription = "افزودن ملک")
             }
         }
@@ -77,26 +83,23 @@ fun HomeScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(Spacing.screen)
         ) {
-            Text(text = "سلام 👋", style = MaterialTheme.typography.headlineSmall)
+            Text(text = "سلام 👋", style = MaterialTheme.typography.headlineLarge)
             Text(
                 text = "بیا سریع به کارت برسی",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(Spacing.xl))
 
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onSearchClick)
+            AppCard(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onSearchClick,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 14.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
@@ -106,32 +109,32 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.cardGap))
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(MaterialTheme.shapes.medium)
-                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                    .background(heroGradient())
                     .clickable(onClick = onOpenWallet)
-                    .padding(16.dp),
+                    .padding(20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     Icons.Filled.AccountBalanceWallet,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    tint = Color.White
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("کیف پول", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                    Text("کیف پول", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.75f))
                     Text(
                         "${NumberFormat.getNumberInstance(Locale.US).format(balance)} تومان",
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                        color = Color.White
                     )
                 }
-                TextButton(onClick = onOpenWallet) { Text("مشاهده") }
+                TextButton(onClick = onOpenWallet) { Text("مشاهده", color = Color.White) }
             }
 
             if (pinned.isNotEmpty()) {
@@ -218,11 +221,12 @@ private fun EmptyHomeState(onAddClick: () -> Unit, modifier: Modifier = Modifier
                 textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(20.dp))
-            Button(onClick = onAddClick) {
-                Icon(Icons.Filled.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("افزودن اولین ملک")
-            }
+            PrimaryButton(
+                text = "افزودن اولین ملک",
+                onClick = onAddClick,
+                icon = Icons.Filled.Add,
+                modifier = Modifier.fillMaxWidth(0.8f)
+            )
         }
     }
 }

@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,7 +31,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -82,7 +80,12 @@ fun PropertyListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddClick) {
+            FloatingActionButton(
+                onClick = onAddClick,
+                shape = androidx.compose.foundation.shape.CircleShape,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
                 Icon(Icons.Filled.Add, contentDescription = "افزودن ملک")
             }
         }
@@ -93,10 +96,15 @@ fun PropertyListScreen(
                 onValueChange = { viewModel.updateFilter(filter.copy(query = it)) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                shape = com.realestate.app.ui.components.PillShape,
                 placeholder = { Text("جستجو بر اساس عنوان، شهر، آدرس یا کد ملک") },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 singleLine = true,
+                colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(
                     onSearch = { viewModel.recordSearch(filter.query) }
@@ -108,7 +116,7 @@ fun PropertyListScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 24.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     recentSearches.forEach { recent ->
@@ -160,8 +168,8 @@ fun PropertyListScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(properties, key = { it.id }) { property ->
                         PropertyCard(
@@ -309,10 +317,13 @@ private fun FilterSheetContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(onClick = onReset, modifier = Modifier.weight(1f)) {
-                Text("حذف فیلترها")
-            }
-            Button(
+            com.realestate.app.ui.components.SecondaryButton(
+                text = "حذف فیلترها",
+                onClick = onReset,
+                modifier = Modifier.weight(1f)
+            )
+            com.realestate.app.ui.components.PrimaryButton(
+                text = "اعمال",
                 onClick = {
                     onApply(
                         filter.copy(
@@ -325,9 +336,7 @@ private fun FilterSheetContent(
                     )
                 },
                 modifier = Modifier.weight(1f)
-            ) {
-                Text("اعمال")
-            }
+            )
         }
         Spacer(modifier = Modifier.height(16.dp))
     }

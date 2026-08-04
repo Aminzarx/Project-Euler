@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -23,6 +22,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.realestate.app.ui.components.PrimaryButton
+import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.ui.theme.heroGradient
 import com.realestate.app.viewmodel.AuthUiState
 
@@ -51,8 +52,8 @@ fun PhoneEntryScreen(
             )
         }
 
-        Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
-            Text("شماره موبایل خود را وارد کنید", style = MaterialTheme.typography.titleMedium)
+        Column(modifier = Modifier.fillMaxWidth().padding(Spacing.screen)) {
+            Text("شماره موبایل خود را وارد کنید", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 "کد تایید برای این شماره پیامک می‌شود",
@@ -76,13 +77,12 @@ fun PhoneEntryScreen(
             }
 
             Spacer(modifier = Modifier.height(20.dp))
-            Button(
+            PrimaryButton(
+                text = "دریافت کد تایید",
                 onClick = onSubmit,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth(),
                 enabled = state.mobileNumber.length == 11
-            ) {
-                Text("دریافت کد تایید")
-            }
+            )
         }
     }
 }

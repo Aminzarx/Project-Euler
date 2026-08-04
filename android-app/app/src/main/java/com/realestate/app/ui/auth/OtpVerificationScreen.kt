@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Sms
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -27,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.realestate.app.ui.components.PrimaryButton
+import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.ui.theme.heroGradient
 import com.realestate.app.viewmodel.AuthUiState
 
@@ -57,8 +57,8 @@ fun OtpVerificationScreen(
             )
         }
 
-        Column(modifier = Modifier.fillMaxWidth().padding(24.dp)) {
-            Text("کد ۵ رقمی را وارد کنید", style = MaterialTheme.typography.titleMedium)
+        Column(modifier = Modifier.fillMaxWidth().padding(Spacing.screen)) {
+            Text("کد ۵ رقمی را وارد کنید", style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(20.dp))
 
             OutlinedTextField(
@@ -91,21 +91,13 @@ fun OtpVerificationScreen(
             }
 
             Spacer(modifier = Modifier.height(20.dp))
-            Button(
+            PrimaryButton(
+                text = "تایید و ورود",
                 onClick = onVerify,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                enabled = state.otpInput.length == 5 && !state.isLoading
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text("تایید و ورود")
-                }
-            }
+                modifier = Modifier.fillMaxWidth(),
+                enabled = state.otpInput.length == 5 && !state.isLoading,
+                loading = state.isLoading
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {

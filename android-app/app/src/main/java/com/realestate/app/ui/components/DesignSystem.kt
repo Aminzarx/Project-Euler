@@ -1,0 +1,296 @@
+package com.realestate.app.ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+
+val CardShape = RoundedCornerShape(22.dp)
+val PillShape = RoundedCornerShape(50)
+val RowShape = RoundedCornerShape(18.dp)
+
+/** Elegant borderless rounded card with a very soft shadow — the base surface for every section. */
+@Composable
+fun AppCard(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    shape: androidx.compose.ui.graphics.Shape = CardShape,
+    contentPadding: PaddingValues = PaddingValues(20.dp),
+    content: @Composable () -> Unit
+) {
+    Surface(
+        onClick = onClick ?: {},
+        enabled = onClick != null,
+        shape = shape,
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 6.dp,
+        modifier = modifier
+    ) {
+        Box(modifier = Modifier.padding(contentPadding)) {
+            Column(content = { content() })
+        }
+    }
+}
+
+/** Rounded pill button — black background, white text. The app's primary call to action. */
+@Composable
+fun PrimaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false,
+    icon: ImageVector? = null
+) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled && !loading,
+        shape = PillShape,
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        modifier = modifier.height(52.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                if (icon != null) {
+                    Icon(icon, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(text, style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    }
+}
+
+/** Rounded pill button — white background with a light shadow, black text. Secondary action. */
+@Composable
+fun SecondaryButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    icon: ImageVector? = null
+) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = PillShape,
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shadowElevation = 4.dp,
+        modifier = modifier.height(52.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (icon != null) {
+                Icon(icon, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text(text, style = MaterialTheme.typography.titleMedium)
+        }
+    }
+}
+
+/** Circular icon button used for compact actions (back, share, favorite, nav items). */
+@Composable
+fun CircleIconButton(
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    size: Dp = 44.dp,
+    elevated: Boolean = true
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = containerColor,
+        contentColor = contentColor,
+        shadowElevation = if (elevated) 4.dp else 0.dp,
+        modifier = modifier.size(size)
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+/** Rounded list row: icon, title, optional subtitle and a trailing chevron — replaces plain rows everywhere. */
+@Composable
+fun AppListRow(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    trailing: @Composable (() -> Unit)? = null
+) {
+    Surface(
+        onClick = onClick,
+        shape = RowShape,
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 3.dp,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.size(38.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall)
+                if (subtitle != null) {
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            if (trailing != null) {
+                trailing()
+            } else {
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+data class BottomNavItem(
+    val icon: ImageVector,
+    val label: String,
+    val selected: Boolean,
+    val onClick: () -> Unit
+)
+
+/** Floating rounded bottom navigation — black active pill, gray inactive icons, shadow above content. */
+@Composable
+fun FloatingBottomNav(items: List<BottomNavItem>, modifier: Modifier = Modifier) {
+    Surface(
+        shape = RoundedCornerShape(32.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 12.dp,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            items.forEach { item ->
+                Surface(
+                    onClick = item.onClick,
+                    shape = CircleShape,
+                    color = if (item.selected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    contentColor = if (item.selected) {
+                        MaterialTheme.colorScheme.onPrimary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier.size(if (item.selected) 50.dp else 44.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                        Icon(item.icon, contentDescription = item.label, modifier = Modifier.size(22.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Small colored-dot pill badge — used for property status and transaction state. */
+@Composable
+fun StatusPillBadge(
+    text: String,
+    color: Color,
+    onClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
+    textColor: Color = MaterialTheme.colorScheme.onSurface
+) {
+    Surface(
+        onClick = onClick ?: {},
+        enabled = onClick != null,
+        shape = PillShape,
+        color = containerColor,
+        shadowElevation = 0.dp,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(color)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(text, style = MaterialTheme.typography.labelMedium, color = textColor)
+        }
+    }
+}

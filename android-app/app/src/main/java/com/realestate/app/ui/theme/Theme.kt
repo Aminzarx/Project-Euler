@@ -13,59 +13,60 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 
 private val LightColorScheme = lightColorScheme(
-    primary = BluePrimaryLight,
-    onPrimary = BlueOnPrimaryLight,
-    primaryContainer = BluePrimaryContainerLight,
-    onPrimaryContainer = BlueOnPrimaryContainerLight,
-    secondary = BlueSecondaryLight,
-    onSecondary = BlueOnSecondaryLight,
-    secondaryContainer = BlueSecondaryContainerLight,
-    onSecondaryContainer = BlueOnSecondaryContainerLight,
-    tertiary = BlueTertiaryLight,
-    onTertiary = BlueOnTertiaryLight,
-    tertiaryContainer = BlueTertiaryContainerLight,
-    onTertiaryContainer = BlueOnTertiaryContainerLight,
+    primary = AccentLight,
+    onPrimary = OnAccentLight,
+    primaryContainer = DividerLight,
+    onPrimaryContainer = AccentLight,
+    secondary = AccentLight,
+    onSecondary = OnAccentLight,
+    secondaryContainer = DividerLight,
+    onSecondaryContainer = AccentLight,
+    tertiary = AccentLight,
+    onTertiary = OnAccentLight,
+    tertiaryContainer = DividerLight,
+    onTertiaryContainer = AccentLight,
     background = BackgroundLight,
     onBackground = OnBackgroundLight,
     surface = SurfaceLight,
     onSurface = OnSurfaceLight,
-    surfaceVariant = SurfaceVariantLight,
-    onSurfaceVariant = OnSurfaceVariantLight,
+    surfaceVariant = DividerLight,
+    onSurfaceVariant = SecondaryTextLight,
     outline = OutlineLight,
-    error = ErrorLight,
-    onError = OnErrorLight
+    error = DangerLight,
+    onError = OnDangerLight
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = BluePrimaryDark,
-    onPrimary = BlueOnPrimaryDark,
-    primaryContainer = BluePrimaryContainerDark,
-    onPrimaryContainer = BlueOnPrimaryContainerDark,
-    secondary = BlueSecondaryDark,
-    onSecondary = BlueOnSecondaryDark,
-    secondaryContainer = BlueSecondaryContainerDark,
-    onSecondaryContainer = BlueOnSecondaryContainerDark,
-    tertiary = BlueTertiaryDark,
-    onTertiary = BlueOnTertiaryDark,
-    tertiaryContainer = BlueTertiaryContainerDark,
-    onTertiaryContainer = BlueOnTertiaryContainerDark,
+    primary = AccentDark,
+    onPrimary = OnAccentDark,
+    primaryContainer = DividerDark,
+    onPrimaryContainer = AccentDark,
+    secondary = AccentDark,
+    onSecondary = OnAccentDark,
+    secondaryContainer = DividerDark,
+    onSecondaryContainer = AccentDark,
+    tertiary = AccentDark,
+    onTertiary = OnAccentDark,
+    tertiaryContainer = DividerDark,
+    onTertiaryContainer = AccentDark,
     background = BackgroundDark,
     onBackground = OnBackgroundDark,
     surface = SurfaceDark,
     onSurface = OnSurfaceDark,
-    surfaceVariant = SurfaceVariantDark,
-    onSurfaceVariant = OnSurfaceVariantDark,
+    surfaceVariant = DividerDark,
+    onSurfaceVariant = SecondaryTextDark,
     outline = OutlineDark,
-    error = ErrorDark,
-    onError = OnErrorDark
+    error = DangerDark,
+    onError = OnDangerDark
 )
 
-private val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(15.dp),
-    small = RoundedCornerShape(15.dp),
-    medium = RoundedCornerShape(15.dp),
-    large = RoundedCornerShape(15.dp),
-    extraLarge = RoundedCornerShape(15.dp)
+/** Soft, borderless rounded-corner scale used across every card, sheet and image in the app. */
+val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(12.dp),
+    small = RoundedCornerShape(16.dp),
+    medium = RoundedCornerShape(22.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(28.dp)
 )
 
 @Composable

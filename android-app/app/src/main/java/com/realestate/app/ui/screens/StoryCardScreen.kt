@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,7 +37,9 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.data.Property
+import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.components.StoryCardContent
+import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
 import kotlinx.coroutines.delay
@@ -78,7 +79,7 @@ fun StoryCardScreen(
             }
         } else {
             Column(
-                modifier = Modifier.padding(padding).fillMaxSize().padding(20.dp),
+                modifier = Modifier.padding(padding).fillMaxSize().padding(Spacing.screen),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 StoryCardContent(
@@ -88,14 +89,12 @@ fun StoryCardScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(20.dp))
-                Button(
+                PrimaryButton(
+                    text = "اشتراک‌گذاری کارت",
                     onClick = { showCaptureDialog = true },
-                    modifier = Modifier.fillMaxWidth().height(52.dp)
-                ) {
-                    Icon(Icons.Filled.Share, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("اشتراک‌گذاری کارت")
-                }
+                    icon = Icons.Filled.Share,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             if (showCaptureDialog) {

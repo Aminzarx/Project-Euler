@@ -1,7 +1,6 @@
 package com.realestate.app.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,7 +17,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -27,7 +25,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -36,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.realestate.app.data.DealType
 import com.realestate.app.data.Property
+import com.realestate.app.ui.theme.extendedColors
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -47,12 +45,12 @@ fun PropertyCard(
     modifier: Modifier = Modifier
 ) {
     val haptics = LocalHapticFeedback.current
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
+    AppCard(
+        modifier = modifier.fillMaxWidth(),
+        onClick = onClick,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(10.dp)
     ) {
-        Row(modifier = Modifier.padding(8.dp)) {
+        Row(modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
                     .size(88.dp)
@@ -120,7 +118,7 @@ fun PropertyCard(
                 Icon(
                     imageVector = if (property.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                     contentDescription = "علاقه‌مندی",
-                    tint = if (property.isFavorite) Color.Red else MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (property.isFavorite) MaterialTheme.extendedColors.danger else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -133,16 +131,17 @@ fun PropertyMiniCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier
-            .width(160.dp)
-            .clickable(onClick = onClick)
+    AppCard(
+        modifier = modifier.width(160.dp),
+        onClick = onClick,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
     ) {
         Column {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(100.dp)
+                    .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 if (property.imageUri != null) {
