@@ -6,9 +6,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.List
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,10 +43,10 @@ import com.realestate.app.viewmodel.WalletViewModel
 private data class BottomTab(val screen: Screen, val label: String, val icon: ImageVector)
 
 private val bottomTabs = listOf(
-    BottomTab(Screen.Home, "خانه", Icons.Filled.Home),
-    BottomTab(Screen.List, "املاک", Icons.Filled.List),
+    BottomTab(Screen.Home, "خانه", Icons.Outlined.Home),
+    BottomTab(Screen.List, "املاک", Icons.Outlined.List),
     BottomTab(Screen.Favorites, "علاقه‌مندی‌ها", Icons.Filled.Favorite),
-    BottomTab(Screen.Profile, "پروفایل", Icons.Filled.Person)
+    BottomTab(Screen.Profile, "پروفایل", Icons.Outlined.Person)
 )
 
 @Composable
@@ -59,7 +59,9 @@ fun RealEstateApp(
 ) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route
+    // Fall back to Home so the bottom nav shows it selected immediately on first launch,
+    // before the NavController's back-stack state flow emits its first value.
+    val currentRoute = backStackEntry?.destination?.route ?: Screen.Home.route
     val showBottomBar = currentRoute == Screen.Home.route ||
         currentRoute == Screen.List.route ||
         currentRoute == Screen.Favorites.route ||

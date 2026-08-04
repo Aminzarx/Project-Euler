@@ -22,9 +22,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.AddAPhoto
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -145,7 +145,7 @@ fun AddEditPropertyScreen(
                 title = { Text(if (isEditMode) "ویرایش ملک" else "افزودن ملک") },
                 navigationIcon = {
                     IconButton(onClick = onDone) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت")
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "بازگشت")
                     }
                 }
             )
@@ -176,7 +176,7 @@ fun AddEditPropertyScreen(
                     )
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Filled.AddAPhoto, contentDescription = null)
+                        Icon(Icons.Outlined.AddAPhoto, contentDescription = null)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text("افزودن تصویر")
                     }
@@ -330,7 +330,7 @@ fun AddEditPropertyScreen(
                             onClick = { tags = tags - tag },
                             label = { Text(tag) },
                             trailingIcon = {
-                                Icon(Icons.Filled.Close, contentDescription = "حذف برچسب", modifier = Modifier.size(16.dp))
+                                Icon(Icons.Outlined.Close, contentDescription = "حذف برچسب", modifier = Modifier.size(16.dp))
                             }
                         )
                     }

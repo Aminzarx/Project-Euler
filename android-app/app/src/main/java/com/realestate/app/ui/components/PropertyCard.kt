@@ -15,8 +15,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -66,7 +66,7 @@ fun PropertyCard(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Filled.Home,
+                        imageVector = Icons.Outlined.Home,
                         contentDescription = null,
                         modifier = Modifier.align(Alignment.Center)
                     )
@@ -92,7 +92,7 @@ fun PropertyCard(
                     if (property.isPinned) {
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
-                            Icons.Filled.PushPin,
+                            Icons.Outlined.PushPin,
                             contentDescription = "سنجاق‌شده",
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.primary
@@ -153,7 +153,7 @@ fun PropertyMiniCard(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Filled.Home,
+                        imageVector = Icons.Outlined.Home,
                         contentDescription = null,
                         modifier = Modifier.align(Alignment.Center)
                     )

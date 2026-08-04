@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Sms
+import androidx.compose.material.icons.outlined.Sms
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -47,7 +47,7 @@ fun OtpVerificationScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(Icons.Filled.Sms, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
+            Icon(Icons.Outlined.Sms, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
             Spacer(modifier = Modifier.height(12.dp))
             Text("کد تایید ارسال شد", style = MaterialTheme.typography.headlineSmall, color = Color.White)
             Text(

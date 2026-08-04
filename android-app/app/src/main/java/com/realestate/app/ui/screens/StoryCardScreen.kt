@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -66,7 +66,7 @@ fun StoryCardScreen(
                 title = { Text("کارت استوری") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت")
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "بازگشت")
                     }
                 }
             )
@@ -92,7 +92,7 @@ fun StoryCardScreen(
                 PrimaryButton(
                     text = "اشتراک‌گذاری کارت",
                     onClick = { showCaptureDialog = true },
-                    icon = Icons.Filled.Share,
+                    icon = Icons.Outlined.Share,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

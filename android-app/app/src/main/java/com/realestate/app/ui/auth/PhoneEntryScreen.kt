@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -42,7 +42,7 @@ fun PhoneEntryScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(Icons.Filled.Call, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
+            Icon(Icons.Outlined.Call, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp))
             Spacer(modifier = Modifier.height(12.dp))
             Text("مدیریت املاک", style = MaterialTheme.typography.headlineSmall, color = Color.White)
             Text(

@@ -20,15 +20,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
@@ -115,7 +115,7 @@ fun PropertyDetailScreen(
                 title = { Text(property?.title ?: "جزئیات ملک") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت")
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "بازگشت")
                     }
                 },
                 actions = {
@@ -128,7 +128,7 @@ fun PropertyDetailScreen(
                         }
                         Box {
                             IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Filled.MoreVert, contentDescription = "بیشتر")
+                                Icon(Icons.Outlined.MoreVert, contentDescription = "بیشتر")
                             }
                             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                                 DropdownMenuItem(
@@ -199,7 +199,7 @@ fun PropertyDetailScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Filled.Home,
+                                Icons.Outlined.Home,
                                 contentDescription = null,
                                 tint = Color.White.copy(alpha = 0.85f),
                                 modifier = Modifier.size(72.dp)
@@ -224,7 +224,7 @@ fun PropertyDetailScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Filled.PushPin,
+                                Icons.Outlined.PushPin,
                                 contentDescription = "سنجاق‌شده",
                                 tint = Color.White,
                                 modifier = Modifier.size(18.dp)
@@ -294,7 +294,7 @@ fun PropertyDetailScreen(
                                 AssistChip(
                                     onClick = { viewModel.removeTag(current, tag) },
                                     label = { Text(tag) },
-                                    trailingIcon = { Icon(Icons.Filled.Close, contentDescription = "حذف برچسب", modifier = Modifier.size(16.dp)) }
+                                    trailingIcon = { Icon(Icons.Outlined.Close, contentDescription = "حذف برچسب", modifier = Modifier.size(16.dp)) }
                                 )
                             }
                         }
@@ -311,7 +311,7 @@ fun PropertyDetailScreen(
                 Spacer(modifier = Modifier.height(Spacing.cardGap))
                 PrimaryButton(
                     text = "اشتراک‌گذاری ملک",
-                    icon = Icons.Filled.Share,
+                    icon = Icons.Outlined.Share,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -419,7 +419,7 @@ fun PropertyDetailScreen(
                                 )
                                 if (status == current.status) {
                                     Icon(
-                                        Icons.Filled.Check,
+                                        Icons.Outlined.Check,
                                         contentDescription = "انتخاب‌شده",
                                         tint = MaterialTheme.colorScheme.primary
                                     )

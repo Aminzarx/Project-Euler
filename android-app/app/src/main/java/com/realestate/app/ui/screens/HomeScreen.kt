@@ -16,11 +16,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -70,7 +70,7 @@ fun HomeScreen(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "افزودن ملک")
+                Icon(Icons.Outlined.Add, contentDescription = "افزودن ملک")
             }
         }
     ) { padding ->
@@ -100,7 +100,7 @@ fun HomeScreen(
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 14.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "جستجوی سریع ملک...",
@@ -121,7 +121,7 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    Icons.Filled.AccountBalanceWallet,
+                    Icons.Outlined.AccountBalanceWallet,
                     contentDescription = null,
                     tint = Color.White
                 )
@@ -140,7 +140,7 @@ fun HomeScreen(
             if (pinned.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(24.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.PushPin, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Outlined.PushPin, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(text = "سنجاق‌شده", style = MaterialTheme.typography.titleMedium)
                 }
@@ -201,7 +201,7 @@ private fun EmptyHomeState(onAddClick: () -> Unit, modifier: Modifier = Modifier
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Home,
+                    imageVector = Icons.Outlined.Home,
                     contentDescription = null,
                     modifier = Modifier.height(40.dp),
                     tint = Color.White
@@ -224,7 +224,7 @@ private fun EmptyHomeState(onAddClick: () -> Unit, modifier: Modifier = Modifier
             PrimaryButton(
                 text = "افزودن اولین ملک",
                 onClick = onAddClick,
-                icon = Icons.Filled.Add,
+                icon = Icons.Outlined.Add,
                 modifier = Modifier.fillMaxWidth(0.8f)
             )
         }

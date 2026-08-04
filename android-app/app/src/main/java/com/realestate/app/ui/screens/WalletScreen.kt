@@ -17,11 +17,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Error
+import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -76,7 +76,7 @@ fun WalletScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
                 title = { Text("کیف پول") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت")
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "بازگشت")
                     }
                 }
             )
@@ -107,7 +107,7 @@ fun WalletScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
                     PrimaryButton(
                         text = "شارژ کیف پول",
                         onClick = { showRechargeSheet = true },
-                        icon = Icons.Filled.Add,
+                        icon = Icons.Outlined.Add,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -158,9 +158,9 @@ private fun TransactionRow(tx: WalletTransaction) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             val (icon, tint) = when (tx.status) {
-                TransactionStatus.SUCCESS -> Icons.Filled.CheckCircle to MaterialTheme.extendedColors.success
-                TransactionStatus.FAILED -> Icons.Filled.Error to MaterialTheme.extendedColors.danger
-                TransactionStatus.PENDING -> Icons.Filled.HourglassEmpty to MaterialTheme.extendedColors.warning
+                TransactionStatus.SUCCESS -> Icons.Outlined.CheckCircle to MaterialTheme.extendedColors.success
+                TransactionStatus.FAILED -> Icons.Outlined.Error to MaterialTheme.extendedColors.danger
+                TransactionStatus.PENDING -> Icons.Outlined.HourglassEmpty to MaterialTheme.extendedColors.warning
             }
             Icon(icon, contentDescription = null, tint = tint)
             Spacer(modifier = Modifier.width(12.dp))
@@ -241,7 +241,7 @@ private fun RechargeSheet(
                     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
-                                Icons.Filled.CheckCircle,
+                                Icons.Outlined.CheckCircle,
                                 contentDescription = null,
                                 tint = MaterialTheme.extendedColors.success,
                                 modifier = Modifier.size(48.dp)
@@ -258,7 +258,7 @@ private fun RechargeSheet(
                     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
-                                Icons.Filled.Error,
+                                Icons.Outlined.Error,
                                 contentDescription = null,
                                 tint = MaterialTheme.extendedColors.danger,
                                 modifier = Modifier.size(48.dp)

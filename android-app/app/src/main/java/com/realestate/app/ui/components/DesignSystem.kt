@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,7 +26,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -34,6 +36,16 @@ import androidx.compose.ui.unit.dp
 val CardShape = RoundedCornerShape(22.dp)
 val PillShape = RoundedCornerShape(50)
 val RowShape = RoundedCornerShape(18.dp)
+
+private val ShadowTint = Color.Black.copy(alpha = 0.05f)
+
+/** A very light, barely-visible shadow — used everywhere instead of Material's default (heavier, gray) elevation shadow. */
+private fun Modifier.softShadow(shape: Shape, elevation: Dp): Modifier = this.shadow(
+    elevation = elevation,
+    shape = shape,
+    ambientColor = ShadowTint,
+    spotColor = ShadowTint
+)
 
 /** Elegant borderless rounded card with a very soft shadow — the base surface for every section. */
 @Composable
@@ -49,8 +61,8 @@ fun AppCard(
         enabled = onClick != null,
         shape = shape,
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 6.dp,
-        modifier = modifier
+        shadowElevation = 0.dp,
+        modifier = modifier.softShadow(shape, 8.dp)
     ) {
         Box(modifier = Modifier.padding(contentPadding)) {
             Column(content = { content() })
@@ -58,7 +70,7 @@ fun AppCard(
     }
 }
 
-/** Rounded pill button — black background, white text. The app's primary call to action. */
+/** Rounded pill button — brand-colored background, white text. The app's primary call to action. */
 @Composable
 fun PrimaryButton(
     text: String,
@@ -98,7 +110,7 @@ fun PrimaryButton(
     }
 }
 
-/** Rounded pill button — white background with a light shadow, black text. Secondary action. */
+/** Rounded pill button — white background with a light shadow, ink text. Secondary action. */
 @Composable
 fun SecondaryButton(
     text: String,
@@ -113,8 +125,8 @@ fun SecondaryButton(
         shape = PillShape,
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
-        shadowElevation = 4.dp,
-        modifier = modifier.height(52.dp)
+        shadowElevation = 0.dp,
+        modifier = modifier.height(52.dp).softShadow(PillShape, 5.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
@@ -147,8 +159,8 @@ fun CircleIconButton(
         shape = CircleShape,
         color = containerColor,
         contentColor = contentColor,
-        shadowElevation = if (elevated) 4.dp else 0.dp,
-        modifier = modifier.size(size)
+        shadowElevation = 0.dp,
+        modifier = modifier.size(size).let { if (elevated) it.softShadow(CircleShape, 5.dp) else it }
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(20.dp))
@@ -170,8 +182,8 @@ fun AppListRow(
         onClick = onClick,
         shape = RowShape,
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 3.dp,
-        modifier = modifier.fillMaxWidth()
+        shadowElevation = 0.dp,
+        modifier = modifier.fillMaxWidth().softShadow(RowShape, 4.dp)
     ) {
         Row(
             modifier = Modifier
@@ -208,7 +220,7 @@ fun AppListRow(
                 trailing()
             } else {
                 Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    Icons.AutoMirrored.Outlined.KeyboardArrowRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -224,14 +236,15 @@ data class BottomNavItem(
     val onClick: () -> Unit
 )
 
-/** Floating rounded bottom navigation — black active pill, gray inactive icons, shadow above content. */
+/** Floating rounded bottom navigation — brand-colored active pill, gray inactive icons, soft shadow above content. */
 @Composable
 fun FloatingBottomNav(items: List<BottomNavItem>, modifier: Modifier = Modifier) {
+    val navShape = RoundedCornerShape(32.dp)
     Surface(
-        shape = RoundedCornerShape(32.dp),
+        shape = navShape,
         color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 12.dp,
-        modifier = modifier.fillMaxWidth()
+        shadowElevation = 0.dp,
+        modifier = modifier.fillMaxWidth().softShadow(navShape, 10.dp)
     ) {
         Row(
             modifier = Modifier

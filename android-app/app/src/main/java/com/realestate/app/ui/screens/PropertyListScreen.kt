@@ -17,9 +17,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -74,7 +74,7 @@ fun PropertyListScreen(
                 title = { Text("املاک") },
                 actions = {
                     IconButton(onClick = { showFilterSheet = true }) {
-                        Icon(Icons.Filled.FilterList, contentDescription = "فیلترها")
+                        Icon(Icons.Outlined.FilterList, contentDescription = "فیلترها")
                     }
                 }
             )
@@ -86,7 +86,7 @@ fun PropertyListScreen(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "افزودن ملک")
+                Icon(Icons.Outlined.Add, contentDescription = "افزودن ملک")
             }
         }
     ) { padding ->
@@ -99,7 +99,7 @@ fun PropertyListScreen(
                     .padding(horizontal = 24.dp, vertical = 8.dp),
                 shape = com.realestate.app.ui.components.PillShape,
                 placeholder = { Text("جستجو بر اساس عنوان، شهر، آدرس یا کد ملک") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
                 singleLine = true,
                 colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
