@@ -20,11 +20,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.ExposedDropdownMenu
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -188,7 +188,7 @@ private fun FilterSheetContent(
                 modifier = Modifier.menuAnchor().fillMaxWidth(),
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = cityMenuExpanded) }
             )
-            ExposedDropdownMenu(expanded = cityMenuExpanded, onDismissRequest = { cityMenuExpanded = false }) {
+            DropdownMenu(expanded = cityMenuExpanded, onDismissRequest = { cityMenuExpanded = false }) {
                 DropdownMenuItem(text = { Text("همه شهرها") }, onClick = {
                     selectedCity = null
                     cityMenuExpanded = false
@@ -213,7 +213,7 @@ private fun FilterSheetContent(
                 modifier = Modifier.menuAnchor().fillMaxWidth(),
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeMenuExpanded) }
             )
-            ExposedDropdownMenu(expanded = typeMenuExpanded, onDismissRequest = { typeMenuExpanded = false }) {
+            DropdownMenu(expanded = typeMenuExpanded, onDismissRequest = { typeMenuExpanded = false }) {
                 DropdownMenuItem(text = { Text("همه انواع") }, onClick = {
                     selectedType = null
                     typeMenuExpanded = false
