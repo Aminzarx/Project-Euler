@@ -148,9 +148,31 @@
   /* ---------------------------------------------------------------------
      GSAP reveal animations
      --------------------------------------------------------------------- */
+  function initFallbackReveal() {
+    const heroEls = $$('.hero .reveal-line, .reveal-name');
+    heroEls.forEach((el, i) => {
+      setTimeout(() => el.classList.add('is-in'), prefersReducedMotion ? 0 : 250 + i * 130);
+    });
+
+    const rest = $$('.reveal-up, .reveal-side');
+    if (prefersReducedMotion || typeof IntersectionObserver === 'undefined') {
+      rest.forEach(el => el.classList.add('is-in'));
+      return;
+    }
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('is-in');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+    rest.forEach(el => observer.observe(el));
+  }
+
   function initAnimations() {
-    if (typeof gsap === 'undefined') {
-      $$('.reveal-line, .reveal-name, .reveal-up, .reveal-side').forEach(el => el.style.opacity = 1);
+    if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
+      initFallbackReveal();
       return;
     }
     gsap.registerPlugin(ScrollTrigger);
@@ -521,7 +543,10 @@
      QR codes (gift + invitation)
      --------------------------------------------------------------------- */
   function initQrCodes() {
-    if (typeof QRCode === 'undefined') return;
+    if (typeof QRCode === 'undefined') {
+      $$('.qr-box').forEach(el => el.classList.add('is-empty'));
+      return;
+    }
     const opts = { width: 128, margin: 1, color: { dark: '#2b2620', light: '#ffffff' } };
 
     const giftTarget = $('#giftQr');
