@@ -33,9 +33,9 @@
   --shadow-lg: 0 25px 60px rgba(43,38,32,0.16);
   --shadow-gold: 0 8px 30px rgba(184,137,79,0.25);
 
-  /* تیتر و اسامی: خوشنویسی ظریف / شعر و نقل‌قول: نسخ کلاسیک / رابط کاربری: فونت هندسی مدرن */
-  --font-title: 'Aref Ruqaa', 'Vazirmatn', serif;
-  --font-display: 'Noto Naskh Arabic', 'Vazirmatn', serif;
+  /* اسامی، تیترها و شعر: خوشنویسی نستعلیق / رابط کاربری: فونت هندسی مدرن */
+  --font-title: 'Noto Nastaliq Urdu', 'Vazirmatn', serif;
+  --font-display: 'Noto Nastaliq Urdu', 'Vazirmatn', serif;
   --font-ui: 'Vazirmatn', 'Segoe UI', sans-serif;
 
   --ease-lux: cubic-bezier(0.16, 1, 0.3, 1);
@@ -128,10 +128,17 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round
 }
 .btn svg { width: 16px; height: 16px; }
 .btn-primary {
+  position: relative; overflow: hidden;
   background: linear-gradient(135deg, var(--champagne) 0%, var(--champagne-deep) 100%);
   color: #2b2210; box-shadow: var(--shadow-gold);
 }
 .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(184,137,79,0.35); }
+.btn-primary::before {
+  content: ''; position: absolute; inset: 0 auto 0 -60%; width: 40%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.6), transparent);
+  transform: skewX(-20deg); transition: left 0.75s var(--ease-lux);
+}
+.btn-primary:hover::before { left: 130%; }
 .btn-ghost { border-color: var(--accent); color: var(--text); }
 .btn-ghost:hover { background: var(--accent); color: #2b2210; transform: translateY(-2px); }
 .btn-outline { border-color: var(--border); color: var(--text); background: transparent; }
@@ -195,12 +202,62 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round
 }
 .hero-vignette { position: absolute; inset: 0; box-shadow: inset 0 0 220px rgba(0,0,0,0.18); pointer-events: none; }
 
+/* گرادیان‌های متحرک آرام پشت صحنه هیرو (افکت شفق) */
+.hero-aurora { position: absolute; inset: 0; overflow: hidden; filter: blur(60px); opacity: 0.55; mix-blend-mode: multiply; }
+:root[data-theme="dark"] .hero-aurora, :root:not([data-theme="light"]) .hero-aurora { mix-blend-mode: screen; opacity: 0.4; }
+.aurora-blob { position: absolute; border-radius: 50%; will-change: transform; }
+.aurora-blob.b1 {
+  width: 46vw; height: 46vw; top: -12%; right: -8%;
+  background: radial-gradient(circle, var(--champagne) 0%, transparent 70%);
+  animation: auroraDrift1 26s ease-in-out infinite;
+}
+.aurora-blob.b2 {
+  width: 38vw; height: 38vw; bottom: -14%; left: -6%;
+  background: radial-gradient(circle, var(--rose-gold) 0%, transparent 72%);
+  animation: auroraDrift2 32s ease-in-out infinite;
+}
+.aurora-blob.b3 {
+  width: 30vw; height: 30vw; top: 30%; left: 32%;
+  background: radial-gradient(circle, var(--deep-green-soft) 0%, transparent 74%);
+  animation: auroraDrift3 22s ease-in-out infinite;
+}
+@keyframes auroraDrift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-6%, 8%) scale(1.12); }
+}
+@keyframes auroraDrift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(8%, -6%) scale(1.15); }
+}
+@keyframes auroraDrift3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-8%, -10%) scale(0.9); }
+}
+
+/* هاله نرم دنبال‌کننده اشاره‌گر موس (فقط دستگاه‌های دارای موس) */
+.hero-spotlight {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.5s var(--ease-soft);
+  background: radial-gradient(560px circle at var(--mx, 50%) var(--my, 30%), rgba(217,179,130,0.16), transparent 60%);
+}
+.hero-spotlight.is-active { opacity: 1; }
+
 .hero-content { position: relative; z-index: 2; text-align: center; padding: 6rem 1.5rem 8rem; max-width: 760px; }
 .eyebrow span { font-family: var(--font-ui); font-size: 0.95rem; font-weight: 500; color: var(--accent); }
 
 .hero-names { margin: 1.2rem 0 1rem; display: flex; align-items: baseline; justify-content: center; gap: 0.7rem; flex-wrap: wrap; }
-.name { font-family: var(--font-title); font-size: clamp(3.4rem, 11vw, 7rem); font-weight: 700; color: var(--text); line-height: 1.3; }
-.ampersand { font-family: var(--font-display); font-size: clamp(1.6rem, 3.5vw, 2.4rem); color: var(--accent); }
+.name {
+  font-family: var(--font-title); font-size: clamp(3.4rem, 11vw, 7rem); font-weight: 700; line-height: 1.3;
+  background: linear-gradient(100deg, var(--text) 25%, var(--accent) 42%, var(--rose-gold) 50%, var(--accent) 58%, var(--text) 75%);
+  background-size: 260% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: nameShimmer 8s ease-in-out infinite;
+}
+@keyframes nameShimmer {
+  0% { background-position: 220% 0; }
+  50% { background-position: 0% 0; }
+  100% { background-position: -220% 0; }
+}
+.ampersand { font-family: var(--font-display); font-weight: 400; font-size: clamp(1.8rem, 4vw, 2.7rem); color: var(--accent); }
 
 .hero-divider { display: flex; justify-content: center; margin: 1.4rem 0; color: var(--accent); }
 .hero-date { font-family: var(--font-ui); font-size: 1.05rem; font-weight: 500; color: var(--text-soft); }
@@ -239,10 +296,18 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round
 @media (max-width: 860px) { .details-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 540px) { .details-grid { grid-template-columns: 1fr; } }
 .detail-card {
-  padding: 2.2rem 1.6rem; border-radius: var(--radius-md); text-align: center; box-shadow: var(--shadow-sm);
+  position: relative; padding: 2.2rem 1.6rem; border-radius: var(--radius-md); text-align: center; box-shadow: var(--shadow-sm);
   transition: transform .4s var(--ease-soft), box-shadow .4s var(--ease-soft);
 }
 .detail-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-md); }
+.detail-card::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px;
+  background: linear-gradient(135deg, var(--accent), transparent 45%, var(--accent-2) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  opacity: 0; transition: opacity .4s var(--ease-soft); pointer-events: none;
+}
+.detail-card:hover::after { opacity: 1; }
 .detail-icon {
   width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 1.1rem; display: flex; align-items: center; justify-content: center;
   background: linear-gradient(135deg, rgba(217,179,130,0.18), rgba(201,143,122,0.14)); color: var(--accent);
@@ -258,9 +323,15 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round
   background: var(--dark-panel); color: var(--dark-panel-text); overflow: hidden;
 }
 .countdown-bg {
-  position: absolute; inset: 0;
-  background: radial-gradient(circle at 20% 20%, rgba(217,179,130,0.15), transparent 45%),
-              radial-gradient(circle at 80% 80%, rgba(201,143,122,0.12), transparent 45%);
+  position: absolute; inset: -10%;
+  background: radial-gradient(circle at 20% 20%, rgba(217,179,130,0.18), transparent 45%),
+              radial-gradient(circle at 80% 80%, rgba(201,143,122,0.14), transparent 45%),
+              radial-gradient(circle at 50% 100%, rgba(69,89,76,0.25), transparent 55%);
+  animation: countdownBgDrift 18s ease-in-out infinite;
+}
+@keyframes countdownBgDrift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-3%, 3%) scale(1.06); }
 }
 .countdown { position: relative; display: flex; align-items: center; justify-content: center; gap: 0.9rem; flex-wrap: wrap; margin: 2.5rem 0 2.5rem; }
 .countdown-unit {
@@ -274,44 +345,17 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round
 @media (max-width: 560px) { .countdown-sep { display: none; } .countdown { gap: 0.7rem; } .countdown-unit { min-width: 72px; padding: 1.1rem 0.5rem; } }
 
 /* ==========================================================================
-   برنامه مجلس
-   ========================================================================== */
-.schedule-list { max-width: 700px; margin: 0 auto; }
-.schedule-item { display: grid; grid-template-columns: 90px 24px 1fr; align-items: start; margin-bottom: 1.6rem; }
-.schedule-time { font-family: var(--font-title); font-weight: 700; font-size: 1rem; color: var(--accent); padding-top: 0.15rem; font-variant-numeric: tabular-nums; }
-.schedule-line { position: relative; height: 100%; display: flex; justify-content: center; }
-.schedule-line::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-.schedule-line::after { content: ''; position: absolute; top: 10px; bottom: -1.6rem; width: 1px; background: var(--border); }
-.schedule-item:last-child .schedule-line::after { display: none; }
-.schedule-body h4 { font-size: 1.15rem; margin-bottom: 0.25rem; font-weight: 500; }
-.schedule-body p { color: var(--text-soft); font-size: 0.95rem; }
-
-/* ==========================================================================
    مکان مراسم
    ========================================================================== */
-.map-wrap { border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-md); height: 420px; }
-.map-wrap iframe { width: 100%; height: 100%; border: 0; filter: saturate(0.85); }
+.map-wrap { border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-md); height: 420px; position: relative; }
+.map-wrap::after {
+  content: ''; position: absolute; inset: -1.5px; border-radius: inherit; padding: 1.5px; z-index: 1; pointer-events: none;
+  background: linear-gradient(135deg, var(--accent), transparent 40%, var(--accent-2) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0.6;
+}
+.map-wrap iframe { width: 100%; height: 100%; border: 0; filter: saturate(0.85); position: relative; z-index: 0; }
 .map-actions { display: flex; justify-content: center; gap: 1rem; margin-top: 1.8rem; flex-wrap: wrap; }
-
-/* پشتیبان ایستا برای محیط‌هایی که iframe نقشه در آن‌ها بارگذاری نمی‌شود */
-.map-wrap.map-static {
-  display: flex; align-items: center; justify-content: center; position: relative;
-  background:
-    radial-gradient(circle at 30% 30%, rgba(217,179,130,0.25), transparent 55%),
-    radial-gradient(circle at 70% 70%, rgba(69,89,76,0.22), transparent 55%),
-    var(--beige);
-}
-.map-static::before {
-  content: ''; position: absolute; inset: 0; opacity: 0.5;
-  background-image:
-    linear-gradient(var(--border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border) 1px, transparent 1px);
-  background-size: 46px 46px;
-}
-.map-static-pin { position: relative; text-align: center; color: var(--text); }
-.map-static-pin svg { color: var(--accent); margin-bottom: 0.8rem; }
-.map-static-pin p { font-family: var(--font-display); font-size: 1.35rem; }
-.map-static-pin span { display: block; margin-top: 0.35rem; font-size: 0.9rem; color: var(--text-soft); }
 
 /* کدهای QR وقتی کتابخانه تولیدکننده در دسترس نیست، مخفی می‌شوند */
 .qr-box.is-empty, .qr-box.is-empty + p { display: none; }

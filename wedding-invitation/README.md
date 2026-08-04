@@ -21,13 +21,16 @@ wedding-invitation/
 
 ## What's inside
 
-- **Hero** — animated name reveal (یگانه و علی), canvas particle field, parallax glow.
+- **Hero** — shimmering gradient name reveal (یگانه و علی), animated aurora
+  gradient blobs + canvas particle field, cursor-follow spotlight (mouse
+  devices), parallax glow.
 - **Wedding Details** — date, time, venue, dress code, contact number, and a
   card telling guests to notify by phone 3 days ahead if they can't attend.
-- **Countdown** — live days/hours/minutes/seconds to the event (Persian numerals).
-- **Order of the Evening** — welcome through farewell.
-- **Location** — a static "venue card" (no map API key configured) plus
-  "Open in Google Maps" / "Navigate" buttons pointing at the address.
+- **Countdown** — live days/hours/minutes/seconds to the event (Persian
+  numerals), slowly drifting gradient backdrop.
+- **Location** — a real embedded Google Maps iframe (no API key needed, plain
+  `?q=...&output=embed` search) plus "Open in Google Maps" / "Navigate"
+  buttons pointing at the address.
 - **RSVP** — validated form, success state, confetti celebration, plus a note
   asking guests to call/text if they can't come.
 - **Footer** — thank-you note, a Hafez couplet, share/copy-link/download-as-image,
@@ -37,8 +40,9 @@ wedding-invitation/
   download with a 3-day-before reminder alarm baked in), "Download as Image"
   (canvas-generated Persian keepsake card), background music toggle (persisted).
 
-The Love Story timeline, photo gallery, and gift registry sections from the
-original template were intentionally left out for this invitation.
+The Love Story timeline, day-of-event timeline, photo gallery, and gift
+registry sections from the original template were intentionally left out for
+this invitation.
 
 ## Customizing
 
@@ -48,12 +52,11 @@ original template were intentionally left out for this invitation.
    Gregorian `2026-08-30T19:00:00+03:30`) — update those if the date changes.
 2. **Colors** — all palette values are CSS custom properties at the top of
    `css/style.css` (`:root` for light, `:root[data-theme="dark"]` for dark).
-3. **Fonts** — Aref Ruqaa (names/titles), Noto Naskh Arabic (quotes/poem),
-   Vazirmatn (UI/body) — all loaded from Google Fonts, full Persian coverage.
-4. **Map** — the location section currently shows a static styled card
-   instead of an embedded map iframe. If you have a real address geocoded,
-   you can swap `.map-wrap.map-static` back to a Google Maps `<iframe>` (see
-   git history for the original markup).
+3. **Fonts** — Noto Nastaliq Urdu (names/titles/quotes), Vazirmatn (UI/body) —
+   both loaded from Google Fonts, full Persian coverage.
+4. **Map** — the `iframe` in `#location` uses a plain text-search embed
+   (`google.com/maps?q=...&output=embed`, no API key). Update the `q=`
+   query (and the two button `href`s below it) if the address changes.
 5. **Music** — `#bgAudio` currently points at an externally-hosted MP3 URL
    (not bundled in this repo). Replace the `<source src="...">` in
    `index.html` with your own licensed/royalty-free track's URL, or a local
@@ -71,7 +74,7 @@ original template were intentionally left out for this invitation.
 - [GSAP](https://gsap.com/) + ScrollTrigger for motion (CDN), with an
   IntersectionObserver + CSS-transition fallback if the CDN is unreachable.
 - [qrcode](https://github.com/soldair/node-qrcode) for QR generation (CDN).
-- Google Fonts: Aref Ruqaa, Noto Naskh Arabic, Vazirmatn.
+- Google Fonts: Noto Nastaliq Urdu, Vazirmatn.
 
 ## Accessibility & performance notes
 

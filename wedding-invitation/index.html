@@ -15,7 +15,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Aref+Ruqaa:wght@400;700&family=Noto+Naskh+Arabic:wght@400;500;600&family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;500;700&family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <link rel="stylesheet" href="css/style.css">
 </head>
@@ -60,7 +60,13 @@
 <!-- ============ هیرو ============ -->
 <header class="hero" id="hero">
   <div class="hero-canvas-wrap" aria-hidden="true">
+    <div class="hero-aurora">
+      <span class="aurora-blob b1"></span>
+      <span class="aurora-blob b2"></span>
+      <span class="aurora-blob b3"></span>
+    </div>
     <canvas id="particles"></canvas>
+    <div class="hero-spotlight" id="heroSpotlight"></div>
     <div class="hero-glow"></div>
     <div class="hero-vignette"></div>
   </div>
@@ -191,51 +197,6 @@
   </button>
 </section>
 
-<!-- ============ برنامه مجلس ============ -->
-<section class="section day-timeline" id="schedule">
-  <div class="section-head reveal-up">
-    <span class="kicker">برنامه شب</span>
-    <h2 class="section-title">ترتیب برنامه مجلس</h2>
-  </div>
-
-  <div class="schedule-list">
-    <div class="schedule-item reveal-up">
-      <span class="schedule-time">۱۹:۰۰</span>
-      <div class="schedule-line" aria-hidden="true"></div>
-      <div class="schedule-body"><h4>خوش‌آمدگویی و پذیرایی</h4><p>استقبال از مهمانان عزیز</p></div>
-    </div>
-    <div class="schedule-item reveal-up">
-      <span class="schedule-time">۱۹:۳۰</span>
-      <div class="schedule-line" aria-hidden="true"></div>
-      <div class="schedule-body"><h4>اجرای موسیقی زنده</h4><p>شروع فضای شاد مجلس</p></div>
-    </div>
-    <div class="schedule-item reveal-up">
-      <span class="schedule-time">۲۰:۳۰</span>
-      <div class="schedule-line" aria-hidden="true"></div>
-      <div class="schedule-body"><h4>سرو شام</h4><p>پذیرایی کامل از مهمانان</p></div>
-    </div>
-    <div class="schedule-item reveal-up">
-      <span class="schedule-time">۲۲:۰۰</span>
-      <div class="schedule-line" aria-hidden="true"></div>
-      <div class="schedule-body"><h4>برش کیک</h4><p>لحظه‌ای شیرین و به‌یادماندنی</p></div>
-    </div>
-    <div class="schedule-item reveal-up">
-      <span class="schedule-time">۲۲:۳۰</span>
-      <div class="schedule-line" aria-hidden="true"></div>
-      <div class="schedule-body"><h4>جشن و پایکوبی</h4><p>رقص و شادی تا پاسی از شب</p></div>
-    </div>
-    <div class="schedule-item reveal-up">
-      <span class="schedule-time">۰۰:۰۰</span>
-      <div class="schedule-line" aria-hidden="true"></div>
-      <div class="schedule-body"><h4>خداحافظی</h4><p>سپاس از حضور گرم‌تان</p></div>
-    </div>
-  </div>
-</section>
-
-<div class="section-divider" aria-hidden="true">
-  <svg viewBox="0 0 300 40" preserveAspectRatio="none"><path d="M0 20 Q 75 0 150 20 T 300 20" /></svg>
-</div>
-
 <!-- ============ مکان مراسم ============ -->
 <section class="section location" id="location">
   <div class="section-head reveal-up">
@@ -244,12 +205,14 @@
     <p class="section-sub">پیوندسرا خاطره &middot; جاده باغرود</p>
   </div>
 
-  <div class="map-wrap map-static reveal-up glass">
-    <div class="map-static-pin">
-      <svg viewBox="0 0 24 24" width="44" height="44"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 12 2.5a7 7 0 0 1 7 7C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>
-      <p>پیوندسرا خاطره</p>
-      <span>جاده باغرود</span>
-    </div>
+  <div class="map-wrap reveal-up glass">
+    <iframe
+      title="نقشه پیوندسرا خاطره"
+      src="https://www.google.com/maps?q=%D8%AC%D8%A7%D8%AF%D9%87%20%D8%A8%D8%A7%D8%BA%D8%B1%D9%88%D8%AF%D8%8C%20%D9%BE%DB%8C%D9%88%D9%86%D8%AF%D8%B3%D8%B1%D8%A7%20%D8%AE%D8%A7%D8%B7%D8%B1%D9%87&output=embed"
+      loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade"
+      allowfullscreen>
+    </iframe>
   </div>
 
   <div class="map-actions reveal-up">

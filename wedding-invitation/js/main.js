@@ -91,6 +91,26 @@
   }
 
   /* ---------------------------------------------------------------------
+     هاله نرم دنبال‌کننده موس در هیرو (فقط دستگاه‌های دارای موس)
+     --------------------------------------------------------------------- */
+  function initHeroSpotlight() {
+    const hero = $('#hero');
+    const spotlight = $('#heroSpotlight');
+    if (!hero || !spotlight) return;
+    if (prefersReducedMotion || !window.matchMedia('(hover: hover)').matches) return;
+
+    hero.addEventListener('mousemove', e => {
+      const rect = hero.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      spotlight.style.setProperty('--mx', x + '%');
+      spotlight.style.setProperty('--my', y + '%');
+      spotlight.classList.add('is-active');
+    });
+    hero.addEventListener('mouseleave', () => spotlight.classList.remove('is-active'));
+  }
+
+  /* ---------------------------------------------------------------------
      ذرات طلایی شناور در پس‌زمینه هیرو
      --------------------------------------------------------------------- */
   function initParticles() {
@@ -518,8 +538,8 @@
       ctx.fillText('دعوت به جشن عروسی', w / 2, 330);
 
       ctx.fillStyle = '#2b2620';
-      ctx.font = '700 130px "Aref Ruqaa", serif';
-      ctx.fillText('یگانه و علی', w / 2, 490);
+      ctx.font = '700 120px "Noto Nastaliq Urdu", serif';
+      ctx.fillText('یگانه و علی', w / 2, 500);
 
       ctx.strokeStyle = '#b8894f';
       ctx.beginPath();
@@ -533,11 +553,11 @@
       ctx.fillText('پیوندسرا خاطره، جاده باغرود', w / 2, 685);
 
       ctx.fillStyle = '#2b2620';
-      ctx.font = '400 34px "Noto Naskh Arabic", serif';
-      wrapText(ctx, '«دو دل که به‌هم می‌رسند، زیباترین فصل زندگی از همان‌جا آغاز می‌شود.»', w / 2, 840, 760, 52);
+      ctx.font = '400 34px "Noto Nastaliq Urdu", serif';
+      wrapText(ctx, '«دو دل که به‌هم می‌رسند، زیباترین فصل زندگی از همان‌جا آغاز می‌شود.»', w / 2, 840, 760, 58);
 
       ctx.fillStyle = '#b8894f';
-      ctx.font = '700 30px "Aref Ruqaa", serif';
+      ctx.font = '700 32px "Noto Nastaliq Urdu", serif';
       ctx.fillText('ی ع', w / 2, h - 120);
 
       const link = document.createElement('a');
@@ -574,6 +594,7 @@
     initTheme();
     initScrollChrome();
     initParticles();
+    initHeroSpotlight();
     initCountdown();
     initRsvp();
     initAudio();
