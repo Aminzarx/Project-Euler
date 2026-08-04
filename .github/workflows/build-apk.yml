@@ -35,6 +35,8 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
         working-directory: android-app
+        env:
+          APP_VERSION_CODE: ${{ github.run_number }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

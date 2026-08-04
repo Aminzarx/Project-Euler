@@ -30,6 +30,7 @@ private object Keys {
     val INSTAGRAM = stringPreferencesKey("instagram")
     val TELEGRAM = stringPreferencesKey("telegram")
     val THEME_PREFERENCE = stringPreferencesKey("theme_preference")
+    val RECENT_SEARCHES = stringPreferencesKey("recent_searches")
 }
 
 /**
@@ -118,5 +119,27 @@ class ProfileRepository(private val context: Context) {
 
     suspend fun setThemePreference(preference: ThemePreference) {
         context.appDataStore.edit { prefs -> prefs[Keys.THEME_PREFERENCE] = preference.name }
+    }
+}
+
+class SearchHistoryRepository(private val context: Context) {
+    val recentSearches: Flow<List<String>> = context.appDataStore.data.map { prefs ->
+        prefs[Keys.RECENT_SEARCHES]?.split(SEARCH_DELIMITER)?.filter { it.isNotBlank() } ?: emptyList()
+    }
+
+    suspend fun addSearch(query: String) {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) return
+        val current = recentSearches.first()
+        val updated = (listOf(trimmed) + current.filterNot { it.equals(trimmed, ignoreCase = true) }).take(5)
+        context.appDataStore.edit { prefs -> prefs[Keys.RECENT_SEARCHES] = updated.joinToString(SEARCH_DELIMITER) }
+    }
+
+    suspend fun clear() {
+        context.appDataStore.edit { prefs -> prefs[Keys.RECENT_SEARCHES] = "" }
+    }
+
+    private companion object {
+        const val SEARCH_DELIMITER = "|||"
     }
 }

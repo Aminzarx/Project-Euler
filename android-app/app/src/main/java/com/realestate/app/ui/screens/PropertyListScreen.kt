@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -43,10 +44,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.data.DealType
+import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
 import com.realestate.app.ui.components.PropertyCard
 import com.realestate.app.ui.components.label
@@ -63,6 +67,7 @@ fun PropertyListScreen(
     val properties by viewModel.filteredProperties.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val cities by viewModel.availableCities.collectAsStateWithLifecycle()
+    val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
     var showFilterSheet by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -89,10 +94,33 @@ fun PropertyListScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                placeholder = { Text("جستجو بر اساس عنوان، شهر یا آدرس") },
+                placeholder = { Text("جستجو بر اساس عنوان، شهر، آدرس یا کد ملک") },
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                singleLine = true
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(
+                    onSearch = { viewModel.recordSearch(filter.query) }
+                )
             )
+
+            if (filter.query.isBlank() && recentSearches.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    recentSearches.forEach { recent ->
+                        FilterChip(
+                            selected = false,
+                            onClick = { viewModel.updateFilter(filter.copy(query = recent)) },
+                            label = { Text(recent) }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
 
             Row(
                 modifier = Modifier
@@ -125,7 +153,7 @@ fun PropertyListScreen(
                     Text(
                         "با این مشخصات ملکی پیدا نشد — فیلترها رو یه بار امتحان کن",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 32.dp)
                     )
                 }
@@ -175,10 +203,12 @@ private fun FilterSheetContent(
 ) {
     var selectedCity by remember(filter) { mutableStateOf(filter.city) }
     var selectedType by remember(filter) { mutableStateOf(filter.propertyType) }
+    var selectedStatus by remember(filter) { mutableStateOf(filter.status) }
     var minPrice by remember(filter) { mutableStateOf(filter.minPrice?.toString() ?: "") }
     var maxPrice by remember(filter) { mutableStateOf(filter.maxPrice?.toString() ?: "") }
     var cityMenuExpanded by remember { mutableStateOf(false) }
     var typeMenuExpanded by remember { mutableStateOf(false) }
+    var statusMenuExpanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
         Text("فیلترها", style = MaterialTheme.typography.titleLarge)
@@ -234,6 +264,31 @@ private fun FilterSheetContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        ExposedDropdownMenuBox(expanded = statusMenuExpanded, onExpandedChange = { statusMenuExpanded = it }) {
+            OutlinedTextField(
+                value = selectedStatus?.label() ?: "همه وضعیت‌ها",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("وضعیت") },
+                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusMenuExpanded) }
+            )
+            DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }) {
+                DropdownMenuItem(text = { Text("همه وضعیت‌ها") }, onClick = {
+                    selectedStatus = null
+                    statusMenuExpanded = false
+                })
+                PropertyStatus.entries.forEach { entry ->
+                    DropdownMenuItem(text = { Text(entry.label()) }, onClick = {
+                        selectedStatus = entry
+                        statusMenuExpanded = false
+                    })
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
                 value = minPrice,
@@ -263,6 +318,7 @@ private fun FilterSheetContent(
                         filter.copy(
                             city = selectedCity,
                             propertyType = selectedType,
+                            status = selectedStatus,
                             minPrice = minPrice.toLongOrNull(),
                             maxPrice = maxPrice.toLongOrNull()
                         )

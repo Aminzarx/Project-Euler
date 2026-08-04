@@ -7,6 +7,8 @@ enum class DealType { SALE, RENT }
 
 enum class PropertyType { APARTMENT, VILLA, LAND, OFFICE, SHOP }
 
+enum class PropertyStatus { NEW, READY, ACTIVE, NEGOTIATING, RESERVED, SOLD, RENTED, ARCHIVED }
+
 @Entity(tableName = "properties")
 data class Property(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -17,11 +19,22 @@ data class Property(
     val rooms: Int,
     val city: String,
     val address: String,
+    val ownerName: String = "",
     val ownerPhone: String,
     val dealType: DealType,
     val propertyType: PropertyType,
+    val status: PropertyStatus = PropertyStatus.NEW,
+    val tags: List<String> = emptyList(),
     val imageUri: String? = null,
     val isFavorite: Boolean = false,
+    val isPinned: Boolean = false,
+    val favoriteFolder: String? = null,
     val dateAdded: Long = System.currentTimeMillis(),
-    val lastViewedAt: Long? = null
+    val lastModifiedAt: Long = System.currentTimeMillis(),
+    val lastViewedAt: Long? = null,
+    val lastSharedAt: Long? = null
 )
+
+/** Derived, human-readable identifier - never stored, always computed from [Property.id]. */
+val Property.code: String
+    get() = "PR-%04d".format(id)

@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,7 +76,31 @@ fun PropertyCard(
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = property.title, style = MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(property.status.color())
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = property.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (property.isPinned) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            Icons.Filled.PushPin,
+                            contentDescription = "سنجاق‌شده",
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
                 Text(
                     text = "${property.city} · ${property.address}",
                     style = MaterialTheme.typography.bodySmall,

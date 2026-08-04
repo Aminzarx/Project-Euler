@@ -11,12 +11,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -38,18 +41,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.ui.components.PropertyMiniCard
 import com.realestate.app.ui.theme.heroGradient
 import com.realestate.app.viewmodel.PropertyViewModel
+import com.realestate.app.viewmodel.WalletViewModel
+import java.text.NumberFormat
+import java.util.Locale
 
 @Composable
 fun HomeScreen(
     viewModel: PropertyViewModel,
+    walletViewModel: WalletViewModel,
     onPropertyClick: (Long) -> Unit,
     onAddClick: () -> Unit,
     onSearchClick: () -> Unit,
-    onSeeAllFavoritesClick: () -> Unit
+    onSeeAllFavoritesClick: () -> Unit,
+    onOpenWallet: () -> Unit
 ) {
     val allProperties by viewModel.allProperties.collectAsStateWithLifecycle()
     val recentlyViewed by viewModel.recentlyViewedProperties.collectAsStateWithLifecycle()
     val favorites by viewModel.favoriteProperties.collectAsStateWithLifecycle()
+    val pinned by viewModel.pinnedProperties.collectAsStateWithLifecycle()
+    val balance by walletViewModel.balance.collectAsStateWithLifecycle()
 
     Scaffold(
         floatingActionButton = {
@@ -93,6 +103,49 @@ fun HomeScreen(
                         text = "جستجوی سریع ملک...",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                    .clickable(onClick = onOpenWallet)
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Filled.AccountBalanceWallet,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("کیف پول", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                    Text(
+                        "${NumberFormat.getNumberInstance(Locale.US).format(balance)} تومان",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+                TextButton(onClick = onOpenWallet) { Text("مشاهده") }
+            }
+
+            if (pinned.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(24.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.PushPin, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "سنجاق‌شده", style = MaterialTheme.typography.titleMedium)
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(pinned, key = { it.id }) { property ->
+                        PropertyMiniCard(property = property, onClick = { onPropertyClick(property.id) })
+                    }
                 }
             }
 

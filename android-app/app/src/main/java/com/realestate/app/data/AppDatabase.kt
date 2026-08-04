@@ -7,14 +7,24 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.realestate.app.data.property.Note
+import com.realestate.app.data.property.NoteDao
+import com.realestate.app.data.property.TimelineDao
+import com.realestate.app.data.property.TimelineEvent
 import com.realestate.app.data.wallet.WalletDao
 import com.realestate.app.data.wallet.WalletTransaction
 
-@Database(entities = [Property::class, WalletTransaction::class], version = 3, exportSchema = false)
+@Database(
+    entities = [Property::class, WalletTransaction::class, Note::class, TimelineEvent::class],
+    version = 4,
+    exportSchema = false
+)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun propertyDao(): PropertyDao
     abstract fun walletDao(): WalletDao
+    abstract fun noteDao(): NoteDao
+    abstract fun timelineDao(): TimelineDao
 
     companion object {
         private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -41,6 +51,39 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE properties ADD COLUMN ownerName TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE properties ADD COLUMN status TEXT NOT NULL DEFAULT 'NEW'")
+                db.execSQL("ALTER TABLE properties ADD COLUMN tags TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE properties ADD COLUMN isPinned INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE properties ADD COLUMN favoriteFolder TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN lastModifiedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE properties ADD COLUMN lastSharedAt INTEGER")
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `notes` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `propertyId` INTEGER NOT NULL,
+                        `content` TEXT NOT NULL,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `timeline_events` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `propertyId` INTEGER NOT NULL,
+                        `type` TEXT NOT NULL,
+                        `description` TEXT NOT NULL,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -50,7 +93,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "real_estate.db"
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { INSTANCE = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build().also { INSTANCE = it }
             }
         }
     }

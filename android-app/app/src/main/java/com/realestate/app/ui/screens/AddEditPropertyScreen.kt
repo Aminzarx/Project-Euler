@@ -9,18 +9,23 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -46,17 +51,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.realestate.app.data.DealType
 import com.realestate.app.data.Property
+import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
 import com.realestate.app.ui.components.label
 import com.realestate.app.viewmodel.PropertyViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddEditPropertyScreen(
     propertyId: Long?,
@@ -69,6 +76,7 @@ fun AddEditPropertyScreen(
     } else {
         remember { mutableStateOf<Property?>(null) }
     }
+    val allTags by viewModel.allTags.collectAsStateWithLifecycle()
 
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -77,12 +85,17 @@ fun AddEditPropertyScreen(
     var rooms by remember { mutableStateOf("") }
     var city by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
+    var ownerName by remember { mutableStateOf("") }
     var ownerPhone by remember { mutableStateOf("") }
     var dealType by remember { mutableStateOf(DealType.SALE) }
     var propertyType by remember { mutableStateOf(PropertyType.APARTMENT) }
+    var status by remember { mutableStateOf(PropertyStatus.NEW) }
+    var tags by remember { mutableStateOf<List<String>>(emptyList()) }
+    var tagInput by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<String?>(null) }
     var loadedExisting by remember { mutableStateOf(false) }
     var typeMenuExpanded by remember { mutableStateOf(false) }
+    var statusMenuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(existing) {
         val p = existing
@@ -94,9 +107,12 @@ fun AddEditPropertyScreen(
             rooms = p.rooms.toString()
             city = p.city
             address = p.address
+            ownerName = p.ownerName
             ownerPhone = p.ownerPhone
             dealType = p.dealType
             propertyType = p.propertyType
+            status = p.status
+            tags = p.tags
             imageUri = p.imageUri
             loadedExisting = true
         }
@@ -222,6 +238,14 @@ fun AddEditPropertyScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             OutlinedTextField(
+                value = ownerName,
+                onValueChange = { ownerName = it },
+                label = { Text("نام مالک") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
                 value = city,
                 onValueChange = { city = it },
                 label = { Text("شهر") },
@@ -273,6 +297,79 @@ fun AddEditPropertyScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(12.dp))
+
+            ExposedDropdownMenuBox(expanded = statusMenuExpanded, onExpandedChange = { statusMenuExpanded = it }) {
+                OutlinedTextField(
+                    value = status.label(),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("وضعیت") },
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusMenuExpanded) }
+                )
+                DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }) {
+                    PropertyStatus.entries.forEach { entry ->
+                        DropdownMenuItem(text = { Text(entry.label()) }, onClick = {
+                            status = entry
+                            statusMenuExpanded = false
+                        })
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text("برچسب‌ها", style = MaterialTheme.typography.labelLarge)
+            Spacer(modifier = Modifier.height(6.dp))
+            if (tags.isNotEmpty()) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    tags.forEach { tag ->
+                        AssistChip(
+                            onClick = { tags = tags - tag },
+                            label = { Text(tag) },
+                            trailingIcon = {
+                                Icon(Icons.Filled.Close, contentDescription = "حذف برچسب", modifier = Modifier.size(16.dp))
+                            }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+            OutlinedTextField(
+                value = tagInput,
+                onValueChange = { tagInput = it },
+                label = { Text("افزودن برچسب") },
+                placeholder = { Text("مثلاً فوری، VIP") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                modifier = Modifier.fillMaxWidth()
+            )
+            val tagSuggestions = allTags.filterNot { tags.contains(it) }
+            if (tagInput.isNotBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    modifier = Modifier.clickable {
+                        tags = tags + tagInput.trim()
+                        tagInput = ""
+                    },
+                    text = "افزودن «${tagInput.trim()}»",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else if (tagSuggestions.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    tagSuggestions.take(8).forEach { suggestion ->
+                        FilterChip(
+                            selected = false,
+                            onClick = { tags = tags + suggestion },
+                            label = { Text(suggestion) }
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
@@ -286,11 +383,19 @@ fun AddEditPropertyScreen(
                         rooms = rooms.toIntOrNull() ?: 0,
                         city = city.trim(),
                         address = address.trim(),
+                        ownerName = ownerName.trim(),
                         ownerPhone = ownerPhone.trim(),
                         dealType = dealType,
                         propertyType = propertyType,
+                        status = status,
+                        tags = tags,
                         imageUri = imageUri,
-                        isFavorite = existing?.isFavorite ?: false
+                        isFavorite = existing?.isFavorite ?: false,
+                        isPinned = existing?.isPinned ?: false,
+                        favoriteFolder = existing?.favoriteFolder,
+                        dateAdded = existing?.dateAdded ?: System.currentTimeMillis(),
+                        lastViewedAt = existing?.lastViewedAt,
+                        lastSharedAt = existing?.lastSharedAt
                     )
                     if (isEditMode) {
                         viewModel.updateProperty(newProperty)
