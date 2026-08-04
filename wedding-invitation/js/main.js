@@ -1,24 +1,28 @@
 /* ==========================================================================
-   Elena & Daniel — Wedding Invitation
-   Vanilla JS + GSAP. No build step, no backend.
+   یگانه و علی — دعوت‌نامه عروسی
+   Vanilla JS + GSAP. بدون مرحله بیلد، بدون بک‌اند.
    ========================================================================== */
 (() => {
   'use strict';
 
   /* ---------------------------------------------------------------------
-     Config
+     تنظیمات
      --------------------------------------------------------------------- */
-  const WEDDING_DATE = new Date('2026-11-14T17:00:00+01:00');
-  const WEDDING_END = new Date('2026-11-15T00:30:00+01:00');
-  const VENUE = 'Villa Serrano, Via del Lago 14, 22021, Lake Como, Italy';
+  const WEDDING_DATE = new Date('2026-08-30T19:00:00+03:30'); // یکشنبه ۸ شهریور ۱۴۰۵، ساعت ۱۹:۰۰ (IRST)
+  const WEDDING_END = new Date('2026-08-30T23:30:00+03:30');
+  const VENUE = 'پیوندسرا خاطره، جاده باغرود';
+  const CONTACT_PHONE = '۰۹۱۵۲۰۳۴۲۶۱';
   const INVITE_URL = window.location.href.split('#')[0];
 
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+  const toFa = n => String(n).replace(/[0-9]/g, d => FA_DIGITS[d]);
+
   /* ---------------------------------------------------------------------
-     Toast helper
+     پیام کوتاه (Toast)
      --------------------------------------------------------------------- */
   let toastTimer;
   function showToast(message) {
@@ -31,18 +35,18 @@
   }
 
   /* ---------------------------------------------------------------------
-     Loading screen
+     صفحه بارگذاری
      --------------------------------------------------------------------- */
   function initLoader() {
     const loader = $('#loader');
     if (!loader) return;
     const hide = () => loader.classList.add('is-hidden');
     window.addEventListener('load', () => setTimeout(hide, 900));
-    setTimeout(hide, 3200); // safety fallback
+    setTimeout(hide, 3200); // پشتیبان ایمنی
   }
 
   /* ---------------------------------------------------------------------
-     Theme toggle (persisted)
+     تغییر پوسته (ذخیره‌شده)
      --------------------------------------------------------------------- */
   function initTheme() {
     const root = document.documentElement;
@@ -61,7 +65,7 @@
   }
 
   /* ---------------------------------------------------------------------
-     Scroll progress + back to top
+     نوار پیشرفت اسکرول + بازگشت به بالا
      --------------------------------------------------------------------- */
   function initScrollChrome() {
     const bar = $('#scrollProgressBar');
@@ -82,12 +86,12 @@
     });
 
     $('#scrollCue')?.addEventListener('click', () => {
-      $('#story')?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+      $('#details')?.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth' });
     });
   }
 
   /* ---------------------------------------------------------------------
-     Hero particles — soft floating gold dust on canvas
+     ذرات طلایی شناور در پس‌زمینه هیرو
      --------------------------------------------------------------------- */
   function initParticles() {
     const canvas = $('#particles');
@@ -146,7 +150,7 @@
   }
 
   /* ---------------------------------------------------------------------
-     GSAP reveal animations
+     انیمیشن‌های GSAP (با پشتیبان IntersectionObserver)
      --------------------------------------------------------------------- */
   function initFallbackReveal() {
     const heroEls = $$('.hero .reveal-line, .reveal-name');
@@ -178,7 +182,6 @@
     gsap.registerPlugin(ScrollTrigger);
     const ease = 'power3.out';
 
-    // Hero intro timeline
     const tl = gsap.timeline({ delay: prefersReducedMotion ? 0 : 1.1 });
     tl.to('.reveal-name', {
       opacity: 1, y: 0, duration: 1.1, stagger: 0.15, ease,
@@ -189,7 +192,6 @@
     gsap.set('.reveal-name', { y: 40 });
     gsap.set('.hero .reveal-line', { y: 18 });
 
-    // Scroll-triggered reveals
     $$('.reveal-up').forEach(el => {
       gsap.fromTo(el, { opacity: 0, y: 34 }, {
         opacity: 1, y: 0, duration: 1, ease,
@@ -204,35 +206,26 @@
       });
     });
 
-    // Parallax hero glow
     gsap.to('.hero-glow', {
       yPercent: 20, ease: 'none',
       scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
     });
-
-    // Gallery item stagger
-    gsap.utils.toArray('.gallery-item').forEach((el, i) => {
-      gsap.fromTo(el, { opacity: 0, y: 24 }, {
-        opacity: 1, y: 0, duration: 0.7, delay: (i % 4) * 0.06, ease,
-        scrollTrigger: { trigger: el, start: 'top 92%' },
-      });
-    });
   }
 
   /* ---------------------------------------------------------------------
-     Countdown
+     شمارش معکوس
      --------------------------------------------------------------------- */
   function initCountdown() {
     const els = {
       d: $('#cd-days'), h: $('#cd-hours'), m: $('#cd-mins'), s: $('#cd-secs'),
     };
     if (!els.d) return;
-    const pad = n => String(Math.max(0, n)).padStart(2, '0');
+    const pad = n => toFa(String(Math.max(0, n)).padStart(2, '0'));
 
     function tick() {
       const diff = WEDDING_DATE.getTime() - Date.now();
       if (diff <= 0) {
-        els.d.textContent = els.h.textContent = els.m.textContent = els.s.textContent = '00';
+        els.d.textContent = els.h.textContent = els.m.textContent = els.s.textContent = toFa('00');
         clearInterval(timer);
         return;
       }
@@ -250,81 +243,17 @@
   }
 
   /* ---------------------------------------------------------------------
-     Gallery — generated elegant placeholder frames + lightbox
-     --------------------------------------------------------------------- */
-  const GALLERY = [
-    { caption: 'Florence, where it began', cls: 'tall', tone: 'linear-gradient(155deg,#d9b382,#8a6a45)' },
-    { caption: 'The proposal, at sunset', cls: 'wide', tone: 'linear-gradient(155deg,#c98f7a,#8a5346)' },
-    { caption: 'Villa Serrano gardens', cls: '', tone: 'linear-gradient(155deg,#45594c,#2f3f35)' },
-    { caption: 'Lake Como mornings', cls: '', tone: 'linear-gradient(155deg,#8a8378,#5a5548)' },
-    { caption: 'Engagement portraits', cls: 'tall', tone: 'linear-gradient(155deg,#ece3d4,#c9b48f)' },
-    { caption: 'A quiet evening together', cls: '', tone: 'linear-gradient(155deg,#b8894f,#6f532c)' },
-    { caption: 'Family gathering, 2025', cls: 'wide', tone: 'linear-gradient(155deg,#d9b382,#c98f7a)' },
-    { caption: 'Details of the day to come', cls: '', tone: 'linear-gradient(155deg,#2f3f35,#45594c)' },
-  ];
-
-  function initGallery() {
-    const grid = $('#galleryGrid');
-    if (!grid) return;
-    grid.innerHTML = GALLERY.map((g, i) => `
-      <div class="gallery-item ${g.cls}" data-index="${i}" style="background-image:${g.tone}">
-        <span class="gi-label">${g.caption}</span>
-      </div>
-    `).join('');
-
-    const items = $$('.gallery-item', grid);
-    const lightbox = $('#lightbox');
-    const imgEl = $('#lightboxImg');
-    const capEl = $('#lightboxCaption');
-    let current = 0;
-
-    function open(i) {
-      current = i;
-      render();
-      lightbox.classList.add('is-open');
-      lightbox.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
-    }
-    function close() {
-      lightbox.classList.remove('is-open');
-      lightbox.setAttribute('aria-hidden', 'true');
-      document.body.style.overflow = '';
-    }
-    function render() {
-      const g = GALLERY[current];
-      imgEl.style.backgroundImage = g.tone;
-      capEl.textContent = g.caption;
-    }
-    function step(dir) {
-      current = (current + dir + GALLERY.length) % GALLERY.length;
-      render();
-    }
-
-    items.forEach(el => el.addEventListener('click', () => open(Number(el.dataset.index))));
-    $('#lightboxClose')?.addEventListener('click', close);
-    $('#lightboxPrev')?.addEventListener('click', () => step(-1));
-    $('#lightboxNext')?.addEventListener('click', () => step(1));
-    lightbox?.addEventListener('click', e => { if (e.target === lightbox) close(); });
-    document.addEventListener('keydown', e => {
-      if (!lightbox.classList.contains('is-open')) return;
-      if (e.key === 'Escape') close();
-      if (e.key === 'ArrowLeft') step(-1);
-      if (e.key === 'ArrowRight') step(1);
-    });
-  }
-
-  /* ---------------------------------------------------------------------
-     RSVP form
+     فرم اعلام حضور (RSVP)
      --------------------------------------------------------------------- */
   function initRsvp() {
     const form = $('#rsvpForm');
     if (!form) return;
 
     const validators = {
-      guestName: v => v.trim().length >= 2 || 'Please enter your full name.',
-      guestPhone: v => /^[0-9+()\-.\s]{7,}$/.test(v.trim()) || 'Please enter a valid phone number.',
-      guestCount: v => !!v || 'Please select the number of guests.',
-      attendance: v => !!v || 'Please let us know if you can attend.',
+      guestName: v => v.trim().length >= 2 || 'لطفاً نام و نام خانوادگی خود را وارد کنید.',
+      guestPhone: v => /^[0-9۰-۹+()\-.\s]{7,}$/.test(v.trim()) || 'لطفاً یک شماره تماس معتبر وارد کنید.',
+      guestCount: v => !!v || 'لطفاً تعداد مهمانان را انتخاب کنید.',
+      attendance: v => !!v || 'لطفاً وضعیت حضور خود را مشخص کنید.',
     };
 
     function fieldValue(name) {
@@ -370,13 +299,13 @@
         form.classList.remove('is-submitting');
         form.classList.add('is-success');
         launchConfetti();
-        showToast('RSVP received — thank you!');
+        showToast('پاسخ شما با موفقیت ثبت شد');
       }, 1100);
     });
   }
 
   /* ---------------------------------------------------------------------
-     Confetti (canvas, lightweight, no dependency)
+     کانفتی (کانواس، بدون وابستگی خارجی)
      --------------------------------------------------------------------- */
   function launchConfetti() {
     if (prefersReducedMotion) return;
@@ -424,7 +353,7 @@
   }
 
   /* ---------------------------------------------------------------------
-     Audio toggle (muted by default, preference remembered)
+     دکمه پخش موسیقی (پیش‌فرض خاموش، ترجیح کاربر ذخیره می‌شود)
      --------------------------------------------------------------------- */
   function initAudio() {
     const btn = $('#audioToggle');
@@ -435,54 +364,48 @@
     const wanted = localStorage.getItem('wedding-audio') === 'on';
     if (wanted) {
       btn.classList.add('is-playing');
-      btn.setAttribute('aria-label', 'Pause background music');
+      btn.setAttribute('aria-label', 'توقف موسیقی');
     }
 
     btn.addEventListener('click', () => {
       if (audio.paused) {
         audio.play().catch(() => {
-          showToast('Add your own track at assets/audio/wedding-theme.mp3');
+          showToast('پخش موسیقی امکان‌پذیر نشد');
         });
         btn.classList.add('is-playing');
-        btn.setAttribute('aria-label', 'Pause background music');
+        btn.setAttribute('aria-label', 'توقف موسیقی');
         localStorage.setItem('wedding-audio', 'on');
       } else {
         audio.pause();
         btn.classList.remove('is-playing');
-        btn.setAttribute('aria-label', 'Play background music');
+        btn.setAttribute('aria-label', 'پخش موسیقی');
         localStorage.setItem('wedding-audio', 'off');
       }
     });
   }
 
   /* ---------------------------------------------------------------------
-     Share + copy link
+     اشتراک‌گذاری + کپی لینک
      --------------------------------------------------------------------- */
   function initShare() {
     const shareData = {
-      title: 'Elena & Daniel — November 14, 2026',
-      text: 'You are invited to our wedding celebration.',
+      title: 'یگانه و علی — ۸ شهریور ۱۴۰۵',
+      text: 'دعوت به جشن عروسی ما',
       url: INVITE_URL,
     };
 
     $('#shareToggle')?.addEventListener('click', async () => {
       if (navigator.share) {
-        try { await navigator.share(shareData); } catch (_) { /* user cancelled */ }
+        try { await navigator.share(shareData); } catch (_) { /* لغو شده توسط کاربر */ }
       } else {
         copyToClipboard(INVITE_URL);
-        showToast('Invitation link copied to clipboard');
+        showToast('لینک دعوت‌نامه کپی شد');
       }
     });
 
     $('#copyLink')?.addEventListener('click', () => {
       copyToClipboard(INVITE_URL);
-      showToast('Invitation link copied to clipboard');
-    });
-
-    $('#copyIban')?.addEventListener('click', () => {
-      const iban = $('#ibanValue')?.textContent.replace(/\s/g, '') || '';
-      copyToClipboard(iban);
-      showToast('IBAN copied to clipboard');
+      showToast('لینک دعوت‌نامه کپی شد');
     });
   }
 
@@ -505,7 +428,7 @@
   }
 
   /* ---------------------------------------------------------------------
-     Add to calendar (.ics download)
+     افزودن به تقویم (دانلود .ics) با یادآوری ۳ روز قبل
      --------------------------------------------------------------------- */
   function initCalendar() {
     $('#addToCalendar')?.addEventListener('click', () => {
@@ -513,34 +436,39 @@
       const ics = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
-        'PRODID:-//Elena & Daniel Wedding//EN',
+        'PRODID:-//Yeganeh & Ali Wedding//FA',
         'BEGIN:VEVENT',
-        `UID:${Date.now()}@elena-daniel-wedding`,
+        `UID:${Date.now()}@yeganeh-ali-wedding`,
         `DTSTAMP:${fmt(new Date())}`,
         `DTSTART:${fmt(WEDDING_DATE)}`,
         `DTEND:${fmt(WEDDING_END)}`,
-        'SUMMARY:Elena & Daniel\'s Wedding',
+        'SUMMARY:جشن عروسی یگانه و علی',
         `LOCATION:${VENUE}`,
-        'DESCRIPTION:Ceremony at 5:00 PM followed by reception. We can\'t wait to celebrate with you.',
+        `DESCRIPTION:جشن عروسی یگانه و علی، ساعت ۱۹:۰۰. در صورت عدم امکان حضور لطفاً حداقل ۳ روز قبل با شماره ${CONTACT_PHONE} تماس بگیرید.`,
+        'BEGIN:VALARM',
+        'TRIGGER:-P3D',
+        'ACTION:DISPLAY',
+        'DESCRIPTION:۳ روز تا جشن عروسی یگانه و علی باقی مانده است.',
+        'END:VALARM',
         'END:VEVENT',
         'END:VCALENDAR',
       ].join('\r\n');
 
-      const blob = new Blob([ics], { type: 'text/calendar' });
+      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'elena-daniel-wedding.ics';
+      a.download = 'yeganeh-ali-wedding.ics';
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      showToast('Calendar event downloaded');
+      showToast('رویداد به همراه یادآوری در تقویم شما دانلود شد');
     });
   }
 
   /* ---------------------------------------------------------------------
-     QR codes (gift + invitation)
+     کد QR (دعوت‌نامه)
      --------------------------------------------------------------------- */
   function initQrCodes() {
     if (typeof QRCode === 'undefined') {
@@ -549,12 +477,6 @@
     }
     const opts = { width: 128, margin: 1, color: { dark: '#2b2620', light: '#ffffff' } };
 
-    const giftTarget = $('#giftQr');
-    if (giftTarget) {
-      QRCode.toCanvas(document.createElement('canvas'), 'IT60X05428111010000000123456', opts, (err, canvas) => {
-        if (!err) giftTarget.appendChild(canvas);
-      });
-    }
     const inviteTarget = $('#inviteQr');
     if (inviteTarget) {
       QRCode.toCanvas(document.createElement('canvas'), INVITE_URL, opts, (err, canvas) => {
@@ -564,14 +486,20 @@
   }
 
   /* ---------------------------------------------------------------------
-     Download invitation as image (canvas-generated keepsake card)
+     دانلود تصویر دعوت‌نامه (کارت یادگاری تولیدشده با کانواس)
      --------------------------------------------------------------------- */
   function initDownloadInvite() {
-    $('#downloadInvite')?.addEventListener('click', () => {
+    $('#downloadInvite')?.addEventListener('click', async () => {
+      if (document.fonts && document.fonts.ready) {
+        try { await document.fonts.ready; } catch (_) { /* ادامه با فونت پیش‌فرض */ }
+      }
+
       const w = 1080, h = 1350;
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       const ctx = canvas.getContext('2d');
+      ctx.direction = 'rtl';
+      ctx.textAlign = 'center';
 
       const grad = ctx.createLinearGradient(0, 0, 0, h);
       grad.addColorStop(0, '#f7f2ea');
@@ -585,39 +513,38 @@
       ctx.lineWidth = 1;
       ctx.strokeRect(64, 64, w - 128, h - 128);
 
-      ctx.textAlign = 'center';
       ctx.fillStyle = '#b8894f';
-      ctx.font = '400 26px Jost, sans-serif';
-      ctx.fillText('THE WEDDING CELEBRATION OF', w / 2, 340);
+      ctx.font = '500 30px Vazirmatn, sans-serif';
+      ctx.fillText('دعوت به جشن عروسی', w / 2, 330);
 
       ctx.fillStyle = '#2b2620';
-      ctx.font = '500 120px "Cinzel", serif';
-      ctx.fillText('Elena & Daniel', w / 2, 480);
+      ctx.font = '700 130px "Aref Ruqaa", serif';
+      ctx.fillText('یگانه و علی', w / 2, 490);
 
       ctx.strokeStyle = '#b8894f';
       ctx.beginPath();
-      ctx.moveTo(w / 2 - 90, 540);
-      ctx.lineTo(w / 2 + 90, 540);
+      ctx.moveTo(w / 2 - 90, 545);
+      ctx.lineTo(w / 2 + 90, 545);
       ctx.stroke();
 
       ctx.fillStyle = '#6f6759';
-      ctx.font = '300 34px Jost, sans-serif';
-      ctx.fillText('Saturday, November 14, 2026', w / 2, 620);
-      ctx.fillText('Lake Como, Italy', w / 2, 670);
+      ctx.font = '400 36px Vazirmatn, sans-serif';
+      ctx.fillText('یکشنبه ۸ شهریور ۱۴۰۵، ساعت ۱۹:۰۰', w / 2, 630);
+      ctx.fillText('پیوندسرا خاطره، جاده باغرود', w / 2, 685);
 
       ctx.fillStyle = '#2b2620';
-      ctx.font = 'italic 300 32px "Cormorant Garamond", serif';
-      wrapText(ctx, '"Two souls, one story — and the most beautiful chapter is only just beginning."', w / 2, 820, 760, 44);
+      ctx.font = '400 34px "Noto Naskh Arabic", serif';
+      wrapText(ctx, '«دو دل که به‌هم می‌رسند، زیباترین فصل زندگی از همان‌جا آغاز می‌شود.»', w / 2, 840, 760, 52);
 
       ctx.fillStyle = '#b8894f';
-      ctx.font = '500 22px "Cinzel", serif';
-      ctx.fillText('E & D', w / 2, h - 120);
+      ctx.font = '700 30px "Aref Ruqaa", serif';
+      ctx.fillText('ی ع', w / 2, h - 120);
 
       const link = document.createElement('a');
-      link.download = 'elena-daniel-invitation.png';
+      link.download = 'yeganeh-ali-invitation.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
-      showToast('Invitation image downloaded');
+      showToast('تصویر دعوت‌نامه دانلود شد');
     });
   }
 
@@ -640,14 +567,13 @@
   }
 
   /* ---------------------------------------------------------------------
-     Init
+     اجرا
      --------------------------------------------------------------------- */
   document.addEventListener('DOMContentLoaded', () => {
     initLoader();
     initTheme();
     initScrollChrome();
     initParticles();
-    initGallery();
     initCountdown();
     initRsvp();
     initAudio();
