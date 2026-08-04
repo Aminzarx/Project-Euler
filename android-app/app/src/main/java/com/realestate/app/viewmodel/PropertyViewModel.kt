@@ -12,9 +12,12 @@ import com.realestate.app.data.PropertyType
 import com.realestate.app.data.code
 import com.realestate.app.data.datastore.SearchHistoryRepository
 import com.realestate.app.data.property.PropertyExtrasRepository
+import com.realestate.app.data.property.TimelineEvent
 import com.realestate.app.data.property.TimelineEventType
 import com.realestate.app.ui.components.label
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -34,6 +37,19 @@ data class PropertyFilter(
     val tag: String? = null,
     val minPrice: Long? = null,
     val maxPrice: Long? = null
+)
+
+data class RecentActivity(
+    val event: TimelineEvent,
+    val propertyId: Long,
+    val propertyTitle: String
+)
+
+/** Last-used values from the most recently added property — prefilled into the add-property form. */
+data class SmartDefaults(
+    val city: String? = null,
+    val propertyType: PropertyType? = null,
+    val dealType: DealType? = null
 )
 
 class PropertyViewModel(application: Application) : AndroidViewModel(application) {
@@ -99,6 +115,39 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     val recentSearches: StateFlow<List<String>> = searchHistoryRepository.recentSearches
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val recentActivities: StateFlow<List<RecentActivity>> = combine(
+        extrasRepository.getRecentEvents(8), allProperties
+    ) { events, properties ->
+        val titleById = properties.associateBy({ it.id }, { it.title })
+        events.mapNotNull { event ->
+            val title = titleById[event.propertyId] ?: return@mapNotNull null
+            RecentActivity(event, event.propertyId, title)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Prefills for the add-property form, based on the most recently added property. */
+    val smartDefaults: StateFlow<SmartDefaults> = allProperties
+        .map { list ->
+            val last = list.maxByOrNull { it.dateAdded }
+            if (last == null) {
+                SmartDefaults()
+            } else {
+                SmartDefaults(city = last.city, propertyType = last.propertyType, dealType = last.dealType)
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SmartDefaults())
+
+    private var lastDeletedProperty: Property? = null
+    private val _deletionEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val deletionEvents: SharedFlow<String> = _deletionEvents
+
+    fun undoLastDelete() = viewModelScope.launch {
+        lastDeletedProperty?.let { property ->
+            repository.insert(property)
+            lastDeletedProperty = null
+        }
+    }
+
     fun updateFilter(newFilter: PropertyFilter) {
         _filter.value = newFilter
     }
@@ -138,7 +187,9 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun deleteProperty(property: Property) = viewModelScope.launch {
+        lastDeletedProperty = property
         repository.delete(property)
+        _deletionEvents.emit(property.title)
     }
 
     fun archiveProperty(property: Property) = viewModelScope.launch {

@@ -12,6 +12,8 @@ class PropertyExtrasRepository(
     fun getTimelineForProperty(propertyId: Long): Flow<List<TimelineEvent>> =
         timelineDao.getEventsForProperty(propertyId)
 
+    fun getRecentEvents(limit: Int): Flow<List<TimelineEvent>> = timelineDao.getRecentEvents(limit)
+
     suspend fun addNote(propertyId: Long, content: String): Long = noteDao.insert(
         Note(propertyId = propertyId, content = content)
     )

@@ -10,8 +10,13 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -67,7 +72,22 @@ fun RealEstateApp(
         currentRoute == Screen.Favorites.route ||
         currentRoute == Screen.Profile.route
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(viewModel) {
+        viewModel.deletionEvents.collect { propertyTitle ->
+            val result = snackbarHostState.showSnackbar(
+                message = "«$propertyTitle» حذف شد",
+                actionLabel = "بازگردانی",
+                duration = androidx.compose.material3.SnackbarDuration.Long
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.undoLastDelete()
+            }
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (showBottomBar) {
                 FloatingBottomNav(
@@ -109,13 +129,6 @@ fun RealEstateApp(
                     onAddClick = { navController.navigate(Screen.AddEdit.createRoute()) },
                     onSearchClick = {
                         navController.navigate(Screen.List.route) {
-                            popUpTo(Screen.Home.route) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onSeeAllFavoritesClick = {
-                        navController.navigate(Screen.Favorites.route) {
                             popUpTo(Screen.Home.route) { saveState = true }
                             launchSingleTop = true
                             restoreState = true

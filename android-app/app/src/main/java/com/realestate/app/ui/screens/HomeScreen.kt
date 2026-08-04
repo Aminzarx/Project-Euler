@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,9 +16,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Search
@@ -37,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.AppListRow
 import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.components.PropertyMiniCard
 import com.realestate.app.ui.theme.Spacing
@@ -44,8 +48,15 @@ import com.realestate.app.ui.theme.heroGradient
 import com.realestate.app.viewmodel.PropertyViewModel
 import com.realestate.app.viewmodel.WalletViewModel
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
+/**
+ * Home is a working desk, not a dashboard: search first, then the properties the agent is
+ * already touching (recently used, pinned), what just happened (recent activity), and the wallet.
+ * Nothing else competes for attention here — favorites has its own tab.
+ */
 @Composable
 fun HomeScreen(
     viewModel: PropertyViewModel,
@@ -53,20 +64,19 @@ fun HomeScreen(
     onPropertyClick: (Long) -> Unit,
     onAddClick: () -> Unit,
     onSearchClick: () -> Unit,
-    onSeeAllFavoritesClick: () -> Unit,
     onOpenWallet: () -> Unit
 ) {
     val allProperties by viewModel.allProperties.collectAsStateWithLifecycle()
     val recentlyViewed by viewModel.recentlyViewedProperties.collectAsStateWithLifecycle()
-    val favorites by viewModel.favoriteProperties.collectAsStateWithLifecycle()
     val pinned by viewModel.pinnedProperties.collectAsStateWithLifecycle()
+    val recentActivities by viewModel.recentActivities.collectAsStateWithLifecycle()
     val balance by walletViewModel.balance.collectAsStateWithLifecycle()
 
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAddClick,
-                shape = androidx.compose.foundation.shape.CircleShape,
+                shape = CircleShape,
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
@@ -85,19 +95,10 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(Spacing.screen)
         ) {
-            Text(text = "سلام 👋", style = MaterialTheme.typography.headlineLarge)
-            Text(
-                text = "بیا سریع به کارت برسی",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(Spacing.xl))
-
             AppCard(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = onSearchClick,
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -109,7 +110,58 @@ fun HomeScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(Spacing.cardGap))
+            Spacer(modifier = Modifier.height(Spacing.md))
+
+            PrimaryButton(
+                text = "افزودن ملک جدید",
+                onClick = onAddClick,
+                icon = Icons.Outlined.Add,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (recentlyViewed.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(Spacing.xl))
+                Text(text = "به‌تازگی دیده‌شده", style = MaterialTheme.typography.titleLarge)
+                Spacer(modifier = Modifier.height(10.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(recentlyViewed, key = { it.id }) { property ->
+                        PropertyMiniCard(property = property, onClick = { onPropertyClick(property.id) })
+                    }
+                }
+            }
+
+            if (pinned.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(Spacing.xl))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.PushPin, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "سنجاق‌شده", style = MaterialTheme.typography.titleLarge)
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(pinned, key = { it.id }) { property ->
+                        PropertyMiniCard(property = property, onClick = { onPropertyClick(property.id) })
+                    }
+                }
+            }
+
+            if (recentActivities.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(Spacing.xl))
+                Text(text = "فعالیت‌های اخیر", style = MaterialTheme.typography.titleLarge)
+                Spacer(modifier = Modifier.height(10.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    recentActivities.forEach { activity ->
+                        AppListRow(
+                            icon = Icons.Outlined.History,
+                            title = activity.event.description,
+                            subtitle = "${activity.propertyTitle} · ${formatActivityTime(activity.event.createdAt)}",
+                            onClick = { onPropertyClick(activity.propertyId) }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.xl))
 
             Row(
                 modifier = Modifier
@@ -137,56 +189,13 @@ fun HomeScreen(
                 TextButton(onClick = onOpenWallet) { Text("مشاهده", color = Color.White) }
             }
 
-            if (pinned.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.PushPin, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "سنجاق‌شده", style = MaterialTheme.typography.titleMedium)
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(pinned, key = { it.id }) { property ->
-                        PropertyMiniCard(property = property, onClick = { onPropertyClick(property.id) })
-                    }
-                }
-            }
-
-            if (recentlyViewed.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(text = "به‌تازگی دیده‌شده", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(10.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(recentlyViewed, key = { it.id }) { property ->
-                        PropertyMiniCard(property = property, onClick = { onPropertyClick(property.id) })
-                    }
-                }
-            }
-
-            if (favorites.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(24.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = "علاقه‌مندی‌ها", style = MaterialTheme.typography.titleMedium)
-                    TextButton(onClick = onSeeAllFavoritesClick) {
-                        Text("مشاهده همه")
-                    }
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(favorites.take(6), key = { it.id }) { property ->
-                        PropertyMiniCard(property = property, onClick = { onPropertyClick(property.id) })
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.xl))
         }
     }
 }
+
+private fun formatActivityTime(timestamp: Long): String =
+    SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(Date(timestamp))
 
 @Composable
 private fun EmptyHomeState(onAddClick: () -> Unit, modifier: Modifier = Modifier) {

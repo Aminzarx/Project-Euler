@@ -59,6 +59,7 @@ import com.realestate.app.data.DealType
 import com.realestate.app.data.Property
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
+import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.components.label
 import com.realestate.app.ui.theme.Spacing
@@ -78,6 +79,7 @@ fun AddEditPropertyScreen(
         remember { mutableStateOf<Property?>(null) }
     }
     val allTags by viewModel.allTags.collectAsStateWithLifecycle()
+    val smartDefaults by viewModel.smartDefaults.collectAsStateWithLifecycle()
 
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -116,6 +118,14 @@ fun AddEditPropertyScreen(
             tags = p.tags
             imageUri = p.imageUri
             loadedExisting = true
+        }
+    }
+
+    LaunchedEffect(smartDefaults) {
+        if (propertyId == null && city.isBlank()) {
+            smartDefaults.city?.let { city = it }
+            smartDefaults.propertyType?.let { propertyType = it }
+            smartDefaults.dealType?.let { dealType = it }
         }
     }
 
@@ -183,195 +193,199 @@ fun AddEditPropertyScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Spacing.cardGap))
 
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it },
-                label = { Text("عنوان ملک") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it },
-                label = { Text("توضیحات") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("اطلاعات پایه", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            AppCard(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
-                    value = price,
-                    onValueChange = { price = it.filter { c -> c.isDigit() } },
-                    label = { Text("قیمت (تومان)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f)
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("عنوان ملک") },
+                    modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
-                    value = area,
-                    onValueChange = { area = it },
-                    label = { Text("متراژ") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f)
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("توضیحات") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3
                 )
             }
-            Spacer(modifier = Modifier.height(8.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(modifier = Modifier.height(Spacing.cardGap))
+
+            Text("قیمت و مشخصات", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            AppCard(modifier = Modifier.fillMaxWidth()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = dealType == DealType.SALE,
+                        onClick = { dealType = DealType.SALE },
+                        label = { Text("فروش") }
+                    )
+                    FilterChip(
+                        selected = dealType == DealType.RENT,
+                        onClick = { dealType = DealType.RENT },
+                        label = { Text("اجاره") }
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = price,
+                        onValueChange = { price = it.filter { c -> c.isDigit() } },
+                        label = { Text("قیمت (تومان)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = area,
+                        onValueChange = { area = it },
+                        label = { Text("متراژ") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = rooms,
                     onValueChange = { rooms = it.filter { c -> c.isDigit() } },
                     label = { Text("تعداد اتاق") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                ExposedDropdownMenuBox(expanded = typeMenuExpanded, onExpandedChange = { typeMenuExpanded = it }) {
+                    OutlinedTextField(
+                        value = propertyType.label(),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("نوع ملک") },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeMenuExpanded) }
+                    )
+                    DropdownMenu(expanded = typeMenuExpanded, onDismissRequest = { typeMenuExpanded = false }) {
+                        PropertyType.entries.forEach { type ->
+                            DropdownMenuItem(text = { Text(type.label()) }, onClick = {
+                                propertyType = type
+                                typeMenuExpanded = false
+                            })
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                ExposedDropdownMenuBox(expanded = statusMenuExpanded, onExpandedChange = { statusMenuExpanded = it }) {
+                    OutlinedTextField(
+                        value = status.label(),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("وضعیت") },
+                        modifier = Modifier.menuAnchor().fillMaxWidth(),
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusMenuExpanded) }
+                    )
+                    DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }) {
+                        PropertyStatus.entries.forEach { entry ->
+                            DropdownMenuItem(text = { Text(entry.label()) }, onClick = {
+                                status = entry
+                                statusMenuExpanded = false
+                            })
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.cardGap))
+
+            Text("موقعیت و مالک", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            AppCard(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = city,
+                    onValueChange = { city = it },
+                    label = { Text("شهر") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = { Text("آدرس") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = ownerName,
+                    onValueChange = { ownerName = it },
+                    label = { Text("نام مالک") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = ownerPhone,
                     onValueChange = { ownerPhone = it },
                     label = { Text("شماره تماس") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = ownerName,
-                onValueChange = { ownerName = it },
-                label = { Text("نام مالک") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = city,
-                onValueChange = { city = it },
-                label = { Text("شهر") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            OutlinedTextField(
-                value = address,
-                onValueChange = { address = it },
-                label = { Text("آدرس") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text("نوع معامله", style = MaterialTheme.typography.labelLarge)
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = dealType == DealType.SALE,
-                    onClick = { dealType = DealType.SALE },
-                    label = { Text("فروش") }
-                )
-                FilterChip(
-                    selected = dealType == DealType.RENT,
-                    onClick = { dealType = DealType.RENT },
-                    label = { Text("اجاره") }
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(Spacing.cardGap))
 
-            ExposedDropdownMenuBox(expanded = typeMenuExpanded, onExpandedChange = { typeMenuExpanded = it }) {
+            Text("برچسب‌ها", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            AppCard(modifier = Modifier.fillMaxWidth()) {
+                if (tags.isNotEmpty()) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        tags.forEach { tag ->
+                            AssistChip(
+                                onClick = { tags = tags - tag },
+                                label = { Text(tag) },
+                                trailingIcon = {
+                                    Icon(Icons.Outlined.Close, contentDescription = "حذف برچسب", modifier = Modifier.size(16.dp))
+                                }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
                 OutlinedTextField(
-                    value = propertyType.label(),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("نوع ملک") },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeMenuExpanded) }
+                    value = tagInput,
+                    onValueChange = { tagInput = it },
+                    label = { Text("افزودن برچسب") },
+                    placeholder = { Text("مثلاً فوری، VIP") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    modifier = Modifier.fillMaxWidth()
                 )
-                DropdownMenu(expanded = typeMenuExpanded, onDismissRequest = { typeMenuExpanded = false }) {
-                    PropertyType.entries.forEach { type ->
-                        DropdownMenuItem(text = { Text(type.label()) }, onClick = {
-                            propertyType = type
-                            typeMenuExpanded = false
-                        })
+                val tagSuggestions = allTags.filterNot { tags.contains(it) }
+                if (tagInput.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        modifier = Modifier.clickable {
+                            tags = tags + tagInput.trim()
+                            tagInput = ""
+                        },
+                        text = "افزودن «${tagInput.trim()}»",
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                } else if (tagSuggestions.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        tagSuggestions.take(8).forEach { suggestion ->
+                            FilterChip(
+                                selected = false,
+                                onClick = { tags = tags + suggestion },
+                                label = { Text(suggestion) }
+                            )
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            ExposedDropdownMenuBox(expanded = statusMenuExpanded, onExpandedChange = { statusMenuExpanded = it }) {
-                OutlinedTextField(
-                    value = status.label(),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("وضعیت") },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusMenuExpanded) }
-                )
-                DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }) {
-                    PropertyStatus.entries.forEach { entry ->
-                        DropdownMenuItem(text = { Text(entry.label()) }, onClick = {
-                            status = entry
-                            statusMenuExpanded = false
-                        })
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text("برچسب‌ها", style = MaterialTheme.typography.labelLarge)
-            Spacer(modifier = Modifier.height(6.dp))
-            if (tags.isNotEmpty()) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    tags.forEach { tag ->
-                        AssistChip(
-                            onClick = { tags = tags - tag },
-                            label = { Text(tag) },
-                            trailingIcon = {
-                                Icon(Icons.Outlined.Close, contentDescription = "حذف برچسب", modifier = Modifier.size(16.dp))
-                            }
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-            OutlinedTextField(
-                value = tagInput,
-                onValueChange = { tagInput = it },
-                label = { Text("افزودن برچسب") },
-                placeholder = { Text("مثلاً فوری، VIP") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                modifier = Modifier.fillMaxWidth()
-            )
-            val tagSuggestions = allTags.filterNot { tags.contains(it) }
-            if (tagInput.isNotBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    modifier = Modifier.clickable {
-                        tags = tags + tagInput.trim()
-                        tagInput = ""
-                    },
-                    text = "افزودن «${tagInput.trim()}»",
-                    color = MaterialTheme.colorScheme.primary,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            } else if (tagSuggestions.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    tagSuggestions.take(8).forEach { suggestion ->
-                        FilterChip(
-                            selected = false,
-                            onClick = { tags = tags + suggestion },
-                            label = { Text(suggestion) }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Spacing.xl))
 
             PrimaryButton(
                 text = if (isEditMode) "ذخیره تغییرات" else "افزودن ملک",

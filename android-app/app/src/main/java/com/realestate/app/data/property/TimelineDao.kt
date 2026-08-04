@@ -13,6 +13,9 @@ interface TimelineDao {
     @Query("SELECT * FROM timeline_events")
     fun getAllEvents(): Flow<List<TimelineEvent>>
 
+    @Query("SELECT * FROM timeline_events ORDER BY createdAt DESC LIMIT :limit")
+    fun getRecentEvents(limit: Int): Flow<List<TimelineEvent>>
+
     @Insert
     suspend fun insert(event: TimelineEvent): Long
 

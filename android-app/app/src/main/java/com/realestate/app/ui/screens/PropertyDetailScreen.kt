@@ -1,6 +1,8 @@
 package com.realestate.app.ui.screens
 
 import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,8 +23,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
@@ -55,7 +59,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -87,13 +93,13 @@ fun PropertyDetailScreen(
     onStoryCard: (Long) -> Unit
 ) {
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     val property by viewModel.getPropertyById(propertyId).collectAsStateWithLifecycle(initialValue = null)
     val notes by viewModel.getNotesForProperty(propertyId).collectAsStateWithLifecycle(initialValue = emptyList())
     val timeline by viewModel.getTimelineForProperty(propertyId).collectAsStateWithLifecycle(initialValue = emptyList())
     val allTags by viewModel.allTags.collectAsStateWithLifecycle()
     val favoriteFolders by viewModel.favoriteFolders.collectAsStateWithLifecycle()
 
-    var showDeleteDialog by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
     var showStatusSheet by remember { mutableStateOf(false) }
     var showAddTagDialog by remember { mutableStateOf(false) }
@@ -160,7 +166,11 @@ fun PropertyDetailScreen(
                                 }
                                 DropdownMenuItem(
                                     text = { Text("حذف") },
-                                    onClick = { showMenu = false; showDeleteDialog = true }
+                                    onClick = {
+                                        showMenu = false
+                                        viewModel.deleteProperty(p)
+                                        onDeleted()
+                                    }
                                 )
                             }
                         }
@@ -252,11 +262,26 @@ fun PropertyDetailScreen(
                             color = Color.White
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "${current.propertyType.label()} · ${current.dealType.label()} · ${current.code}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White.copy(alpha = 0.85f)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable {
+                                clipboardManager.setText(AnnotatedString(current.code))
+                                Toast.makeText(context, "کد ملک کپی شد", Toast.LENGTH_SHORT).show()
+                            }
+                        ) {
+                            Text(
+                                text = "${current.propertyType.label()} · ${current.dealType.label()} · ${current.code}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.85f)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                Icons.Outlined.ContentCopy,
+                                contentDescription = "کپی کد ملک",
+                                tint = Color.White.copy(alpha = 0.85f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = formatPrice(current.price, current.dealType),
@@ -275,7 +300,20 @@ fun PropertyDetailScreen(
                     if (current.ownerName.isNotBlank()) {
                         DetailRow(label = "مالک", value = current.ownerName)
                     }
-                    DetailRow(label = "شماره تماس", value = current.ownerPhone)
+                    if (current.ownerPhone.isNotBlank()) {
+                        DetailRow(
+                            label = "شماره تماس",
+                            value = current.ownerPhone,
+                            trailing = {
+                                IconButton(onClick = {
+                                    val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${current.ownerPhone}"))
+                                    context.startActivity(dialIntent)
+                                }) {
+                                    Icon(Icons.Outlined.Call, contentDescription = "تماس با مالک", tint = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(Spacing.cardGap))
@@ -455,23 +493,6 @@ fun PropertyDetailScreen(
                 )
             }
 
-            if (showDeleteDialog) {
-                AlertDialog(
-                    onDismissRequest = { showDeleteDialog = false },
-                    title = { Text("حذف ملک") },
-                    text = { Text("آیا از حذف این ملک مطمئن هستید؟ این عمل قابل بازگشت نیست.") },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            viewModel.deleteProperty(current)
-                            showDeleteDialog = false
-                            onDeleted()
-                        }) { Text("حذف") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { showDeleteDialog = false }) { Text("انصراف") }
-                    }
-                )
-            }
         }
     }
 }
@@ -489,15 +510,19 @@ private fun SectionHeader(title: String, onAddClick: () -> Unit) {
 }
 
 @Composable
-private fun DetailRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+private fun DetailRow(label: String, value: String, trailing: @Composable (() -> Unit)? = null) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
             text = "$label:",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = value, style = MaterialTheme.typography.bodyMedium)
+        Text(text = value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        trailing?.invoke()
     }
 }
 
