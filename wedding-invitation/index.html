@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Elena &amp; Daniel — November 14, 2026</title>
+<meta name="description" content="You are invited to the wedding celebration of Elena &amp; Daniel — November 14, 2026, Villa Serrano, Lake Como.">
+<meta name="theme-color" content="#f6f1e9">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Elena &amp; Daniel are getting married">
+<meta property="og:description" content="Join us on November 14, 2026 at Villa Serrano, Lake Como.">
+<meta property="og:type" content="website">
+
+<link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Cinzel:wght@400;500;600&family=Vazirmatn:wght@300;400;500;600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============ LOADING SCREEN ============ -->
+<div id="loader" class="loader" aria-hidden="true">
+  <div class="loader-inner">
+    <svg class="loader-monogram" viewBox="0 0 120 120" width="72" height="72">
+      <circle cx="60" cy="60" r="58" class="loader-ring"/>
+      <text x="60" y="72" text-anchor="middle" class="loader-initials">E &amp; D</text>
+    </svg>
+    <p class="loader-label">Preparing your invitation</p>
+    <div class="loader-bar"><span></span></div>
+  </div>
+</div>
+
+<!-- ============ SCROLL PROGRESS ============ -->
+<div class="scroll-progress" aria-hidden="true"><span id="scrollProgressBar"></span></div>
+
+<!-- ============ TOP UTILITY BAR ============ -->
+<div class="utility-bar">
+  <button id="themeToggle" class="icon-btn" aria-label="Toggle dark mode" title="Toggle theme">
+    <svg class="icon-sun" viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="4.2"/><g class="rays"><line x1="12" y1="2" x2="12" y2="4.6"/><line x1="12" y1="19.4" x2="12" y2="22"/><line x1="2" y1="12" x2="4.6" y2="12"/><line x1="19.4" y1="12" x2="22" y2="12"/><line x1="4.9" y1="4.9" x2="6.7" y2="6.7"/><line x1="17.3" y1="17.3" x2="19.1" y2="19.1"/><line x1="4.9" y1="19.1" x2="6.7" y2="17.3"/><line x1="17.3" y1="6.7" x2="19.1" y2="4.9"/></g></svg>
+    <svg class="icon-moon" viewBox="0 0 24 24" width="18" height="18"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg>
+  </button>
+  <button id="audioToggle" class="icon-btn" aria-label="Play background music" title="Music">
+    <svg class="icon-audio" viewBox="0 0 24 24" width="18" height="18">
+      <path d="M4 9v6h4l5 4V5L8 9H4z"/>
+      <g class="sound-waves"><path d="M16.5 8.5a5 5 0 0 1 0 7"/><path d="M19 6a8.5 8.5 0 0 1 0 12"/></g>
+    </svg>
+  </button>
+  <button id="shareToggle" class="icon-btn" aria-label="Share invitation" title="Share">
+    <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="5.5" r="2.4"/><circle cx="18" cy="18.5" r="2.4"/><line x1="8.1" y1="10.9" x2="15.9" y2="6.6"/><line x1="8.1" y1="13.1" x2="15.9" y2="17.4"/></svg>
+  </button>
+</div>
+<audio id="bgAudio" loop preload="none">
+  <source src="assets/audio/wedding-theme.mp3" type="audio/mpeg">
+</audio>
+
+<!-- ============ HERO ============ -->
+<header class="hero" id="hero">
+  <div class="hero-canvas-wrap" aria-hidden="true">
+    <canvas id="particles"></canvas>
+    <div class="hero-glow"></div>
+    <div class="hero-vignette"></div>
+  </div>
+
+  <div class="hero-content">
+    <p class="eyebrow reveal-line"><span>The Wedding Celebration Of</span></p>
+
+    <h1 class="hero-names">
+      <span class="name name-bride reveal-name">Elena</span>
+      <span class="ampersand reveal-name">&amp;</span>
+      <span class="name name-groom reveal-name">Daniel</span>
+    </h1>
+
+    <div class="hero-divider reveal-line" aria-hidden="true">
+      <svg viewBox="0 0 240 24" width="180" height="18"><path d="M0 12 C 40 2, 80 22, 120 12 S 200 2, 240 12" /></svg>
+    </div>
+
+    <p class="hero-date reveal-line">Saturday, November 14, 2026 · Lake Como, Italy</p>
+
+    <p class="hero-quote reveal-line">"Two souls, one story — and the most beautiful chapter is only just beginning."</p>
+
+    <div class="hero-cta reveal-line">
+      <a href="#rsvp" class="btn btn-primary">Confirm Attendance</a>
+      <a href="#details" class="btn btn-ghost">Explore Details</a>
+    </div>
+  </div>
+
+  <button class="scroll-cue" id="scrollCue" aria-label="Scroll to continue">
+    <span class="scroll-cue-line"></span>
+    <span class="scroll-cue-text">Scroll to Continue</span>
+  </button>
+</header>
+
+<!-- decorative section divider -->
+<div class="section-divider" aria-hidden="true">
+  <svg viewBox="0 0 300 40" preserveAspectRatio="none"><path d="M0 20 Q 75 0 150 20 T 300 20" /></svg>
+</div>
+
+<!-- ============ LOVE STORY ============ -->
+<section class="section story" id="story">
+  <div class="section-head reveal-up">
+    <span class="kicker">Our Journey</span>
+    <h2 class="section-title">The Love Story</h2>
+    <p class="section-sub">Every love has a story. Here is a little of ours.</p>
+  </div>
+
+  <div class="timeline">
+    <div class="timeline-line" aria-hidden="true"></div>
+
+    <article class="timeline-item reveal-side">
+      <div class="timeline-marker"><span>2019</span></div>
+      <div class="timeline-card glass">
+        <h3>A Chance Encounter</h3>
+        <p>We met on a rain-soft evening in Florence, two strangers sharing the last table at a quiet trattoria. What began as a polite exchange about the wine list became a conversation that lasted until closing.</p>
+      </div>
+    </article>
+
+    <article class="timeline-item reveal-side">
+      <div class="timeline-marker"><span>2021</span></div>
+      <div class="timeline-card glass">
+        <h3>Building a Home</h3>
+        <p>Two years, countless letters, and one very determined move later, we chose to build a life together — filling small rooms with big plans and quiet mornings with each other.</p>
+      </div>
+    </article>
+
+    <article class="timeline-item reveal-side">
+      <div class="timeline-marker"><span>2024</span></div>
+      <div class="timeline-card glass">
+        <h3>The Proposal</h3>
+        <p>Beneath the cypress trees at sunset, with the lake turning gold, Daniel asked the only question that mattered. Elena said yes before he finished the sentence.</p>
+      </div>
+    </article>
+
+    <article class="timeline-item reveal-side">
+      <div class="timeline-marker"><span>2026</span></div>
+      <div class="timeline-card glass">
+        <h3>Forever Begins</h3>
+        <p>Now, surrounded by the people we love most, we begin our forever — and we would be honored to have you there to witness it.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<div class="section-divider flip" aria-hidden="true">
+  <svg viewBox="0 0 300 40" preserveAspectRatio="none"><path d="M0 20 Q 75 0 150 20 T 300 20" /></svg>
+</div>
+
+<!-- ============ WEDDING DETAILS ============ -->
+<section class="section details" id="details">
+  <div class="section-head reveal-up">
+    <span class="kicker">Join Us</span>
+    <h2 class="section-title">Wedding Details</h2>
+    <p class="section-sub">All the essentials for an unforgettable evening.</p>
+  </div>
+
+  <div class="details-grid">
+    <div class="detail-card glass reveal-up">
+      <div class="detail-icon">
+        <svg viewBox="0 0 24 24" width="26" height="26"><rect x="3.5" y="5" width="17" height="16" rx="2"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+      </div>
+      <h3>Date</h3>
+      <p>Saturday<br>November 14, 2026</p>
+    </div>
+
+    <div class="detail-card glass reveal-up">
+      <div class="detail-icon">
+        <svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8.5"/><line x1="12" y1="12" x2="12" y2="7"/><line x1="12" y1="12" x2="15.5" y2="14"/></svg>
+      </div>
+      <h3>Time</h3>
+      <p>Ceremony at 5:00 PM<br>Reception to follow</p>
+    </div>
+
+    <div class="detail-card glass reveal-up">
+      <div class="detail-icon">
+        <svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 21s-7-6.1-7-11.5A7 7 0 0 1 12 2.5a7 7 0 0 1 7 7C19 14.9 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.4"/></svg>
+      </div>
+      <h3>Venue</h3>
+      <p>Villa Serrano<br>Lake Como, Italy</p>
+    </div>
+
+    <div class="detail-card glass reveal-up">
+      <div class="detail-icon">
+        <svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 3c2.8 3 4 5.6 4 8a4 4 0 1 1-8 0c0-2.4 1.2-5 4-8z"/></svg>
+      </div>
+      <h3>Dress Code</h3>
+      <p>Black Tie Optional<br>Garden-Formal Attire</p>
+    </div>
+
+    <div class="detail-card glass reveal-up">
+      <div class="detail-icon">
+        <svg viewBox="0 0 24 24" width="26" height="26"><path d="M4 4h5l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v5a2 2 0 0 1-2.2 2A16 16 0 0 1 4 6.2 2 2 0 0 1 6 4z"/></svg>
+      </div>
+      <h3>Contact</h3>
+      <p>Sofia (Wedding Planner)<br>+39 345 678 9012</p>
+    </div>
+
+    <div class="detail-card glass reveal-up">
+      <div class="detail-icon">
+        <svg viewBox="0 0 24 24" width="26" height="26"><rect x="3" y="6" width="18" height="13" rx="1.5"/><path d="M3 8.5 12 14l9-5.5"/></svg>
+      </div>
+      <h3>RSVP By</h3>
+      <p>October 1, 2026<br>Kindly respond below</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COUNTDOWN ============ -->
+<section class="section countdown-section" id="countdown">
+  <div class="countdown-bg" aria-hidden="true"></div>
+  <div class="section-head reveal-up light-on-dark">
+    <span class="kicker">Almost There</span>
+    <h2 class="section-title">Counting Down to "I Do"</h2>
+  </div>
+  <div class="countdown reveal-up" id="countdown-timer">
+    <div class="countdown-unit">
+      <span class="countdown-num" id="cd-days">00</span>
+      <span class="countdown-label">Days</span>
+    </div>
+    <div class="countdown-sep">:</div>
+    <div class="countdown-unit">
+      <span class="countdown-num" id="cd-hours">00</span>
+      <span class="countdown-label">Hours</span>
+    </div>
+    <div class="countdown-sep">:</div>
+    <div class="countdown-unit">
+      <span class="countdown-num" id="cd-mins">00</span>
+      <span class="countdown-label">Minutes</span>
+    </div>
+    <div class="countdown-sep">:</div>
+    <div class="countdown-unit">
+      <span class="countdown-num" id="cd-secs">00</span>
+      <span class="countdown-label">Seconds</span>
+    </div>
+  </div>
+  <button id="addToCalendar" class="btn btn-outline-light reveal-up">
+    <svg viewBox="0 0 24 24" width="16" height="16"><rect x="3.5" y="5" width="17" height="16" rx="2"/><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>
+    Add to Calendar
+  </button>
+</section>
+
+<!-- ============ GALLERY ============ -->
+<section class="section gallery-section" id="gallery">
+  <div class="section-head reveal-up">
+    <span class="kicker">In Frame</span>
+    <h2 class="section-title">Gallery</h2>
+    <p class="section-sub">Moments we've already made, and a glimpse of what's to come.</p>
+  </div>
+
+  <div class="gallery-grid" id="galleryGrid">
+    <!-- gallery items injected via data attributes, styled placeholders (swap backgrounds for real photography) -->
+  </div>
+</section>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" aria-hidden="true">
+  <button class="lightbox-close" id="lightboxClose" aria-label="Close gallery">&times;</button>
+  <button class="lightbox-nav prev" id="lightboxPrev" aria-label="Previous image">&#10094;</button>
+  <div class="lightbox-stage">
+    <div class="lightbox-img" id="lightboxImg"></div>
+    <p class="lightbox-caption" id="lightboxCaption"></p>
+  </div>
+  <button class="lightbox-nav next" id="lightboxNext" aria-label="Next image">&#10095;</button>
+</div>
+
+<!-- ============ WEDDING DAY TIMELINE ============ -->
+<section class="section day-timeline" id="schedule">
+  <div class="section-head reveal-up">
+    <span class="kicker">The Day Of</span>
+    <h2 class="section-title">Order of the Evening</h2>
+  </div>
+
+  <div class="schedule-list">
+    <div class="schedule-item reveal-up">
+      <span class="schedule-time">4:15 PM</span>
+      <div class="schedule-line" aria-hidden="true"></div>
+      <div class="schedule-body"><h4>Guest Arrival</h4><p>Welcome drinks in the lakeside garden.</p></div>
+    </div>
+    <div class="schedule-item reveal-up">
+      <span class="schedule-time">5:00 PM</span>
+      <div class="schedule-line" aria-hidden="true"></div>
+      <div class="schedule-body"><h4>Ceremony</h4><p>Exchange of vows beneath the pergola.</p></div>
+    </div>
+    <div class="schedule-item reveal-up">
+      <span class="schedule-time">6:00 PM</span>
+      <div class="schedule-line" aria-hidden="true"></div>
+      <div class="schedule-body"><h4>Cocktail Hour</h4><p>Photography &amp; canapés on the terrace.</p></div>
+    </div>
+    <div class="schedule-item reveal-up">
+      <span class="schedule-time">7:30 PM</span>
+      <div class="schedule-line" aria-hidden="true"></div>
+      <div class="schedule-body"><h4>Dinner</h4><p>A seated dinner beneath the stars.</p></div>
+    </div>
+    <div class="schedule-item reveal-up">
+      <span class="schedule-time">9:00 PM</span>
+      <div class="schedule-line" aria-hidden="true"></div>
+      <div class="schedule-body"><h4>Cake &amp; Toasts</h4><p>Cutting of the cake, speeches, first dance.</p></div>
+    </div>
+    <div class="schedule-item reveal-up">
+      <span class="schedule-time">9:30 PM</span>
+      <div class="schedule-line" aria-hidden="true"></div>
+      <div class="schedule-body"><h4>Celebration</h4><p>Dancing and music long into the night.</p></div>
+    </div>
+    <div class="schedule-item reveal-up">
+      <span class="schedule-time">12:00 AM</span>
+      <div class="schedule-line" aria-hidden="true"></div>
+      <div class="schedule-body"><h4>Farewell</h4><p>Sparklers send-off. Thank you for celebrating with us.</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider" aria-hidden="true">
+  <svg viewBox="0 0 300 40" preserveAspectRatio="none"><path d="M0 20 Q 75 0 150 20 T 300 20" /></svg>
+</div>
+
+<!-- ============ LOCATION ============ -->
+<section class="section location" id="location">
+  <div class="section-head reveal-up">
+    <span class="kicker">Find Us</span>
+    <h2 class="section-title">The Location</h2>
+    <p class="section-sub">Villa Serrano &middot; Via del Lago 14, 22021 Lake Como, Italy</p>
+  </div>
+
+  <div class="map-wrap reveal-up glass">
+    <iframe
+      title="Villa Serrano map"
+      src="https://www.google.com/maps?q=Lake%20Como%2C%20Italy&output=embed"
+      loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade"
+      allowfullscreen>
+    </iframe>
+  </div>
+
+  <div class="map-actions reveal-up">
+    <a class="btn btn-primary" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Lake+Como+Italy">Open in Google Maps</a>
+    <a class="btn btn-ghost" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=Lake+Como+Italy">Navigate</a>
+  </div>
+</section>
+
+<!-- ============ RSVP ============ -->
+<section class="section rsvp-section" id="rsvp">
+  <div class="section-head reveal-up">
+    <span class="kicker">Kindly Reply</span>
+    <h2 class="section-title">RSVP</h2>
+    <p class="section-sub">We would be so grateful to know if you can join us by October 1, 2026.</p>
+  </div>
+
+  <form class="rsvp-form glass reveal-up" id="rsvpForm" novalidate>
+    <div class="form-row">
+      <label for="guestName">Full Name</label>
+      <input type="text" id="guestName" name="guestName" placeholder="Your full name" required autocomplete="name">
+      <span class="field-error" data-error-for="guestName"></span>
+    </div>
+
+    <div class="form-row">
+      <label for="guestPhone">Phone Number</label>
+      <input type="tel" id="guestPhone" name="guestPhone" placeholder="+1 (555) 000-0000" required autocomplete="tel">
+      <span class="field-error" data-error-for="guestPhone"></span>
+    </div>
+
+    <div class="form-row">
+      <label for="guestCount">Number of Guests</label>
+      <select id="guestCount" name="guestCount" required>
+        <option value="" disabled selected>Select number of guests</option>
+        <option value="1">Just Me — 1</option>
+        <option value="2">2 Guests</option>
+        <option value="3">3 Guests</option>
+        <option value="4">4 Guests</option>
+        <option value="5+">5 or more</option>
+      </select>
+      <span class="field-error" data-error-for="guestCount"></span>
+    </div>
+
+    <fieldset class="form-row attendance-group">
+      <legend>Will you attend?</legend>
+      <div class="radio-pills">
+        <label class="pill"><input type="radio" name="attendance" value="yes" required><span>Joyfully Accept</span></label>
+        <label class="pill"><input type="radio" name="attendance" value="no" required><span>Regretfully Decline</span></label>
+      </div>
+      <span class="field-error" data-error-for="attendance"></span>
+    </fieldset>
+
+    <div class="form-row">
+      <label for="guestNotes">Special Notes <em>(dietary needs, song requests…)</em></label>
+      <textarea id="guestNotes" name="guestNotes" rows="3" placeholder="Anything we should know?"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block">
+      <span class="btn-label">Send RSVP</span>
+      <span class="btn-spinner" aria-hidden="true"></span>
+    </button>
+
+    <p class="form-success" id="rsvpSuccess" role="status">
+      <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 12.5 9.5 18 20 6"/></svg>
+      Thank you — your response has been received with love.
+    </p>
+  </form>
+</section>
+
+<!-- ============ GIFT ============ -->
+<section class="section gift-section" id="gift">
+  <div class="section-head reveal-up">
+    <span class="kicker">With Gratitude</span>
+    <h2 class="section-title">Gift Registry</h2>
+    <p class="section-sub">Your presence is the greatest gift. Should you wish to honor us further, we've included the details below.</p>
+  </div>
+
+  <div class="gift-card glass reveal-up">
+    <div class="gift-info">
+      <h3>Bank Transfer</h3>
+      <dl>
+        <div><dt>Account Name</dt><dd>Elena Moretti &amp; Daniel Whitfield</dd></div>
+        <div><dt>IBAN</dt><dd id="ibanValue">IT60 X054 2811 1010 0000 0123 456</dd></div>
+        <div><dt>BIC / SWIFT</dt><dd>BCITITMM</dd></div>
+      </dl>
+      <button class="btn btn-outline" id="copyIban" type="button">Copy IBAN</button>
+    </div>
+    <div class="gift-qr">
+      <div id="giftQr" class="qr-box" aria-label="QR code for gift transfer"></div>
+      <p>Scan to save details</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="site-footer">
+  <div class="footer-monogram">E &amp; D</div>
+  <p class="footer-thanks">Thank you for being part of our story.</p>
+  <p class="footer-quote">"Whatever our souls are made of, his and mine are the same." — Emily Brontë</p>
+  <p class="footer-quote-fa">با عشق شما را به جشن زندگی‌مان دعوت می‌کنیم</p>
+
+  <div class="footer-actions">
+    <button class="btn btn-outline-light" id="copyLink" type="button">Copy Invitation Link</button>
+    <button class="btn btn-outline-light" id="downloadInvite" type="button">Download as Image</button>
+  </div>
+
+  <div class="footer-qr">
+    <div id="inviteQr" class="qr-box" aria-label="QR code for this invitation"></div>
+    <p>Share this invitation</p>
+  </div>
+
+  <div class="social-links">
+    <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" width="18" height="18"><rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg></a>
+    <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M14 8.5h2.5V5H14c-2.2 0-4 1.8-4 4v2H8v3.5h2V21h3.5v-6.5H16l.5-3.5h-3V9c0-.6.4-1 1-1z"/></svg></a>
+    <a href="#" aria-label="WhatsApp"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.6-1.2A9 9 0 1 0 12 3z"/><path d="M8.5 8.6c.3-.6 1-1.6 1.8-.7.4.4.7 1.4 1 2 .2.4 0 .8-.3 1.1-.9 1 .4 2.4 1.3 3.1.3.3.6.4 1 .1.5-.3 1.3-1.1 1.9-.7.6.3 1.7 1 1.9 1.5.3.7-.6 1.7-1.3 2-1.6.7-3.9-.4-5.4-1.7-1.6-1.4-3.1-3.4-2-5.7z"/></svg></a>
+  </div>
+
+  <p class="footer-copyright">&copy; 2026 Elena &amp; Daniel · Made with love for our wedding day</p>
+</footer>
+
+<!-- Back to top -->
+<button id="backToTop" class="back-to-top" aria-label="Back to top">
+  <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>
+</button>
+
+<!-- RSVP confetti canvas -->
+<canvas id="confettiCanvas" class="confetti-canvas" aria-hidden="true"></canvas>
+
+<!-- Toast -->
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
