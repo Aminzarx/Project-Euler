@@ -7,6 +7,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -38,3 +41,12 @@ jobs:
         with:
           name: real-estate-app-debug-apk
           path: android-app/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Publish direct-download release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-debug-build
+          name: "Latest debug build"
+          body: "Automatically updated on every push. Commit: ${{ github.sha }}"
+          make_latest: true
+          files: android-app/app/build/outputs/apk/debug/app-debug.apk

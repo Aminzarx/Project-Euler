@@ -1,13 +1,14 @@
 package com.realestate.app.ui
 
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -25,28 +26,42 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.realestate.app.ui.navigation.Screen
 import com.realestate.app.ui.screens.AddEditPropertyScreen
+import com.realestate.app.ui.screens.EditProfileScreen
 import com.realestate.app.ui.screens.FavoritesScreen
 import com.realestate.app.ui.screens.HomeScreen
+import com.realestate.app.ui.screens.ProfileScreen
 import com.realestate.app.ui.screens.PropertyDetailScreen
 import com.realestate.app.ui.screens.PropertyListScreen
+import com.realestate.app.ui.screens.StoryCardScreen
+import com.realestate.app.ui.screens.WalletScreen
+import com.realestate.app.viewmodel.AuthViewModel
+import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
+import com.realestate.app.viewmodel.WalletViewModel
 
 private data class BottomTab(val screen: Screen, val label: String, val icon: ImageVector)
 
 private val bottomTabs = listOf(
     BottomTab(Screen.Home, "خانه", Icons.Filled.Home),
     BottomTab(Screen.List, "املاک", Icons.Filled.List),
-    BottomTab(Screen.Favorites, "علاقه‌مندی‌ها", Icons.Filled.Favorite)
+    BottomTab(Screen.Favorites, "علاقه‌مندی‌ها", Icons.Filled.Favorite),
+    BottomTab(Screen.Profile, "پروفایل", Icons.Filled.Person)
 )
 
 @Composable
-fun RealEstateApp(viewModel: PropertyViewModel) {
+fun RealEstateApp(
+    viewModel: PropertyViewModel,
+    walletViewModel: WalletViewModel,
+    profileViewModel: ProfileViewModel,
+    authViewModel: AuthViewModel
+) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val showBottomBar = currentRoute == Screen.Home.route ||
         currentRoute == Screen.List.route ||
-        currentRoute == Screen.Favorites.route
+        currentRoute == Screen.Favorites.route ||
+        currentRoute == Screen.Profile.route
 
     Scaffold(
         bottomBar = {
@@ -115,6 +130,27 @@ fun RealEstateApp(viewModel: PropertyViewModel) {
                     onPropertyClick = { id -> navController.navigate(Screen.Detail.createRoute(id)) }
                 )
             }
+            composable(Screen.Profile.route) {
+                ProfileScreen(
+                    profileViewModel = profileViewModel,
+                    walletViewModel = walletViewModel,
+                    authViewModel = authViewModel,
+                    onEditProfile = { navController.navigate(Screen.EditProfile.route) },
+                    onOpenWallet = { navController.navigate(Screen.Wallet.route) }
+                )
+            }
+            composable(Screen.EditProfile.route) {
+                EditProfileScreen(
+                    viewModel = profileViewModel,
+                    onDone = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.Wallet.route) {
+                WalletScreen(
+                    viewModel = walletViewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
             composable(
                 route = Screen.Detail.route,
                 arguments = listOf(navArgument(Screen.Detail.ARG_PROPERTY_ID) { type = NavType.LongType })
@@ -125,7 +161,19 @@ fun RealEstateApp(viewModel: PropertyViewModel) {
                     viewModel = viewModel,
                     onBack = { navController.popBackStack() },
                     onEdit = { id -> navController.navigate(Screen.AddEdit.createRoute(id)) },
-                    onDeleted = { navController.popBackStack() }
+                    onDeleted = { navController.popBackStack() },
+                    onStoryCard = { id -> navController.navigate(Screen.StoryCard.createRoute(id)) }
+                )
+            }
+            composable(
+                route = Screen.StoryCard.route,
+                arguments = listOf(navArgument(Screen.StoryCard.ARG_PROPERTY_ID) { type = NavType.LongType })
+            ) { entry ->
+                val propertyId = entry.arguments?.getLong(Screen.StoryCard.ARG_PROPERTY_ID) ?: -1L
+                StoryCardScreen(
+                    propertyId = propertyId,
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() }
                 )
             }
             composable(

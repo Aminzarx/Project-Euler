@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -146,7 +145,7 @@ fun AddEditPropertyScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(160.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .clickable { imagePicker.launch("image/*") },
                 contentAlignment = Alignment.Center

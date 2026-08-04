@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -49,14 +48,13 @@ fun PropertyCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp)
+            .clickable(onClick = onClick)
     ) {
         Row(modifier = Modifier.padding(8.dp)) {
             Box(
                 modifier = Modifier
                     .size(88.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(MaterialTheme.shapes.small)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 if (property.imageUri != null) {
@@ -112,8 +110,7 @@ fun PropertyMiniCard(
     Card(
         modifier = modifier
             .width(160.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp)
+            .clickable(onClick = onClick)
     ) {
         Column {
             Box(

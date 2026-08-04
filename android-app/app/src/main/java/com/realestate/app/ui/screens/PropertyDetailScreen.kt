@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -20,6 +19,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -53,7 +53,8 @@ fun PropertyDetailScreen(
     viewModel: PropertyViewModel,
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
-    onDeleted: () -> Unit
+    onDeleted: () -> Unit,
+    onStoryCard: (Long) -> Unit
 ) {
     val property by viewModel.getPropertyById(propertyId).collectAsStateWithLifecycle(initialValue = null)
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -83,6 +84,9 @@ fun PropertyDetailScreen(
                                 imageVector = if (p.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                                 contentDescription = "علاقه‌مندی"
                             )
+                        }
+                        IconButton(onClick = { onStoryCard(p.id) }) {
+                            Icon(Icons.Filled.Share, contentDescription = "کارت استوری")
                         }
                         IconButton(onClick = { onEdit(p.id) }) {
                             Icon(Icons.Filled.Edit, contentDescription = "ویرایش")
@@ -114,7 +118,7 @@ fun PropertyDetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(MaterialTheme.shapes.medium)
             ) {
                 if (current.imageUri != null) {
                     AsyncImage(

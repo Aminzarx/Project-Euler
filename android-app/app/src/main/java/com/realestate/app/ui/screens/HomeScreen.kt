@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
@@ -31,10 +30,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.ui.components.PropertyMiniCard
+import com.realestate.app.ui.theme.heroGradient
 import com.realestate.app.viewmodel.PropertyViewModel
 
 @Composable
@@ -79,8 +81,7 @@ fun HomeScreen(
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onSearchClick),
-                shape = RoundedCornerShape(14.dp)
+                    .clickable(onClick = onSearchClick)
             ) {
                 Row(
                     modifier = Modifier.padding(14.dp),
@@ -139,14 +140,15 @@ private fun EmptyHomeState(onAddClick: () -> Unit, modifier: Modifier = Modifier
                 modifier = Modifier
                     .height(96.dp)
                     .fillMaxWidth(0.5f)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(24.dp)),
+                    .clip(MaterialTheme.shapes.large)
+                    .background(heroGradient()),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Filled.Home,
                     contentDescription = null,
                     modifier = Modifier.height(40.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = Color.White
                 )
             }
             Spacer(modifier = Modifier.height(20.dp))
