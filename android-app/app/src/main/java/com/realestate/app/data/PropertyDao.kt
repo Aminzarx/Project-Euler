@@ -29,4 +29,7 @@ interface PropertyDao {
 
     @Delete
     suspend fun delete(property: Property)
+
+    @Query("DELETE FROM properties")
+    suspend fun deleteAll()
 }

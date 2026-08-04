@@ -32,9 +32,11 @@ import com.realestate.app.ui.screens.HomeScreen
 import com.realestate.app.ui.screens.ProfileScreen
 import com.realestate.app.ui.screens.PropertyDetailScreen
 import com.realestate.app.ui.screens.PropertyListScreen
+import com.realestate.app.ui.screens.SettingsScreen
 import com.realestate.app.ui.screens.StoryCardScreen
 import com.realestate.app.ui.screens.WalletScreen
 import com.realestate.app.viewmodel.AuthViewModel
+import com.realestate.app.viewmodel.BackupViewModel
 import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
 import com.realestate.app.viewmodel.WalletViewModel
@@ -53,7 +55,8 @@ fun RealEstateApp(
     viewModel: PropertyViewModel,
     walletViewModel: WalletViewModel,
     profileViewModel: ProfileViewModel,
-    authViewModel: AuthViewModel
+    authViewModel: AuthViewModel,
+    backupViewModel: BackupViewModel
 ) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -138,13 +141,22 @@ fun RealEstateApp(
                     walletViewModel = walletViewModel,
                     authViewModel = authViewModel,
                     onEditProfile = { navController.navigate(Screen.EditProfile.route) },
-                    onOpenWallet = { navController.navigate(Screen.Wallet.route) }
+                    onOpenWallet = { navController.navigate(Screen.Wallet.route) },
+                    onOpenSettings = { navController.navigate(Screen.Settings.route) }
                 )
             }
             composable(Screen.EditProfile.route) {
                 EditProfileScreen(
                     viewModel = profileViewModel,
                     onDone = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    profileViewModel = profileViewModel,
+                    propertyViewModel = viewModel,
+                    backupViewModel = backupViewModel,
+                    onBack = { navController.popBackStack() }
                 )
             }
             composable(Screen.Wallet.route) {
@@ -175,6 +187,7 @@ fun RealEstateApp(
                 StoryCardScreen(
                     propertyId = propertyId,
                     viewModel = viewModel,
+                    profileViewModel = profileViewModel,
                     onBack = { navController.popBackStack() }
                 )
             }

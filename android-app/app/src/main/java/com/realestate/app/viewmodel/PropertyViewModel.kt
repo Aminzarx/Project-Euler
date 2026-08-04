@@ -107,6 +107,10 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
         searchHistoryRepository.addSearch(query)
     }
 
+    fun clearRecentSearches() = viewModelScope.launch {
+        searchHistoryRepository.clear()
+    }
+
     fun getPropertyById(id: Long) = repository.getPropertyById(id)
 
     fun getNotesForProperty(propertyId: Long) = extrasRepository.getNotesForProperty(propertyId)

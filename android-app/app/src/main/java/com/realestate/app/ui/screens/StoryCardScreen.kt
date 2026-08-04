@@ -39,6 +39,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.data.Property
 import com.realestate.app.ui.components.StoryCardContent
+import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
 import kotlinx.coroutines.delay
 import java.io.File
@@ -49,9 +50,13 @@ import java.io.FileOutputStream
 fun StoryCardScreen(
     propertyId: Long,
     viewModel: PropertyViewModel,
+    profileViewModel: ProfileViewModel,
     onBack: () -> Unit
 ) {
     val property by viewModel.getPropertyById(propertyId).collectAsStateWithLifecycle(initialValue = null)
+    val profile by profileViewModel.profile.collectAsStateWithLifecycle()
+    val agentPhone = profile.mobileNumber
+    val agencyName = profile.agencyName
     var showCaptureDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -76,7 +81,12 @@ fun StoryCardScreen(
                 modifier = Modifier.padding(padding).fillMaxSize().padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                StoryCardContent(property = current, modifier = Modifier.fillMaxWidth())
+                StoryCardContent(
+                    property = current,
+                    agentPhone = agentPhone,
+                    agencyName = agencyName,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(modifier = Modifier.height(20.dp))
                 Button(
                     onClick = { showCaptureDialog = true },
@@ -89,19 +99,34 @@ fun StoryCardScreen(
             }
 
             if (showCaptureDialog) {
-                StoryCardCaptureDialog(property = current, onDismiss = { showCaptureDialog = false })
+                StoryCardCaptureDialog(
+                    property = current,
+                    agentPhone = agentPhone,
+                    agencyName = agencyName,
+                    onDismiss = { showCaptureDialog = false }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun StoryCardCaptureDialog(property: Property, onDismiss: () -> Unit) {
+private fun StoryCardCaptureDialog(
+    property: Property,
+    agentPhone: String,
+    agencyName: String,
+    onDismiss: () -> Unit
+) {
     val context = LocalContext.current
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         val view = LocalView.current
-        StoryCardContent(property = property, modifier = Modifier.width(360.dp))
+        StoryCardContent(
+            property = property,
+            agentPhone = agentPhone,
+            agencyName = agencyName,
+            modifier = Modifier.width(360.dp)
+        )
 
         LaunchedEffect(Unit) {
             delay(300)

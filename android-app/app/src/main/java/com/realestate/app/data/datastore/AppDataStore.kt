@@ -31,6 +31,7 @@ private object Keys {
     val TELEGRAM = stringPreferencesKey("telegram")
     val THEME_PREFERENCE = stringPreferencesKey("theme_preference")
     val RECENT_SEARCHES = stringPreferencesKey("recent_searches")
+    val BACKUP_HISTORY = stringPreferencesKey("backup_history")
 }
 
 /**
@@ -141,5 +142,44 @@ class SearchHistoryRepository(private val context: Context) {
 
     private companion object {
         const val SEARCH_DELIMITER = "|||"
+    }
+}
+
+data class BackupHistoryEntry(val timestamp: Long, val propertyCount: Int, val sizeBytes: Long)
+
+class BackupHistoryRepository(private val context: Context) {
+    val history: Flow<List<BackupHistoryEntry>> = context.appDataStore.data.map { prefs ->
+        val raw = prefs[Keys.BACKUP_HISTORY]
+        if (raw.isNullOrBlank()) {
+            emptyList()
+        } else {
+            runCatching {
+                val array = org.json.JSONArray(raw)
+                (0 until array.length()).map { i ->
+                    val obj = array.getJSONObject(i)
+                    BackupHistoryEntry(
+                        timestamp = obj.getLong("timestamp"),
+                        propertyCount = obj.getInt("propertyCount"),
+                        sizeBytes = obj.getLong("sizeBytes")
+                    )
+                }
+            }.getOrDefault(emptyList())
+        }
+    }
+
+    suspend fun addEntry(entry: BackupHistoryEntry) {
+        val current = history.first()
+        val updated = (listOf(entry) + current).take(5)
+        val array = org.json.JSONArray()
+        updated.forEach { e ->
+            array.put(
+                org.json.JSONObject().apply {
+                    put("timestamp", e.timestamp)
+                    put("propertyCount", e.propertyCount)
+                    put("sizeBytes", e.sizeBytes)
+                }
+            )
+        }
+        context.appDataStore.edit { prefs -> prefs[Keys.BACKUP_HISTORY] = array.toString() }
     }
 }

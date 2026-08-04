@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,9 +31,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -47,7 +45,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.realestate.app.data.datastore.ThemePreference
 import com.realestate.app.ui.STORE_URL
 import com.realestate.app.ui.theme.heroGradient
 import com.realestate.app.viewmodel.AuthViewModel
@@ -63,7 +60,8 @@ fun ProfileScreen(
     walletViewModel: WalletViewModel,
     authViewModel: AuthViewModel,
     onEditProfile: () -> Unit,
-    onOpenWallet: () -> Unit
+    onOpenWallet: () -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     val profile by profileViewModel.profile.collectAsStateWithLifecycle()
     val balance by walletViewModel.balance.collectAsStateWithLifecycle()
@@ -159,13 +157,12 @@ fun ProfileScreen(
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(STORE_URL)))
                     }
                 )
-
-                Spacer(modifier = Modifier.height(20.dp))
-                Text("ظاهر برنامه", style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                ThemeSelector(
-                    selected = profile.themePreference,
-                    onSelect = { profileViewModel.setThemePreference(it) }
+                Spacer(modifier = Modifier.height(10.dp))
+                ProfileActionRow(
+                    icon = Icons.Filled.Settings,
+                    title = "تنظیمات",
+                    subtitle = "ظاهر برنامه، پشتیبان‌گیری و موارد دیگر",
+                    onClick = onOpenSettings
                 )
 
                 if (profile.biography.isNotBlank()) {
@@ -232,23 +229,3 @@ private fun ProfileActionRow(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ThemeSelector(selected: ThemePreference, onSelect: (ThemePreference) -> Unit) {
-    val options = listOf(
-        ThemePreference.SYSTEM to "سیستم",
-        ThemePreference.LIGHT to "روشن",
-        ThemePreference.DARK to "تاریک"
-    )
-    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-        options.forEachIndexed { index, (pref, label) ->
-            SegmentedButton(
-                selected = selected == pref,
-                onClick = { onSelect(pref) },
-                shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
-            ) {
-                Text(label)
-            }
-        }
-    }
-}

@@ -29,7 +29,12 @@ import com.realestate.app.data.Property
 import com.realestate.app.ui.theme.heroGradient
 
 @Composable
-fun StoryCardContent(property: Property, modifier: Modifier = Modifier) {
+fun StoryCardContent(
+    property: Property,
+    agentPhone: String,
+    agencyName: String,
+    modifier: Modifier = Modifier
+) {
     Box(
         modifier = modifier
             .aspectRatio(9f / 16f)
@@ -51,7 +56,7 @@ fun StoryCardContent(property: Property, modifier: Modifier = Modifier) {
                     Icon(Icons.Filled.Home, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Text("مدیریت املاک", color = Color.White, style = MaterialTheme.typography.titleSmall)
+                Text(agencyName.ifBlank { "مدیریت املاک" }, color = Color.White, style = MaterialTheme.typography.titleSmall)
             }
 
             Column {
@@ -90,7 +95,11 @@ fun StoryCardContent(property: Property, modifier: Modifier = Modifier) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Call, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text(property.ownerPhone, color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    agentPhone.ifBlank { "—" },
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
     }

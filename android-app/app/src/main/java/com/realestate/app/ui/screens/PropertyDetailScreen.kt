@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -67,6 +68,8 @@ import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.ui.components.color
 import com.realestate.app.ui.components.formatPrice
 import com.realestate.app.ui.components.label
+import com.realestate.app.ui.theme.heroGradient
+import com.realestate.app.ui.theme.imageScrimGradient
 import com.realestate.app.viewmodel.PropertyViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -176,13 +179,11 @@ fun PropertyDetailScreen(
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
                     .fillMaxSize()
-                    .padding(16.dp)
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(MaterialTheme.shapes.medium)
+                        .height(280.dp)
                 ) {
                     if (current.imageUri != null) {
                         AsyncImage(
@@ -192,46 +193,73 @@ fun PropertyDetailScreen(
                             modifier = Modifier.fillMaxSize()
                         )
                     } else {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Filled.Home, contentDescription = null, modifier = Modifier.size(64.dp))
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(heroGradient()),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.Home,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.85f),
+                                modifier = Modifier.size(72.dp)
+                            )
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = current.title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                    if (current.isPinned) {
-                        Icon(Icons.Filled.PushPin, contentDescription = "سنجاق‌شده", tint = MaterialTheme.colorScheme.primary)
-                    }
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "${current.propertyType.label()} · ${current.dealType.label()} · ${current.code}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(imageScrimGradient())
                     )
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                AssistChip(
-                    onClick = { showStatusSheet = true },
-                    label = { Text(current.status.label()) },
-                    leadingIcon = {
+
+                    if (current.isPinned) {
                         Box(
                             modifier = Modifier
-                                .size(10.dp)
+                                .align(Alignment.TopStart)
+                                .padding(16.dp)
+                                .size(36.dp)
                                 .clip(CircleShape)
-                                .background(current.status.color())
+                                .background(Color.Black.copy(alpha = 0.35f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.PushPin,
+                                contentDescription = "سنجاق‌شده",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth()
+                            .padding(20.dp)
+                    ) {
+                        StatusPill(status = current.status, onClick = { showStatusSheet = true })
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = current.title,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "${current.propertyType.label()} · ${current.dealType.label()} · ${current.code}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.85f)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = formatPrice(current.price, current.dealType),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.White
                         )
                     }
-                )
+                }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(text = formatPrice(current.price, current.dealType), style = MaterialTheme.typography.titleLarge)
-
-                Spacer(modifier = Modifier.height(16.dp))
+                Column(modifier = Modifier.padding(16.dp)) {
                 DetailRow(label = "شهر", value = current.city)
                 DetailRow(label = "آدرس", value = current.address)
                 DetailRow(label = "متراژ", value = "${current.area} متر مربع")
@@ -345,6 +373,7 @@ fun PropertyDetailScreen(
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
+                }
             }
 
             if (showStatusSheet) {
@@ -443,6 +472,31 @@ private fun SectionHeader(title: String, onAddClick: () -> Unit) {
     ) {
         Text(text = title, style = MaterialTheme.typography.titleMedium)
         TextButton(onClick = onAddClick) { Text("افزودن") }
+    }
+}
+
+@Composable
+private fun StatusPill(status: PropertyStatus, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color.White.copy(alpha = 0.92f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(status.color())
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = status.label(),
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.Black
+        )
     }
 }
 

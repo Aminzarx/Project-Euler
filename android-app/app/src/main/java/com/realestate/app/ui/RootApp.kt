@@ -13,6 +13,7 @@ import com.realestate.app.data.datastore.ThemePreference
 import com.realestate.app.ui.auth.AuthFlow
 import com.realestate.app.ui.theme.RealEstateAppTheme
 import com.realestate.app.viewmodel.AuthViewModel
+import com.realestate.app.viewmodel.BackupViewModel
 import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
 import com.realestate.app.viewmodel.WalletViewModel
@@ -22,7 +23,8 @@ fun RootApp(
     authViewModel: AuthViewModel,
     propertyViewModel: PropertyViewModel,
     walletViewModel: WalletViewModel,
-    profileViewModel: ProfileViewModel
+    profileViewModel: ProfileViewModel,
+    backupViewModel: BackupViewModel
 ) {
     val profile by profileViewModel.profile.collectAsStateWithLifecycle()
     val systemDark = isSystemInDarkTheme()
@@ -45,7 +47,8 @@ fun RootApp(
                 viewModel = propertyViewModel,
                 walletViewModel = walletViewModel,
                 profileViewModel = profileViewModel,
-                authViewModel = authViewModel
+                authViewModel = authViewModel,
+                backupViewModel = backupViewModel
             )
         }
     }
