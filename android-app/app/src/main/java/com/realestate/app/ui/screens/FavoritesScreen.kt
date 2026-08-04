@@ -35,7 +35,12 @@ fun FavoritesScreen(
                 modifier = Modifier.padding(padding).fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text("هنوز ملکی به علاقه‌مندی‌ها اضافه نشده", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "هنوز چیزی اینجا نیست — با ضربه روی ♡ کنار هر ملک، به علاقه‌مندی‌هات اضافه‌اش کن",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 32.dp)
+                )
             }
         } else {
             LazyColumn(

@@ -1,9 +1,13 @@
 package com.realestate.app.ui
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -22,6 +26,7 @@ import androidx.navigation.navArgument
 import com.realestate.app.ui.navigation.Screen
 import com.realestate.app.ui.screens.AddEditPropertyScreen
 import com.realestate.app.ui.screens.FavoritesScreen
+import com.realestate.app.ui.screens.HomeScreen
 import com.realestate.app.ui.screens.PropertyDetailScreen
 import com.realestate.app.ui.screens.PropertyListScreen
 import com.realestate.app.viewmodel.PropertyViewModel
@@ -29,7 +34,8 @@ import com.realestate.app.viewmodel.PropertyViewModel
 private data class BottomTab(val screen: Screen, val label: String, val icon: ImageVector)
 
 private val bottomTabs = listOf(
-    BottomTab(Screen.List, "املاک", Icons.Filled.Home),
+    BottomTab(Screen.Home, "خانه", Icons.Filled.Home),
+    BottomTab(Screen.List, "املاک", Icons.Filled.List),
     BottomTab(Screen.Favorites, "علاقه‌مندی‌ها", Icons.Filled.Favorite)
 )
 
@@ -38,7 +44,9 @@ fun RealEstateApp(viewModel: PropertyViewModel) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val showBottomBar = currentRoute == Screen.List.route || currentRoute == Screen.Favorites.route
+    val showBottomBar = currentRoute == Screen.Home.route ||
+        currentRoute == Screen.List.route ||
+        currentRoute == Screen.Favorites.route
 
     Scaffold(
         bottomBar = {
@@ -50,7 +58,7 @@ fun RealEstateApp(viewModel: PropertyViewModel) {
                             onClick = {
                                 if (currentRoute != tab.screen.route) {
                                     navController.navigate(tab.screen.route) {
-                                        popUpTo(Screen.List.route) { saveState = true }
+                                        popUpTo(Screen.Home.route) { saveState = true }
                                         launchSingleTop = true
                                         restoreState = true
                                     }
@@ -66,9 +74,34 @@ fun RealEstateApp(viewModel: PropertyViewModel) {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.List.route,
-            modifier = Modifier.padding(innerPadding)
+            startDestination = Screen.Home.route,
+            modifier = Modifier.padding(innerPadding),
+            enterTransition = { fadeIn(animationSpec = tween(220)) },
+            exitTransition = { fadeOut(animationSpec = tween(180)) },
+            popEnterTransition = { fadeIn(animationSpec = tween(220)) },
+            popExitTransition = { fadeOut(animationSpec = tween(180)) }
         ) {
+            composable(Screen.Home.route) {
+                HomeScreen(
+                    viewModel = viewModel,
+                    onPropertyClick = { id -> navController.navigate(Screen.Detail.createRoute(id)) },
+                    onAddClick = { navController.navigate(Screen.AddEdit.createRoute()) },
+                    onSearchClick = {
+                        navController.navigate(Screen.List.route) {
+                            popUpTo(Screen.Home.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onSeeAllFavoritesClick = {
+                        navController.navigate(Screen.Favorites.route) {
+                            popUpTo(Screen.Home.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
             composable(Screen.List.route) {
                 PropertyListScreen(
                     viewModel = viewModel,

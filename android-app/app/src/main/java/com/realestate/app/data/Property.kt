@@ -22,5 +22,6 @@ data class Property(
     val propertyType: PropertyType,
     val imageUri: String? = null,
     val isFavorite: Boolean = false,
-    val dateAdded: Long = System.currentTimeMillis()
+    val dateAdded: Long = System.currentTimeMillis(),
+    val lastViewedAt: Long? = null
 )

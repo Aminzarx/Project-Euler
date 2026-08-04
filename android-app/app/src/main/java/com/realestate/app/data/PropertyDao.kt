@@ -15,6 +15,9 @@ interface PropertyDao {
     @Query("SELECT * FROM properties WHERE isFavorite = 1 ORDER BY dateAdded DESC")
     fun getFavoriteProperties(): Flow<List<Property>>
 
+    @Query("SELECT * FROM properties WHERE lastViewedAt IS NOT NULL ORDER BY lastViewedAt DESC LIMIT 5")
+    fun getRecentlyViewedProperties(): Flow<List<Property>>
+
     @Query("SELECT * FROM properties WHERE id = :id")
     fun getPropertyById(id: Long): Flow<Property?>
 

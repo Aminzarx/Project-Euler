@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 class PropertyRepository(private val dao: PropertyDao) {
     val allProperties: Flow<List<Property>> = dao.getAllProperties()
     val favoriteProperties: Flow<List<Property>> = dao.getFavoriteProperties()
+    val recentlyViewedProperties: Flow<List<Property>> = dao.getRecentlyViewedProperties()
 
     fun getPropertyById(id: Long): Flow<Property?> = dao.getPropertyById(id)
 

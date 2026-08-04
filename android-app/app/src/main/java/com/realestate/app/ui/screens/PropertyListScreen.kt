@@ -122,7 +122,12 @@ fun PropertyListScreen(
 
             if (properties.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("هیچ ملکی یافت نشد", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "با این مشخصات ملکی پیدا نشد — فیلترها رو یه بار امتحان کن",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    )
                 }
             } else {
                 LazyColumn(

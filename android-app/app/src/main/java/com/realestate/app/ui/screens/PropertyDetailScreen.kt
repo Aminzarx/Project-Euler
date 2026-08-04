@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +57,15 @@ fun PropertyDetailScreen(
 ) {
     val property by viewModel.getPropertyById(propertyId).collectAsStateWithLifecycle(initialValue = null)
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var hasMarkedViewed by remember(propertyId) { mutableStateOf(false) }
+
+    LaunchedEffect(property) {
+        val p = property
+        if (p != null && !hasMarkedViewed) {
+            hasMarkedViewed = true
+            viewModel.markViewed(p)
+        }
+    }
 
     Scaffold(
         topBar = {

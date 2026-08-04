@@ -34,6 +34,9 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     private val _filter = MutableStateFlow(PropertyFilter())
     val filter: StateFlow<PropertyFilter> = _filter
 
+    val allProperties: StateFlow<List<Property>> = repository.allProperties
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val filteredProperties: StateFlow<List<Property>> = combine(
         repository.allProperties, _filter
     ) { properties, filter ->
@@ -52,6 +55,9 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val favoriteProperties: StateFlow<List<Property>> = repository.favoriteProperties
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val recentlyViewedProperties: StateFlow<List<Property>> = repository.recentlyViewedProperties
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val availableCities: StateFlow<List<String>> = repository.allProperties
@@ -78,5 +84,9 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
 
     fun toggleFavorite(property: Property) = viewModelScope.launch {
         repository.update(property.copy(isFavorite = !property.isFavorite))
+    }
+
+    fun markViewed(property: Property) = viewModelScope.launch {
+        repository.update(property.copy(lastViewedAt = System.currentTimeMillis()))
     }
 }
