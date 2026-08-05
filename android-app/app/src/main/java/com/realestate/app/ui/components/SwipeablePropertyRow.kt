@@ -1,5 +1,6 @@
 package com.realestate.app.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -48,7 +49,7 @@ import com.realestate.app.ui.theme.extendedColors
  * tap to open, long-press to enter multi-select, double-tap to favorite, and swipe
  * to call (toward the reading-start edge) or share (toward the end edge).
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SwipeablePropertyRow(
     property: Property,
