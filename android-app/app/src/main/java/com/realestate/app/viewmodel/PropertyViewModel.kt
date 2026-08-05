@@ -276,6 +276,10 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
         _selectedIds.value = emptySet()
     }
 
+    fun selectAll(ids: List<Long>) {
+        _selectedIds.value = ids.toSet()
+    }
+
     fun deleteSelected(properties: List<Property>) = viewModelScope.launch {
         properties.forEach { repository.delete(it) }
         clearSelection()

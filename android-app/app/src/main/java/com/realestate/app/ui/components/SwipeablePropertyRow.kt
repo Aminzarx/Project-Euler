@@ -1,5 +1,7 @@
 package com.realestate.app.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -25,16 +27,22 @@ import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -183,7 +191,7 @@ fun SwipeablePropertyRow(
                         }
                     }
                     Text(
-                        text = "${property.city} · ${formatPrice(property.price, property.dealType)}",
+                        text = "${property.city} · ${"%.0f".format(property.area)} متر · ${formatPrice(property.price, property.dealType)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -191,12 +199,25 @@ fun SwipeablePropertyRow(
                     )
                 }
                 if (!selectionMode) {
-                    Icon(
-                        if (property.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                        contentDescription = "علاقه‌مندی",
-                        tint = if (property.isFavorite) MaterialTheme.extendedColors.danger else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
+                    var justToggled by remember { mutableStateOf(false) }
+                    val scale by animateFloatAsState(
+                        targetValue = if (justToggled) 1.25f else 1f,
+                        animationSpec = tween(150),
+                        label = "favorite-pop",
+                        finishedListener = { justToggled = false }
                     )
+                    IconButton(onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        justToggled = true
+                        onToggleFavorite()
+                    }) {
+                        Icon(
+                            if (property.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            contentDescription = if (property.isFavorite) "حذف از علاقه‌مندی‌ها" else "افزودن به علاقه‌مندی‌ها",
+                            tint = if (property.isFavorite) MaterialTheme.extendedColors.danger else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp).graphicsLayer { scaleX = scale; scaleY = scale }
+                        )
+                    }
                 }
             }
         }

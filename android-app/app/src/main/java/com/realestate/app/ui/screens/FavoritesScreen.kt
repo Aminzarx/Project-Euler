@@ -38,6 +38,20 @@ import com.realestate.app.ui.components.SwipeablePropertyRow
 import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.viewmodel.PropertyViewModel
 
+private enum class FavoriteSort(val label: String) {
+    RECENT("جدیدترین"),
+    PRICE_LOW("ارزان‌ترین"),
+    PRICE_HIGH("گران‌ترین"),
+    TITLE("نام")
+}
+
+private fun List<Property>.sortedFor(sort: FavoriteSort): List<Property> = when (sort) {
+    FavoriteSort.RECENT -> sortedByDescending { it.dateAdded }
+    FavoriteSort.PRICE_LOW -> sortedBy { it.price }
+    FavoriteSort.PRICE_HIGH -> sortedByDescending { it.price }
+    FavoriteSort.TITLE -> sortedBy { it.title }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
@@ -47,12 +61,11 @@ fun FavoritesScreen(
     val favorites by viewModel.favoriteProperties.collectAsStateWithLifecycle()
     val folders by viewModel.favoriteFolders.collectAsStateWithLifecycle()
     var selectedFolder by remember { mutableStateOf<String?>(null) }
+    var sortOption by remember { mutableStateOf(FavoriteSort.RECENT) }
 
-    val visibleFavorites = if (selectedFolder == null) {
-        favorites
-    } else {
-        favorites.filter { it.favoriteFolder == selectedFolder }
-    }
+    val visibleFavorites = (
+        if (selectedFolder == null) favorites else favorites.filter { it.favoriteFolder == selectedFolder }
+        ).sortedFor(sortOption)
 
     Scaffold(topBar = { TopAppBar(title = { Text("علاقه‌مندی‌ها") }) }) { padding ->
         if (favorites.isEmpty()) {
@@ -68,34 +81,46 @@ fun FavoritesScreen(
                 )
             }
         } else {
-            Box(modifier = Modifier.padding(padding).fillMaxSize()) {
-                if (folders.isEmpty()) {
-                    FavoritesList(favorites, onPropertyClick, viewModel)
-                } else {
-                    Column {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 24.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            FilterChip(
-                                selected = selectedFolder == null,
-                                onClick = { selectedFolder = null },
-                                label = { Text("همه") }
-                            )
-                            folders.forEach { folder ->
-                                FilterChip(
-                                    selected = selectedFolder == folder,
-                                    onClick = { selectedFolder = folder },
-                                    label = { Text(folder) }
-                                )
-                            }
-                        }
-                        FavoritesList(visibleFavorites, onPropertyClick, viewModel)
+            Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FavoriteSort.entries.forEach { option ->
+                        FilterChip(
+                            selected = sortOption == option,
+                            onClick = { sortOption = option },
+                            label = { Text(option.label) }
+                        )
                     }
                 }
+                if (folders.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = selectedFolder == null,
+                            onClick = { selectedFolder = null },
+                            label = { Text("همه") }
+                        )
+                        folders.forEach { folder ->
+                            FilterChip(
+                                selected = selectedFolder == folder,
+                                onClick = { selectedFolder = folder },
+                                label = { Text(folder) }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                FavoritesList(visibleFavorites, onPropertyClick, viewModel)
             }
         }
     }

@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FilterList
@@ -40,15 +41,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -78,12 +76,9 @@ fun PropertyListScreen(
     val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
     val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     var showFilterSheet by remember { mutableStateOf(false) }
-    val searchFocusRequester = remember { FocusRequester() }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    val allProperties by viewModel.allProperties.collectAsStateWithLifecycle()
     val selectionMode = selectedIds.isNotEmpty()
-
-    LaunchedEffect(Unit) {
-        searchFocusRequester.requestFocus()
-    }
 
     Scaffold(
         topBar = {
@@ -96,10 +91,10 @@ fun PropertyListScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = {
-                            val selected = properties.filter { selectedIds.contains(it.id) }
-                            viewModel.deleteSelected(selected)
-                        }) {
+                        IconButton(onClick = { viewModel.selectAll(properties.map { it.id }) }) {
+                            Icon(Icons.Rounded.CheckCircle, contentDescription = "انتخاب همه")
+                        }
+                        IconButton(onClick = { showDeleteConfirm = true }) {
                             Icon(Icons.Rounded.Delete, contentDescription = "حذف موارد انتخاب‌شده")
                         }
                     }
@@ -132,8 +127,7 @@ fun PropertyListScreen(
                 onValueChange = { viewModel.updateFilter(filter.copy(query = it)) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
-                    .focusRequester(searchFocusRequester),
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
                 shape = com.realestate.app.ui.components.PillShape,
                 placeholder = { Text("جستجو بر اساس عنوان، شهر، آدرس یا کد ملک") },
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
@@ -195,14 +189,51 @@ fun PropertyListScreen(
 
             if (properties.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        "با این مشخصات ملکی پیدا نشد — فیلترها رو یه بار امتحان کن",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 32.dp)
-                    )
+                    if (allProperties.isEmpty()) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                "هنوز ملکی ثبت نکردی",
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                "با دکمه + پایین صفحه اولین ملک رو اضافه کن",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 32.dp)
+                            )
+                        }
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                "با این مشخصات ملکی پیدا نشد",
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                "جستجو یا فیلترها رو تغییر بده",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            com.realestate.app.ui.components.SecondaryButton(
+                                text = "حذف جستجو و فیلترها",
+                                onClick = { viewModel.updateFilter(PropertyFilter()) }
+                            )
+                        }
+                    }
                 }
             } else {
+                Text(
+                    text = "${properties.size} ملک",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(24.dp),
@@ -247,6 +278,7 @@ fun PropertyListScreen(
             FilterSheetContent(
                 cities = cities,
                 filter = filter,
+                allProperties = allProperties,
                 onApply = { newFilter ->
                     viewModel.updateFilter(newFilter)
                     showFilterSheet = false
@@ -258,6 +290,18 @@ fun PropertyListScreen(
             )
         }
     }
+
+    if (showDeleteConfirm) {
+        val selected = properties.filter { selectedIds.contains(it.id) }
+        com.realestate.app.ui.components.ConfirmationDialog(
+            title = "حذف ${selected.size} ملک؟",
+            text = "این ملک‌ها برای همیشه حذف می‌شوند و این کار قابل بازگشت نیست.",
+            confirmLabel = "حذف",
+            danger = true,
+            onConfirm = { viewModel.deleteSelected(selected) },
+            onDismiss = { showDeleteConfirm = false }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -265,6 +309,7 @@ fun PropertyListScreen(
 private fun FilterSheetContent(
     cities: List<String>,
     filter: PropertyFilter,
+    allProperties: List<com.realestate.app.data.Property>,
     onApply: (PropertyFilter) -> Unit,
     onReset: () -> Unit
 ) {
@@ -276,6 +321,18 @@ private fun FilterSheetContent(
     var cityMenuExpanded by remember { mutableStateOf(false) }
     var typeMenuExpanded by remember { mutableStateOf(false) }
     var statusMenuExpanded by remember { mutableStateOf(false) }
+
+    val matchCount = remember(allProperties, selectedCity, selectedType, selectedStatus, minPrice, maxPrice) {
+        val min = minPrice.toLongOrNull()
+        val max = maxPrice.toLongOrNull()
+        allProperties.count { property ->
+            (selectedCity == null || property.city == selectedCity) &&
+                (selectedType == null || property.propertyType == selectedType) &&
+                (selectedStatus == null || property.status == selectedStatus) &&
+                (min == null || property.price >= min) &&
+                (max == null || property.price <= max)
+        }
+    }
 
     Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
         Text("فیلترها", style = MaterialTheme.typography.titleLarge)
@@ -374,6 +431,13 @@ private fun FilterSheetContent(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "$matchCount ملک با این فیلترها",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(8.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             com.realestate.app.ui.components.SecondaryButton(
