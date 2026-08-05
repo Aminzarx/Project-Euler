@@ -110,6 +110,7 @@ fun HomeScreen(
                 ?.takeIf { now - it.lastModifiedAt > STALE_THRESHOLD_MILLIS }
         }
         val visible = remember { androidx.compose.animation.core.MutableTransitionState(false).apply { targetState = true } }
+        val groupedActivities = remember(recentActivities) { groupActivitiesByRecency(recentActivities) }
 
         AnimatedVisibility(
             visibleState = visible,
@@ -267,8 +268,7 @@ fun HomeScreen(
                         SectionHeader(icon = Icons.Rounded.History, title = "فعالیت‌های اخیر")
                         Spacer(modifier = Modifier.height(10.dp))
                     }
-                    val grouped = remember(recentActivities) { groupActivitiesByRecency(recentActivities) }
-                    grouped.forEach { (bucketLabel, activities) ->
+                    groupedActivities.forEach { (bucketLabel, activities) ->
                         item(key = "activity-bucket-$bucketLabel") {
                             Text(
                                 text = bucketLabel,
