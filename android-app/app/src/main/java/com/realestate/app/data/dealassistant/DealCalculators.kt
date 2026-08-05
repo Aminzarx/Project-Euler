@@ -300,29 +300,44 @@ data class EarlyRepaymentComparison(
     val monthsSaved: Int
 )
 
-/** Simulates paying one extra lump sum at a given month (equal-installment method), holding the regular payment fixed and letting the loan finish early instead. */
+/** Simulates paying one extra lump sum at a given month, holding the loan's actual repayment method and grace period fixed, and letting the loan finish early instead. */
 fun simulateEarlyRepayment(
     principal: Double,
     annualRatePercent: Double,
     months: Int,
     extraPaymentMonth: Int,
-    extraPaymentAmount: Double
+    extraPaymentAmount: Double,
+    gracePeriodMonths: Int = 0,
+    method: RepaymentMethod = RepaymentMethod.EQUAL_INSTALLMENT
 ): EarlyRepaymentComparison {
-    val original = calculateLoanSchedule(principal, annualRatePercent, months)
+    val original = calculateLoanSchedule(principal, annualRatePercent, months, gracePeriodMonths, method)
     if (extraPaymentAmount <= 0 || extraPaymentMonth <= 0 || extraPaymentMonth > months) {
         return EarlyRepaymentComparison(original.totalInterest, original.totalInterest, 0.0, 0)
     }
     val monthlyRate = annualRatePercent / 100.0 / 12.0
-    val originalPayment = original.firstPayment
+    val remainingMonths = (months - gracePeriodMonths).coerceAtLeast(1)
+    val equalInstallmentPayment = if (monthlyRate == 0.0) {
+        principal / remainingMonths
+    } else {
+        val factor = (1 + monthlyRate).pow(remainingMonths.toDouble())
+        principal * monthlyRate * factor / (factor - 1)
+    }
+    val principalPerMonth = principal / remainingMonths
+
     var balance = principal
     var totalInterest = 0.0
     var monthCount = 0
     while (balance > 0.01 && monthCount < months * 2) {
         monthCount++
         val interest = balance * monthlyRate
-        val principalPaid = (originalPayment - interest).coerceAtMost(balance)
+        if (monthCount > gracePeriodMonths) {
+            val principalPaid = when (method) {
+                RepaymentMethod.EQUAL_INSTALLMENT -> (equalInstallmentPayment - interest).coerceAtMost(balance)
+                RepaymentMethod.EQUAL_PRINCIPAL -> principalPerMonth.coerceAtMost(balance)
+            }
+            balance -= principalPaid
+        }
         totalInterest += interest
-        balance -= principalPaid
         if (monthCount == extraPaymentMonth) {
             balance -= extraPaymentAmount.coerceAtMost(balance)
         }

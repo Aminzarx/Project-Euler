@@ -130,7 +130,9 @@ internal fun LoanCalculatorFull(prefillPrincipal: Long?) {
                 annualRate.toAmount(),
                 monthsValue,
                 extraMonth.toAmount().toInt(),
-                extraAmount.toAmount()
+                extraAmount.toAmount(),
+                graceValue,
+                method
             )
             ResultsCard(
                 listOf(
