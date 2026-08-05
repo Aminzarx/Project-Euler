@@ -60,6 +60,7 @@ import com.realestate.app.data.Property
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
 import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.MoneyField
 import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.components.RequiredFieldLabel
 import com.realestate.app.ui.components.label
@@ -235,11 +236,10 @@ fun AddEditPropertyScreen(
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
+                    MoneyField(
+                        label = if (dealType == DealType.RENT) "اجاره ماهانه (تومان)" else "قیمت کل ملک (تومان)",
                         value = price,
-                        onValueChange = { price = it.filter { c -> c.isDigit() } },
-                        label = { Text("قیمت (تومان)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        onValueChange = { price = it },
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(

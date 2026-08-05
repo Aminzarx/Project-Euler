@@ -39,15 +39,9 @@ import com.realestate.app.data.dealassistant.DealToolId
 import com.realestate.app.data.dealassistant.addDays
 import com.realestate.app.data.dealassistant.applyPercentChange
 import com.realestate.app.data.dealassistant.calculateCommission
-import com.realestate.app.data.dealassistant.calculateConstructionCost
 import com.realestate.app.data.dealassistant.calculateDepositFromRent
-import com.realestate.app.data.dealassistant.calculateInstallment
-import com.realestate.app.data.dealassistant.calculateLoan
-import com.realestate.app.data.dealassistant.calculatePricePerMeter
 import com.realestate.app.data.dealassistant.calculatePurchaseCost
 import com.realestate.app.data.dealassistant.calculateRentalConversion
-import com.realestate.app.data.dealassistant.calculateRoi
-import com.realestate.app.data.dealassistant.calculateTotalFromPricePerMeter
 import com.realestate.app.data.dealassistant.convertArea
 import com.realestate.app.data.dealassistant.dateMillisOf
 import com.realestate.app.data.dealassistant.daysBetween
@@ -55,6 +49,7 @@ import com.realestate.app.data.dealassistant.defaultCommissionRate
 import com.realestate.app.data.dealassistant.percentOf
 import com.realestate.app.data.dealassistant.whatPercent
 import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.MoneyField
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.viewmodel.DealAssistantViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
@@ -63,8 +58,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private fun money(value: Double): String = NumberFormat.getNumberInstance(Locale.US).format(value.toLong())
-private fun percent(value: Double): String = "%.1f٪".format(value)
+internal fun money(value: Double): String = NumberFormat.getNumberInstance(Locale.US).format(value.toLong())
+internal fun percent(value: Double): String = "%.1f٪".format(value)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,13 +101,12 @@ fun DealCalculatorScreen(
         ) {
             when (toolId) {
                 DealToolId.COMMISSION -> CommissionCalculator(property?.price)
-                DealToolId.PRICE_PER_METER -> PricePerMeterCalculator(property?.price, property?.area)
                 DealToolId.PURCHASE_COST -> PurchaseCostCalculator(property?.price)
-                DealToolId.CONSTRUCTION_COST -> ConstructionCostCalculator(property?.price, property?.area)
+                DealToolId.CONSTRUCTION_COST -> ConstructionFeasibilityCalculator(property?.price, property?.area)
                 DealToolId.RENTAL_CONVERSION -> RentalConversionCalculator()
-                DealToolId.ROI -> RoiCalculator()
-                DealToolId.LOAN -> LoanCalculator()
-                DealToolId.INSTALLMENT -> InstallmentCalculator(property?.price)
+                DealToolId.ROI -> InvestmentAnalysisCalculator(property?.price)
+                DealToolId.LOAN -> LoanCalculatorFull(property?.price)
+                DealToolId.INSTALLMENT -> PaymentPlanBuilder(property?.price)
                 DealToolId.AREA_CONVERTER -> AreaConverter(property?.area)
                 DealToolId.PERCENTAGE -> PercentageCalculator()
                 DealToolId.DATE_CALCULATOR -> DateCalculatorTool()
@@ -123,20 +117,20 @@ fun DealCalculatorScreen(
 }
 
 @Composable
-private fun NumberField(label: String, value: String, onValueChange: (String) -> Unit, suffix: String? = null) {
+internal fun NumberField(label: String, value: String, onValueChange: (String) -> Unit, suffix: String? = null, modifier: Modifier = Modifier) {
     OutlinedTextField(
         value = value,
         onValueChange = { input -> onValueChange(input.filter { it.isDigit() || it == '.' }) },
         label = { Text(if (suffix != null) "$label ($suffix)" else label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         singleLine = true,
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     )
     Spacer(modifier = Modifier.height(Spacing.sm))
 }
 
 @Composable
-private fun ResultsCard(rows: List<Pair<String, String>>) {
+internal fun ResultsCard(rows: List<Pair<String, String>>) {
     Spacer(modifier = Modifier.height(Spacing.md))
     AppCard(modifier = Modifier.fillMaxWidth()) {
         Column {
@@ -151,11 +145,11 @@ private fun ResultsCard(rows: List<Pair<String, String>>) {
     }
 }
 
-private fun String.toAmount(): Double = toDoubleOrNull() ?: 0.0
+internal fun String.toAmount(): Double = toDoubleOrNull() ?: 0.0
 
 /** The numeric keyboard has no minus key, so "negative" is a toggle rather than something typed. */
 @Composable
-private fun IncreaseDecreaseToggle(isIncrease: Boolean, onChange: (Boolean) -> Unit) {
+internal fun IncreaseDecreaseToggle(isIncrease: Boolean, onChange: (Boolean) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         FilterChip(selected = isIncrease, onClick = { onChange(true) }, label = { Text("افزایش") })
         FilterChip(selected = !isIncrease, onClick = { onChange(false) }, label = { Text("کاهش") })
@@ -171,38 +165,13 @@ private fun CommissionCalculator(prefillPrice: Long?) {
     val rateValue = rate.toAmount()
     val result = calculateCommission(priceValue, rateValue)
 
-    NumberField("قیمت ملک", price, { price = it }, "تومان")
+    MoneyField("قیمت کل ملک (تومان)", price, { price = it }, modifier = Modifier.fillMaxWidth())
+    Spacer(modifier = Modifier.height(Spacing.sm))
     NumberField("درصد کارمزد هر طرف", rate, { rate = it }, "٪")
     ResultsCard(
         listOf(
             "کارمزد هر طرف" to "${money(result.perSideShare)} تومان",
             "مجموع کارمزد" to "${money(result.total)} تومان"
-        )
-    )
-}
-
-@Composable
-private fun PricePerMeterCalculator(prefillPrice: Long?, prefillArea: Double?) {
-    var price by remember { mutableStateOf(prefillPrice?.toString() ?: "") }
-    var area by remember { mutableStateOf(prefillArea?.toString() ?: "") }
-    val priceValue = price.toAmount().toLong()
-    val areaValue = area.toAmount()
-    val perMeter = calculatePricePerMeter(priceValue, areaValue)
-
-    NumberField("قیمت کل", price, { price = it }, "تومان")
-    NumberField("متراژ", area, { area = it }, "متر")
-    ResultsCard(listOf("قیمت هر متر" to "${money(perMeter)} تومان"))
-
-    Spacer(modifier = Modifier.height(Spacing.lg))
-    Text("محاسبه برعکس: از قیمت هر متر به قیمت کل", style = MaterialTheme.typography.titleSmall)
-    Spacer(modifier = Modifier.height(Spacing.sm))
-    var reversePerMeter by remember { mutableStateOf("") }
-    var reverseArea by remember { mutableStateOf(prefillArea?.toString() ?: "") }
-    NumberField("قیمت هر متر", reversePerMeter, { reversePerMeter = it }, "تومان")
-    NumberField("متراژ", reverseArea, { reverseArea = it }, "متر")
-    ResultsCard(
-        listOf(
-            "قیمت کل" to "${money(calculateTotalFromPricePerMeter(reversePerMeter.toAmount(), reverseArea.toAmount()))} تومان"
         )
     )
 }
@@ -215,7 +184,8 @@ private fun PurchaseCostCalculator(prefillPrice: Long?) {
     var registration by remember { mutableStateOf("1") }
     var transfer by remember { mutableStateOf("1") }
 
-    NumberField("قیمت ملک", price, { price = it }, "تومان")
+    MoneyField("قیمت کل ملک (تومان)", price, { price = it }, modifier = Modifier.fillMaxWidth())
+    Spacer(modifier = Modifier.height(Spacing.sm))
     NumberField("کارمزد", commission, { commission = it }, "٪")
     NumberField("مالیات نقل و انتقال", tax, { tax = it }, "٪")
     NumberField("هزینه ثبت دفترخانه", registration, { registration = it }, "٪")
@@ -239,34 +209,7 @@ private fun PurchaseCostCalculator(prefillPrice: Long?) {
     )
 }
 
-@Composable
-private fun ConstructionCostCalculator(prefillLandPrice: Long?, prefillArea: Double?) {
-    var landPrice by remember { mutableStateOf(prefillLandPrice?.toString() ?: "") }
-    var builtArea by remember { mutableStateOf(prefillArea?.toString() ?: "") }
-    var costPerMeter by remember { mutableStateOf("") }
-    var sellingPricePerMeter by remember { mutableStateOf("") }
-
-    NumberField("قیمت زمین", landPrice, { landPrice = it }, "تومان")
-    NumberField("متراژ بنا", builtArea, { builtArea = it }, "متر")
-    NumberField("هزینه ساخت هر متر", costPerMeter, { costPerMeter = it }, "تومان")
-    NumberField("قیمت فروش تخمینی هر متر پس از ساخت", sellingPricePerMeter, { sellingPricePerMeter = it }, "تومان")
-
-    val result = calculateConstructionCost(
-        landPrice.toAmount().toLong(),
-        builtArea.toAmount(),
-        costPerMeter.toAmount(),
-        sellingPricePerMeter.toAmount()
-    )
-    ResultsCard(
-        listOf(
-            "هزینه ساخت" to "${money(result.constructionCost)} تومان",
-            "سرمایه‌گذاری کل" to "${money(result.totalInvestment)} تومان",
-            "ارزش فروش تخمینی" to "${money(result.estimatedSellingValue)} تومان",
-            "سود تخمینی" to "${money(result.profit)} تومان",
-            "درصد سود" to percent(result.profitPercent)
-        )
-    )
-}
+private val rentalConversionPresets = listOf(2.0, 2.5, 3.0, 3.5)
 
 @Composable
 private fun RentalConversionCalculator() {
@@ -274,9 +217,26 @@ private fun RentalConversionCalculator() {
     var rate by remember { mutableStateOf("3") }
     var convertAmount by remember { mutableStateOf("") }
 
-    NumberField("رهن کامل", fullDeposit, { fullDeposit = it }, "تومان")
+    Text(
+        "این ابزار مبلغی از رهن کامل را با نرخ تبدیل ماهانه به اجاره تبدیل می‌کند — روش رایج «رهن به اجاره» در معاملات ملکی. نرخ رایج معمولاً بین ۲ تا ۳.۵ درصد در ماه است؛ می‌توانید عدد دلخواه خودتان را هم وارد کنید.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(modifier = Modifier.height(Spacing.sm))
+    MoneyField("رهن کامل (تومان)", fullDeposit, { fullDeposit = it }, modifier = Modifier.fillMaxWidth())
+    Spacer(modifier = Modifier.height(Spacing.sm))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        rentalConversionPresets.forEach { preset ->
+            FilterChip(
+                selected = rate.toAmount() == preset,
+                onClick = { rate = preset.toString() },
+                label = { Text("${"%.1f".format(preset)}٪") }
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(Spacing.sm))
     NumberField("نرخ تبدیل ماهانه", rate, { rate = it }, "٪")
-    NumberField("مبلغ تبدیل‌شونده به اجاره", convertAmount, { convertAmount = it }, "تومان")
+    MoneyField("مبلغ تبدیل‌شونده به اجاره (تومان)", convertAmount, { convertAmount = it }, modifier = Modifier.fillMaxWidth())
 
     val result = calculateRentalConversion(fullDeposit.toAmount(), rate.toAmount(), convertAmount.toAmount())
     ResultsCard(
@@ -290,70 +250,8 @@ private fun RentalConversionCalculator() {
     Text("محاسبه برعکس: از اجاره ماهانه به رهن معادل", style = MaterialTheme.typography.titleSmall)
     Spacer(modifier = Modifier.height(Spacing.sm))
     var monthlyRent by remember { mutableStateOf("") }
-    NumberField("اجاره ماهانه", monthlyRent, { monthlyRent = it }, "تومان")
+    MoneyField("اجاره ماهانه (تومان)", monthlyRent, { monthlyRent = it }, modifier = Modifier.fillMaxWidth())
     ResultsCard(listOf("رهن معادل" to "${money(calculateDepositFromRent(monthlyRent.toAmount(), rate.toAmount()))} تومان"))
-}
-
-@Composable
-private fun RoiCalculator() {
-    var purchasePrice by remember { mutableStateOf("") }
-    var sellingPrice by remember { mutableStateOf("") }
-    var years by remember { mutableStateOf("1") }
-
-    NumberField("قیمت خرید", purchasePrice, { purchasePrice = it }, "تومان")
-    NumberField("قیمت فروش", sellingPrice, { sellingPrice = it }, "تومان")
-    NumberField("مدت نگهداری", years, { years = it }, "سال")
-
-    val result = calculateRoi(purchasePrice.toAmount(), sellingPrice.toAmount(), years.toAmount())
-    ResultsCard(
-        listOf(
-            "سود" to "${money(result.profit)} تومان",
-            "بازده سرمایه (ROI)" to percent(result.roiPercent),
-            "بازده سالانه" to percent(result.annualReturnPercent),
-            "رشد سرمایه" to "×${"%.2f".format(result.growthMultiplier)}"
-        )
-    )
-}
-
-@Composable
-private fun LoanCalculator() {
-    var principal by remember { mutableStateOf("") }
-    var annualRate by remember { mutableStateOf("18") }
-    var months by remember { mutableStateOf("12") }
-
-    NumberField("مبلغ وام", principal, { principal = it }, "تومان")
-    NumberField("نرخ سود سالانه", annualRate, { annualRate = it }, "٪")
-    NumberField("مدت بازپرداخت", months, { months = it }, "ماه")
-
-    val result = calculateLoan(principal.toAmount(), annualRate.toAmount(), months.toAmount().toInt())
-    ResultsCard(
-        listOf(
-            "قسط ماهانه" to "${money(result.monthlyPayment)} تومان",
-            "کل بازپرداخت" to "${money(result.totalPayment)} تومان",
-            "کل سود" to "${money(result.totalInterest)} تومان"
-        )
-    )
-}
-
-@Composable
-private fun InstallmentCalculator(prefillPrice: Long?) {
-    var totalPrice by remember { mutableStateOf(prefillPrice?.toString() ?: "") }
-    var downPayment by remember { mutableStateOf("") }
-    var count by remember { mutableStateOf("12") }
-    var rate by remember { mutableStateOf("0") }
-
-    NumberField("قیمت کل", totalPrice, { totalPrice = it }, "تومان")
-    NumberField("پیش‌پرداخت", downPayment, { downPayment = it }, "تومان")
-    NumberField("تعداد اقساط", count, { count = it })
-    NumberField("نرخ سود سالانه (در صورت وجود)", rate, { rate = it }, "٪")
-
-    val result = calculateInstallment(totalPrice.toAmount().toLong(), downPayment.toAmount(), count.toAmount().toInt(), rate.toAmount())
-    ResultsCard(
-        listOf(
-            "مبلغ هر قسط" to "${money(result.installmentAmount)} تومان",
-            "مجموع قابل پرداخت" to "${money(result.totalPayable)} تومان"
-        )
-    )
 }
 
 @Composable
@@ -470,13 +368,13 @@ private fun DateCalculatorTool() {
 }
 
 @Composable
-private fun NumberFieldCompact(label: String, value: String, onValueChange: (String) -> Unit) {
+internal fun NumberFieldCompact(label: String, value: String, modifier: Modifier = Modifier.width(90.dp), onValueChange: (String) -> Unit) {
     OutlinedTextField(
         value = value,
         onValueChange = { input -> onValueChange(input.filter { it.isDigit() }) },
         label = { Text(label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,
-        modifier = Modifier.width(90.dp)
+        modifier = modifier
     )
 }

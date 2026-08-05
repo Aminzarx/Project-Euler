@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
@@ -29,7 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -42,13 +40,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.data.wallet.TransactionStatus
 import com.realestate.app.data.wallet.TransactionType
 import com.realestate.app.data.wallet.WalletTransaction
 import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.MoneyField
 import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.ui.theme.extendedColors
@@ -207,14 +205,13 @@ private fun RechargeSheet(
                         customAmount = ""
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
+                    MoneyField(
+                        label = "مبلغ دلخواه (تومان)",
                         value = customAmount,
                         onValueChange = {
-                            customAmount = it.filter { c -> c.isDigit() }
+                            customAmount = it
                             selectedAmount = null
                         },
-                        label = { Text("مبلغ دلخواه (تومان)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(20.dp))

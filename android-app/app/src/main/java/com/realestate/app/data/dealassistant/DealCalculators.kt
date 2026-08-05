@@ -2,6 +2,7 @@ package com.realestate.app.data.dealassistant
 
 import com.realestate.app.data.Property
 import java.util.Calendar
+import kotlin.math.ln
 import kotlin.math.pow
 
 // ---------- Financial ----------
@@ -46,26 +47,78 @@ fun calculatePurchaseCost(
     )
 }
 
-data class ConstructionCostResult(
-    val constructionCost: Double,
-    val totalInvestment: Double,
-    val estimatedSellingValue: Double,
-    val profit: Double,
-    val profitPercent: Double
+/** Everything a construction-feasibility study needs, gathered in one place. */
+data class ConstructionFeasibilityInputs(
+    val landArea: Double,
+    val landPrice: Long,
+    val totalBuiltArea: Double,
+    val efficiencyPercent: Double,
+    val costPerMeter: Double,
+    val permitCost: Double,
+    val engineeringFeePercent: Double,
+    val municipalityCharges: Double,
+    val insurancePercent: Double,
+    val unexpectedPercent: Double,
+    val financingCost: Double,
+    val sellingPricePerMeter: Double
 )
 
-fun calculateConstructionCost(
-    landPrice: Long,
-    builtArea: Double,
-    costPerMeter: Double,
-    sellingPricePerMeter: Double
-): ConstructionCostResult {
-    val constructionCost = builtArea * costPerMeter
-    val totalInvestment = landPrice + constructionCost
-    val estimatedSellingValue = builtArea * sellingPricePerMeter
-    val profit = estimatedSellingValue - totalInvestment
-    val profitPercent = if (totalInvestment > 0) profit / totalInvestment * 100.0 else 0.0
-    return ConstructionCostResult(constructionCost, totalInvestment, estimatedSellingValue, profit, profitPercent)
+data class ConstructionFeasibilityResult(
+    val netSaleableArea: Double,
+    val commonArea: Double,
+    val hardCost: Double,
+    val engineeringFees: Double,
+    val insurance: Double,
+    val unexpectedCosts: Double,
+    val softCosts: Double,
+    val totalInvestment: Double,
+    val averageCostPerSaleableMeter: Double,
+    val expectedRevenue: Double,
+    val grossProfit: Double,
+    val netProfit: Double,
+    val profitMarginPercent: Double,
+    val roiPercent: Double
+)
+
+fun calculateConstructionFeasibility(inputs: ConstructionFeasibilityInputs): ConstructionFeasibilityResult {
+    val netSaleable = inputs.totalBuiltArea * (inputs.efficiencyPercent / 100.0)
+    val common = inputs.totalBuiltArea - netSaleable
+    val hardCost = inputs.totalBuiltArea * inputs.costPerMeter
+    val engineeringFees = hardCost * (inputs.engineeringFeePercent / 100.0)
+    val insurance = hardCost * (inputs.insurancePercent / 100.0)
+    val preUnexpected = inputs.permitCost + engineeringFees + inputs.municipalityCharges + insurance + inputs.financingCost
+    val unexpected = (hardCost + preUnexpected) * (inputs.unexpectedPercent / 100.0)
+    val softCosts = preUnexpected + unexpected
+    val totalInvestment = inputs.landPrice + hardCost + softCosts
+    val avgCostPerSaleable = if (netSaleable > 0) totalInvestment / netSaleable else 0.0
+    val revenue = netSaleable * inputs.sellingPricePerMeter
+    val grossProfit = revenue - (inputs.landPrice + hardCost)
+    val netProfit = revenue - totalInvestment
+    val margin = if (revenue > 0) netProfit / revenue * 100.0 else 0.0
+    val roi = if (totalInvestment > 0) netProfit / totalInvestment * 100.0 else 0.0
+    return ConstructionFeasibilityResult(
+        netSaleableArea = netSaleable,
+        commonArea = common,
+        hardCost = hardCost,
+        engineeringFees = engineeringFees,
+        insurance = insurance,
+        unexpectedCosts = unexpected,
+        softCosts = softCosts,
+        totalInvestment = totalInvestment,
+        averageCostPerSaleableMeter = avgCostPerSaleable,
+        expectedRevenue = revenue,
+        grossProfit = grossProfit,
+        netProfit = netProfit,
+        profitMarginPercent = margin,
+        roiPercent = roi
+    )
+}
+
+fun constructionFeasibilityVerdict(result: ConstructionFeasibilityResult): String = when {
+    result.profitMarginPercent >= 25 -> "این پروژه حاشیه سود بالایی دارد و از نظر مالی جذاب به‌نظر می‌رسد."
+    result.profitMarginPercent >= 10 -> "حاشیه سود این پروژه در محدوده معقول قرار دارد."
+    result.profitMarginPercent >= 0 -> "حاشیه سود این پروژه پایین است؛ فرضیات هزینه و قیمت فروش را دوباره بررسی کنید."
+    else -> "بر اساس اعداد وارد‌شده، این پروژه با قیمت فروش فعلی زیان‌ده است."
 }
 
 data class RentalConversionResult(val monthlyRent: Double, val remainingDeposit: Double)
@@ -80,42 +133,207 @@ fun calculateRentalConversion(fullDeposit: Double, monthlyRatePercent: Double, a
 fun calculateDepositFromRent(monthlyRent: Double, monthlyRatePercent: Double): Double =
     if (monthlyRatePercent > 0) monthlyRent * 100.0 / monthlyRatePercent else 0.0
 
-data class RoiResult(val profit: Double, val roiPercent: Double, val annualReturnPercent: Double, val growthMultiplier: Double)
+data class InvestmentAnalysisInputs(
+    val purchasePrice: Double,
+    /** Null means "not sold yet" — the effective selling price is projected from [annualAppreciationPercent]. */
+    val sellingPrice: Double?,
+    val holdingYears: Double,
+    val annualInflationPercent: Double,
+    val annualAppreciationPercent: Double,
+    val maintenanceCosts: Double,
+    val renovationCosts: Double,
+    val taxes: Double,
+    val transactionCosts: Double,
+    /** Annual return of an alternative investment, for a side-by-side comparison. Null = skip. */
+    val opportunityCostPercent: Double?
+)
 
-fun calculateRoi(purchasePrice: Double, sellingPrice: Double, years: Double): RoiResult {
-    val profit = sellingPrice - purchasePrice
-    val roi = if (purchasePrice > 0) profit / purchasePrice * 100.0 else 0.0
-    val annual = if (years > 0) roi / years else roi
-    val growth = if (purchasePrice > 0) sellingPrice / purchasePrice else 0.0
-    return RoiResult(profit, roi, annual, growth)
+data class InvestmentAnalysisResult(
+    val effectiveSellingPrice: Double,
+    val totalCosts: Double,
+    val nominalProfit: Double,
+    val realProfit: Double,
+    val roiPercent: Double,
+    val annualizedRoiPercent: Double,
+    val capitalGrowthMultiplier: Double,
+    val purchasingPowerAdjustedValue: Double,
+    val breakEvenYear: Double?
+)
+
+fun calculateInvestmentAnalysis(inputs: InvestmentAnalysisInputs): InvestmentAnalysisResult {
+    val years = inputs.holdingYears.coerceAtLeast(0.0)
+    val effectiveSellingPrice = inputs.sellingPrice
+        ?: inputs.purchasePrice * (1 + inputs.annualAppreciationPercent / 100.0).pow(years)
+    val totalCosts = inputs.maintenanceCosts + inputs.renovationCosts + inputs.taxes + inputs.transactionCosts
+    val nominalProfit = effectiveSellingPrice - inputs.purchasePrice - totalCosts
+    val investedCapital = inputs.purchasePrice + totalCosts
+    val roi = if (investedCapital > 0) nominalProfit / investedCapital * 100.0 else 0.0
+    val annualizedRoi = if (years > 0 && inputs.purchasePrice > 0) {
+        (((effectiveSellingPrice - totalCosts) / inputs.purchasePrice).pow(1.0 / years) - 1) * 100.0
+    } else {
+        roi
+    }
+    val inflationFactor = (1 + inputs.annualInflationPercent / 100.0).pow(years)
+    val realProfit = if (inflationFactor > 0) nominalProfit / inflationFactor else nominalProfit
+    val growth = if (inputs.purchasePrice > 0) effectiveSellingPrice / inputs.purchasePrice else 0.0
+    val purchasingPowerValue = if (inflationFactor > 0) effectiveSellingPrice / inflationFactor else effectiveSellingPrice
+    val breakEven = if (inputs.annualAppreciationPercent > 0 && inputs.purchasePrice > 0 && investedCapital > 0) {
+        val ratio = investedCapital / inputs.purchasePrice
+        if (ratio > 0) ln(ratio) / ln(1 + inputs.annualAppreciationPercent / 100.0) else null
+    } else {
+        null
+    }
+    return InvestmentAnalysisResult(
+        effectiveSellingPrice = effectiveSellingPrice,
+        totalCosts = totalCosts,
+        nominalProfit = nominalProfit,
+        realProfit = realProfit,
+        roiPercent = roi,
+        annualizedRoiPercent = annualizedRoi,
+        capitalGrowthMultiplier = growth,
+        purchasingPowerAdjustedValue = purchasingPowerValue,
+        breakEvenYear = breakEven
+    )
 }
 
-data class LoanResult(val monthlyPayment: Double, val totalPayment: Double, val totalInterest: Double)
+fun investmentVerdicts(result: InvestmentAnalysisResult, inputs: InvestmentAnalysisInputs): List<String> {
+    val messages = mutableListOf<String>()
+    messages += when {
+        result.annualizedRoiPercent >= 20 -> "بازده سالانه این سرمایه‌گذاری بسیار مطلوب است."
+        result.annualizedRoiPercent >= 10 -> "بازده سالانه این سرمایه‌گذاری معقول است."
+        result.annualizedRoiPercent >= 0 -> "بازده سالانه این سرمایه‌گذاری پایین است."
+        else -> "این سرمایه‌گذاری بر اساس فرضیات فعلی زیان‌ده است."
+    }
+    if (result.annualizedRoiPercent < inputs.annualInflationPercent) {
+        messages += "بازده سالانه کمتر از نرخ تورم است؛ قدرت خرید سرمایه در عمل کاهش می‌یابد."
+    }
+    val opportunityCost = inputs.opportunityCostPercent
+    if (opportunityCost != null) {
+        messages += if (result.annualizedRoiPercent >= opportunityCost) {
+            "بازده این ملک از گزینه جایگزین (%.1f٪) بهتر است.".format(opportunityCost)
+        } else {
+            "بازده این ملک از گزینه جایگزین (%.1f٪) کمتر است.".format(opportunityCost)
+        }
+    }
+    return messages
+}
 
-fun calculateLoan(principal: Double, annualRatePercent: Double, months: Int): LoanResult {
-    if (months <= 0 || principal <= 0) return LoanResult(0.0, 0.0, 0.0)
+enum class RepaymentMethod(val label: String) {
+    EQUAL_INSTALLMENT("اقساط مساوی"),
+    EQUAL_PRINCIPAL("اصل ثابت")
+}
+
+data class AmortizationRow(val period: Int, val payment: Double, val principal: Double, val interest: Double, val balance: Double)
+
+data class LoanScheduleResult(
+    val firstPayment: Double,
+    val totalPayment: Double,
+    val totalInterest: Double,
+    val schedule: List<AmortizationRow>
+)
+
+fun calculateLoanSchedule(
+    principal: Double,
+    annualRatePercent: Double,
+    months: Int,
+    gracePeriodMonths: Int = 0,
+    method: RepaymentMethod = RepaymentMethod.EQUAL_INSTALLMENT
+): LoanScheduleResult {
+    if (principal <= 0 || months <= 0) return LoanScheduleResult(0.0, 0.0, 0.0, emptyList())
     val monthlyRate = annualRatePercent / 100.0 / 12.0
-    val payment = if (monthlyRate == 0.0) {
-        principal / months
-    } else {
-        val factor = (1 + monthlyRate).pow(months.toDouble())
-        principal * monthlyRate * factor / (factor - 1)
+    val schedule = mutableListOf<AmortizationRow>()
+    var balance = principal
+    var totalInterest = 0.0
+    var totalPayment = 0.0
+
+    for (m in 1..gracePeriodMonths) {
+        val interest = balance * monthlyRate
+        schedule += AmortizationRow(m, interest, 0.0, interest, balance)
+        totalInterest += interest
+        totalPayment += interest
     }
-    val total = payment * months
-    return LoanResult(monthlyPayment = payment, totalPayment = total, totalInterest = total - principal)
+
+    val remainingMonths = (months - gracePeriodMonths).coerceAtLeast(1)
+    when (method) {
+        RepaymentMethod.EQUAL_INSTALLMENT -> {
+            val payment = if (monthlyRate == 0.0) {
+                principal / remainingMonths
+            } else {
+                val factor = (1 + monthlyRate).pow(remainingMonths.toDouble())
+                principal * monthlyRate * factor / (factor - 1)
+            }
+            repeat(remainingMonths) { index ->
+                val interest = balance * monthlyRate
+                val principalPaid = (payment - interest).coerceAtMost(balance)
+                balance = (balance - principalPaid).coerceAtLeast(0.0)
+                schedule += AmortizationRow(gracePeriodMonths + index + 1, payment, principalPaid, interest, balance)
+                totalInterest += interest
+                totalPayment += payment
+            }
+        }
+        RepaymentMethod.EQUAL_PRINCIPAL -> {
+            val principalPerMonth = principal / remainingMonths
+            repeat(remainingMonths) { index ->
+                val interest = balance * monthlyRate
+                val payment = principalPerMonth + interest
+                balance = (balance - principalPerMonth).coerceAtLeast(0.0)
+                schedule += AmortizationRow(gracePeriodMonths + index + 1, payment, principalPerMonth, interest, balance)
+                totalInterest += interest
+                totalPayment += payment
+            }
+        }
+    }
+
+    val firstRealPayment = schedule.getOrNull(gracePeriodMonths)?.payment ?: schedule.firstOrNull()?.payment ?: 0.0
+    return LoanScheduleResult(
+        firstPayment = firstRealPayment,
+        totalPayment = totalPayment,
+        totalInterest = totalInterest,
+        schedule = schedule
+    )
 }
 
-data class InstallmentResult(val installmentAmount: Double, val totalPayable: Double)
+data class EarlyRepaymentComparison(
+    val originalTotalInterest: Double,
+    val newTotalInterest: Double,
+    val interestSaved: Double,
+    val monthsSaved: Int
+)
 
-fun calculateInstallment(totalPrice: Long, downPayment: Double, installmentCount: Int, annualRatePercent: Double): InstallmentResult {
-    val remaining = (totalPrice - downPayment).coerceAtLeast(0.0)
-    if (installmentCount <= 0) return InstallmentResult(0.0, remaining)
-    return if (annualRatePercent <= 0.0) {
-        InstallmentResult(installmentAmount = remaining / installmentCount, totalPayable = remaining)
-    } else {
-        val loan = calculateLoan(remaining, annualRatePercent, installmentCount)
-        InstallmentResult(installmentAmount = loan.monthlyPayment, totalPayable = loan.totalPayment)
+/** Simulates paying one extra lump sum at a given month (equal-installment method), holding the regular payment fixed and letting the loan finish early instead. */
+fun simulateEarlyRepayment(
+    principal: Double,
+    annualRatePercent: Double,
+    months: Int,
+    extraPaymentMonth: Int,
+    extraPaymentAmount: Double
+): EarlyRepaymentComparison {
+    val original = calculateLoanSchedule(principal, annualRatePercent, months)
+    if (extraPaymentAmount <= 0 || extraPaymentMonth <= 0 || extraPaymentMonth > months) {
+        return EarlyRepaymentComparison(original.totalInterest, original.totalInterest, 0.0, 0)
     }
+    val monthlyRate = annualRatePercent / 100.0 / 12.0
+    val originalPayment = original.firstPayment
+    var balance = principal
+    var totalInterest = 0.0
+    var monthCount = 0
+    while (balance > 0.01 && monthCount < months * 2) {
+        monthCount++
+        val interest = balance * monthlyRate
+        val principalPaid = (originalPayment - interest).coerceAtMost(balance)
+        totalInterest += interest
+        balance -= principalPaid
+        if (monthCount == extraPaymentMonth) {
+            balance -= extraPaymentAmount.coerceAtMost(balance)
+        }
+        if (balance < 0) balance = 0.0
+    }
+    return EarlyRepaymentComparison(
+        originalTotalInterest = original.totalInterest,
+        newTotalInterest = totalInterest,
+        interestSaved = original.totalInterest - totalInterest,
+        monthsSaved = months - monthCount
+    )
 }
 
 // ---------- Utilities ----------

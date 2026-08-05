@@ -33,7 +33,6 @@ import com.realestate.app.data.dealassistant.DealToolId
 val DealToolId.icon: ImageVector
     get() = when (this) {
         DealToolId.COMMISSION -> Icons.Rounded.Percent
-        DealToolId.PRICE_PER_METER -> Icons.Rounded.Straighten
         DealToolId.PURCHASE_COST -> Icons.Rounded.Receipt
         DealToolId.CONSTRUCTION_COST -> Icons.Rounded.Construction
         DealToolId.RENTAL_CONVERSION -> Icons.Rounded.SwapHoriz

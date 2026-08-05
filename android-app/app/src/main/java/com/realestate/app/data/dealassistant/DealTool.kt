@@ -20,13 +20,12 @@ enum class DealToolId(
     val available: Boolean = true
 ) {
     COMMISSION(DealCategory.FINANCIAL, "محاسبه کارمزد", "کارمزد مشاور را از قیمت ملک حساب کن"),
-    PRICE_PER_METER(DealCategory.FINANCIAL, "قیمت هر متر", "تبدیل قیمت کل به قیمت هر متر و برعکس"),
     PURCHASE_COST(DealCategory.FINANCIAL, "هزینه تخمینی خرید", "کارمزد، مالیات، ثبت و هزینه انتقال"),
-    CONSTRUCTION_COST(DealCategory.FINANCIAL, "برآورد هزینه ساخت", "هزینه ساخت، سرمایه‌گذاری کل و سود تخمینی"),
+    CONSTRUCTION_COST(DealCategory.FINANCIAL, "امکان‌سنجی ساخت‌وساز", "سرمایه‌گذاری کل، سود و بازده یک پروژه ساخت"),
     RENTAL_CONVERSION(DealCategory.FINANCIAL, "تبدیل رهن و اجاره", "تبدیل بین رهن کامل، اجاره و ترکیبی"),
-    ROI(DealCategory.FINANCIAL, "بازده سرمایه‌گذاری", "سود، بازده و رشد سرمایه"),
-    LOAN(DealCategory.FINANCIAL, "محاسبه وام", "قسط ماهانه و کل سود وام"),
-    INSTALLMENT(DealCategory.FINANCIAL, "محاسبه اقساط", "تقسیط قیمت ملک بین چند قسط"),
+    ROI(DealCategory.FINANCIAL, "تحلیل سرمایه‌گذاری", "سود واقعی، بازده سالانه و مقایسه با تورم"),
+    LOAN(DealCategory.FINANCIAL, "محاسبه وام", "قسط، جدول اقساط و شبیه‌سازی پیش‌پرداخت"),
+    INSTALLMENT(DealCategory.FINANCIAL, "برنامه پرداخت اقساطی", "طراحی برنامه پرداخت دلخواه بین خریدار و فروشنده"),
 
     AVERAGE_PRICE(DealCategory.ANALYSIS, "میانگین قیمت", "میانگین قیمت و قیمت هر متر املاک شما"),
     MARKET_VALUE(DealCategory.ANALYSIS, "برآورد ارزش بازار", "مقایسه با املاک مشابه در پایگاه داده شما"),
