@@ -66,8 +66,16 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.realestate.app.data.DealType
 import com.realestate.app.data.PropertyStatus
+import com.realestate.app.data.PropertyType
 import com.realestate.app.data.code
+import com.realestate.app.data.dealassistant.DealToolId
+import com.realestate.app.data.dealassistant.calculateCommission
+import com.realestate.app.data.dealassistant.calculatePricePerMeter
+import com.realestate.app.data.dealassistant.defaultCommissionRate
+import com.realestate.app.data.dealassistant.estimateMarketValue
+import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.CircleIconButton
 import com.realestate.app.ui.components.CollapsibleSection
 import com.realestate.app.ui.components.StatusPillBadge
@@ -76,9 +84,11 @@ import com.realestate.app.ui.components.color
 import com.realestate.app.ui.components.formatPrice
 import com.realestate.app.ui.components.label
 import com.realestate.app.ui.theme.Spacing
+import com.realestate.app.ui.theme.extendedColors
 import com.realestate.app.ui.theme.heroGradient
 import com.realestate.app.ui.theme.imageScrimGradient
 import com.realestate.app.viewmodel.PropertyViewModel
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -91,11 +101,13 @@ fun PropertyDetailScreen(
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
     onDeleted: () -> Unit,
-    onStoryCard: (Long) -> Unit
+    onStoryCard: (Long) -> Unit,
+    onOpenDealTool: (DealToolId) -> Unit
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val property by viewModel.getPropertyById(propertyId).collectAsStateWithLifecycle(initialValue = null)
+    val allProperties by viewModel.allProperties.collectAsStateWithLifecycle()
     val notes by viewModel.getNotesForProperty(propertyId).collectAsStateWithLifecycle(initialValue = emptyList())
     val timeline by viewModel.getTimelineForProperty(propertyId).collectAsStateWithLifecycle(initialValue = emptyList())
     val allTags by viewModel.allTags.collectAsStateWithLifecycle()
@@ -329,6 +341,8 @@ fun PropertyDetailScreen(
                 }
 
                 Column(modifier = Modifier.padding(horizontal = Spacing.screen)) {
+                DealAssistantSection(current = current, allProperties = allProperties, onOpenDealTool = onOpenDealTool)
+                Spacer(modifier = Modifier.height(Spacing.cardGap))
                 CollapsibleSection(title = "اطلاعات ملک", initiallyExpanded = true) {
                     DetailRow(label = "شهر", value = current.city)
                     DetailRow(label = "آدرس", value = current.address)
@@ -545,6 +559,71 @@ private fun QuickAction(
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/**
+ * Type A/C of the Smart Deal Assistant: commission and price/m² are computed and shown here
+ * automatically — no tool to open. Construction cost and rental conversion only ever need one
+ * extra number, so they're a single tap away instead of a whole separate workflow.
+ */
+@Composable
+private fun DealAssistantSection(
+    current: com.realestate.app.data.Property,
+    allProperties: List<com.realestate.app.data.Property>,
+    onOpenDealTool: (DealToolId) -> Unit
+) {
+    val commission = calculateCommission(current.price, defaultCommissionRate())
+    val pricePerMeter = calculatePricePerMeter(current.price, current.area)
+    val marketEstimate = estimateMarketValue(current, allProperties)
+    val moneyFormat = remember { NumberFormat.getNumberInstance(Locale.US) }
+
+    AppCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Text("دستیار معامله", style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(Spacing.sm))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("کارمزد (٪۰.۵)", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${moneyFormat.format(commission.perSideShare.toLong())} تومان", style = MaterialTheme.typography.titleSmall)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("قیمت هر متر", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${moneyFormat.format(pricePerMeter.toLong())} تومان", style = MaterialTheme.typography.titleSmall)
+            }
+            if (marketEstimate.comparableCount > 0) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("نسبت به میانگین بازار", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val diff = marketEstimate.differencePercent
+                    Text(
+                        "${if (diff >= 0) "+" else ""}${"%.1f".format(diff)}٪",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (diff >= 0) MaterialTheme.extendedColors.success else MaterialTheme.extendedColors.danger
+                    )
+                }
+            }
+
+            val showConstruction = current.propertyType == PropertyType.LAND || current.propertyType == PropertyType.VILLA
+            val showRentalConversion = current.dealType == DealType.RENT
+            if (showConstruction || showRentalConversion) {
+                Spacer(modifier = Modifier.height(Spacing.md))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (showConstruction) {
+                        AssistChip(
+                            onClick = { onOpenDealTool(DealToolId.CONSTRUCTION_COST) },
+                            label = { Text("برآورد هزینه ساخت") }
+                        )
+                    }
+                    if (showRentalConversion) {
+                        AssistChip(
+                            onClick = { onOpenDealTool(DealToolId.RENTAL_CONVERSION) },
+                            label = { Text("تبدیل رهن و اجاره") }
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

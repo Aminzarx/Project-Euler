@@ -32,6 +32,7 @@ private object Keys {
     val THEME_PREFERENCE = stringPreferencesKey("theme_preference")
     val RECENT_SEARCHES = stringPreferencesKey("recent_searches")
     val BACKUP_HISTORY = stringPreferencesKey("backup_history")
+    val RECENT_DEAL_TOOLS = stringPreferencesKey("recent_deal_tools")
 }
 
 /**
@@ -142,6 +143,23 @@ class SearchHistoryRepository(private val context: Context) {
 
     private companion object {
         const val SEARCH_DELIMITER = "|||"
+    }
+}
+
+/** Tracks which Smart Deal Assistant tools were opened most recently, most-recent first. */
+class RecentToolsRepository(private val context: Context) {
+    val recentToolKeys: Flow<List<String>> = context.appDataStore.data.map { prefs ->
+        prefs[Keys.RECENT_DEAL_TOOLS]?.split(TOOL_DELIMITER)?.filter { it.isNotBlank() } ?: emptyList()
+    }
+
+    suspend fun recordUsage(toolKey: String) {
+        val current = recentToolKeys.first()
+        val updated = (listOf(toolKey) + current.filterNot { it == toolKey }).take(6)
+        context.appDataStore.edit { prefs -> prefs[Keys.RECENT_DEAL_TOOLS] = updated.joinToString(TOOL_DELIMITER) }
+    }
+
+    private companion object {
+        const val TOOL_DELIMITER = "|||"
     }
 }
 
