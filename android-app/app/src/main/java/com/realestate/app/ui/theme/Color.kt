@@ -30,6 +30,10 @@ val WarningLight = Color(0xFFF59E0B)
 val OnWarningLight = Color(0xFFFFFFFF)
 val InfoLight = Color(0xFF3B82F6)
 val OnInfoLight = Color(0xFFFFFFFF)
+// A distinct hue from warning/success/danger/info — used for "reserved" so it never renders
+// identically to another property status.
+val ReservedLight = Color(0xFF8B5CF6)
+val OnReservedLight = Color(0xFFFFFFFF)
 
 // Warm neutral palette — dark
 val BrandDark = Color(0xFF9BB2DD)
@@ -53,3 +57,5 @@ val WarningDark = Color(0xFFFBBF24)
 val OnWarningDark = Color(0xFF2B1B00)
 val InfoDark = Color(0xFF60A5FA)
 val OnInfoDark = Color(0xFF001C3D)
+val ReservedDark = Color(0xFFA78BFA)
+val OnReservedDark = Color(0xFF2E1065)

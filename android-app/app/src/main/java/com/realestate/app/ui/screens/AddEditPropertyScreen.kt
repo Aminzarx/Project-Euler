@@ -64,6 +64,7 @@ import com.realestate.app.ui.components.MoneyField
 import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.components.RequiredFieldLabel
 import com.realestate.app.ui.components.label
+import com.realestate.app.ui.components.normalizeDigits
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.viewmodel.PropertyViewModel
 
@@ -244,8 +245,10 @@ fun AddEditPropertyScreen(
                     )
                     OutlinedTextField(
                         value = area,
-                        onValueChange = { area = it },
-                        label = { Text("متراژ") },
+                        onValueChange = { input ->
+                            area = normalizeDigits(input).filter { it in '0'..'9' || it == '.' }
+                        },
+                        label = { Text("متراژ (متر مربع)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )

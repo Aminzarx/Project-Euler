@@ -2,6 +2,8 @@ package com.realestate.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
@@ -43,11 +47,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.realestate.app.ui.theme.Elevation
+import com.realestate.app.ui.theme.MotionDuration
 import com.realestate.app.ui.theme.extendedColors
 
 val CardShape = RoundedCornerShape(14.dp)
@@ -78,7 +85,7 @@ fun AppCard(
     contentPadding: PaddingValues = PaddingValues(20.dp),
     content: @Composable () -> Unit
 ) {
-    val cardModifier = modifier.softShadow(shape, 8.dp)
+    val cardModifier = modifier.softShadow(shape, Elevation.card)
     if (onClick != null) {
         Surface(
             onClick = onClick,
@@ -105,7 +112,26 @@ fun AppCard(
     }
 }
 
-/** Rounded pill button — warm accent background, dark ink text. The app's primary call to action. */
+/** A subtle "press down" scale for any clickable Surface — the single cheapest lever for making
+ *  taps feel tactile instead of purely a color/ripple change. Read the given [interactionSource]
+ *  (must be the same one passed to the Surface's `onClick`) so the scale tracks real press state. */
+@Composable
+private fun rememberPressScale(interactionSource: MutableInteractionSource, pressedScale: Float = 0.96f): Float {
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) pressedScale else 1f,
+        animationSpec = tween(MotionDuration.FAST),
+        label = "press-scale"
+    )
+    return scale
+}
+
+/** Semantic intent of a button — lets one button component cover default/destructive/positive
+ *  actions instead of a separate composable per tone. */
+enum class ButtonTone { DEFAULT, DANGER, SUCCESS }
+
+/** Rounded pill button — warm accent background, dark ink text by default. The app's primary call
+ *  to action; pass [tone] for a destructive (danger) or confirming (success) action instead. */
 @Composable
 fun PrimaryButton(
     text: String,
@@ -113,15 +139,24 @@ fun PrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     loading: Boolean = false,
-    icon: ImageVector? = null
+    icon: ImageVector? = null,
+    tone: ButtonTone = ButtonTone.DEFAULT
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val scale = rememberPressScale(interactionSource)
+    val (container, onContainer) = when (tone) {
+        ButtonTone.DEFAULT -> MaterialTheme.extendedColors.accent to MaterialTheme.extendedColors.onAccent
+        ButtonTone.DANGER -> MaterialTheme.extendedColors.danger to MaterialTheme.extendedColors.onDanger
+        ButtonTone.SUCCESS -> MaterialTheme.extendedColors.success to MaterialTheme.extendedColors.onSuccess
+    }
     Surface(
         onClick = onClick,
         enabled = enabled && !loading,
         shape = PillShape,
-        color = if (enabled) MaterialTheme.extendedColors.accent else MaterialTheme.extendedColors.disabled,
-        contentColor = if (enabled) MaterialTheme.extendedColors.onAccent else MaterialTheme.extendedColors.onDisabled,
-        modifier = modifier.height(52.dp)
+        color = if (enabled) container else MaterialTheme.extendedColors.disabled,
+        contentColor = if (enabled) onContainer else MaterialTheme.extendedColors.onDisabled,
+        interactionSource = interactionSource,
+        modifier = modifier.height(52.dp).graphicsLayer { scaleX = scale; scaleY = scale }
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
@@ -131,7 +166,7 @@ fun PrimaryButton(
             if (loading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
-                    color = MaterialTheme.extendedColors.onAccent,
+                    color = onContainer,
                     strokeWidth = 2.dp
                 )
             } else {
@@ -154,6 +189,8 @@ fun SecondaryButton(
     enabled: Boolean = true,
     icon: ImageVector? = null
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val scale = rememberPressScale(interactionSource)
     Surface(
         onClick = onClick,
         enabled = enabled,
@@ -161,7 +198,8 @@ fun SecondaryButton(
         color = if (enabled) MaterialTheme.colorScheme.surface else MaterialTheme.extendedColors.disabled,
         contentColor = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.extendedColors.onDisabled,
         shadowElevation = 0.dp,
-        modifier = modifier.height(52.dp).softShadow(PillShape, 5.dp)
+        interactionSource = interactionSource,
+        modifier = modifier.height(52.dp).softShadow(PillShape, Elevation.control).graphicsLayer { scaleX = scale; scaleY = scale }
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
@@ -172,6 +210,32 @@ fun SecondaryButton(
                 Icon(icon, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
             }
+            Text(text, style = MaterialTheme.typography.titleMedium)
+        }
+    }
+}
+
+/** Low-emphasis text-only action (e.g. "انصراف") — no container, no shadow, just colored text. */
+@Composable
+fun AppTextButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = PillShape,
+        color = Color.Transparent,
+        contentColor = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.extendedColors.onDisabled,
+        modifier = modifier.height(44.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(text, style = MaterialTheme.typography.titleMedium)
         }
     }
@@ -190,6 +254,8 @@ fun CircleIconButton(
     elevated: Boolean = true,
     enabled: Boolean = true
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val scale = rememberPressScale(interactionSource)
     Surface(
         onClick = onClick,
         enabled = enabled,
@@ -197,7 +263,10 @@ fun CircleIconButton(
         color = if (enabled) containerColor else MaterialTheme.extendedColors.disabled,
         contentColor = if (enabled) contentColor else MaterialTheme.extendedColors.onDisabled,
         shadowElevation = 0.dp,
-        modifier = modifier.size(size).let { if (elevated) it.softShadow(CircleShape, 5.dp) else it }
+        interactionSource = interactionSource,
+        modifier = modifier.size(size)
+            .let { if (elevated) it.softShadow(CircleShape, Elevation.control) else it }
+            .graphicsLayer { scaleX = scale; scaleY = scale }
     ) {
         Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
             Icon(icon, contentDescription = contentDescription, modifier = Modifier.size(20.dp))
@@ -220,7 +289,7 @@ fun AppListRow(
         shape = RowShape,
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 0.dp,
-        modifier = modifier.fillMaxWidth().softShadow(RowShape, 4.dp)
+        modifier = modifier.fillMaxWidth().softShadow(RowShape, Elevation.row)
     ) {
         Row(
             modifier = Modifier
@@ -282,7 +351,7 @@ fun FloatingBottomNav(items: List<BottomNavItem>, modifier: Modifier = Modifier)
         shape = navShape,
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 0.dp,
-        modifier = modifier.fillMaxWidth().softShadow(navShape, 10.dp)
+        modifier = modifier.fillMaxWidth().softShadow(navShape, Elevation.floating)
     ) {
         Row(
             modifier = Modifier
@@ -301,7 +370,7 @@ fun FloatingBottomNav(items: List<BottomNavItem>, modifier: Modifier = Modifier)
                 )
                 val containerColor by animateColorAsState(
                     targetValue = if (item.selected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                    animationSpec = tween(220),
+                    animationSpec = tween(MotionDuration.MEDIUM),
                     label = "nav-item-bg"
                 )
                 val contentColor by animateColorAsState(
@@ -310,7 +379,7 @@ fun FloatingBottomNav(items: List<BottomNavItem>, modifier: Modifier = Modifier)
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
-                    animationSpec = tween(220),
+                    animationSpec = tween(MotionDuration.MEDIUM),
                     label = "nav-item-fg"
                 )
                 Surface(
@@ -340,19 +409,26 @@ fun StatusPillBadge(
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.surface,
-    textColor: Color = MaterialTheme.colorScheme.onSurface
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
+    icon: ImageVector? = null
 ) {
     val badgeContent: @Composable () -> Unit = {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(color)
-            )
+            // An icon (when provided) lets a status be told apart without reading the text or
+            // relying on color alone — a colored dot alone isn't reliable for color-blind users.
+            if (icon != null) {
+                Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp), tint = color)
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(color)
+                )
+            }
             Spacer(modifier = Modifier.width(6.dp))
             Text(text, style = MaterialTheme.typography.labelMedium, color = textColor)
         }
@@ -512,4 +588,39 @@ fun RouteErrorState(
             PrimaryButton(text = actionLabel, onClick = onBack, modifier = Modifier.fillMaxWidth())
         }
     }
+}
+
+/**
+ * Reusable yes/no confirmation for a consequential action (deleting, discarding, archiving) —
+ * use instead of an ad-hoc [AlertDialog] so every "are you sure?" moment in the app looks and
+ * behaves the same way. Pass [danger] = true for destructive actions (delete) to color the
+ * confirm button as a warning instead of the default accent.
+ */
+@Composable
+fun ConfirmationDialog(
+    title: String,
+    text: String,
+    confirmLabel: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    dismissLabel: String = "انصراف",
+    danger: Boolean = false
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = modifier,
+        title = { Text(title) },
+        text = { Text(text) },
+        confirmButton = {
+            PrimaryButton(
+                text = confirmLabel,
+                onClick = { onConfirm(); onDismiss() },
+                tone = if (danger) ButtonTone.DANGER else ButtonTone.DEFAULT
+            )
+        },
+        dismissButton = {
+            AppTextButton(text = dismissLabel, onClick = onDismiss)
+        }
+    )
 }

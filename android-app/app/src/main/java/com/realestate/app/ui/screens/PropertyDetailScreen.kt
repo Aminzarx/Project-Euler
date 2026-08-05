@@ -78,10 +78,12 @@ import com.realestate.app.data.dealassistant.estimateMarketValue
 import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.CircleIconButton
 import com.realestate.app.ui.components.CollapsibleSection
+import com.realestate.app.ui.components.ConfirmationDialog
 import com.realestate.app.ui.components.StatusPillBadge
 import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.ui.components.color
 import com.realestate.app.ui.components.formatPrice
+import com.realestate.app.ui.components.icon
 import com.realestate.app.ui.components.label
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.ui.theme.extendedColors
@@ -119,6 +121,7 @@ fun PropertyDetailScreen(
     var showAddNoteDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
     var showFollowUpDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
     var hasMarkedViewed by remember(propertyId) { mutableStateOf(false) }
 
     LaunchedEffect(property) {
@@ -186,8 +189,7 @@ fun PropertyDetailScreen(
                                     text = { Text("حذف") },
                                     onClick = {
                                         showMenu = false
-                                        viewModel.deleteProperty(p)
-                                        onDeleted()
+                                        showDeleteConfirm = true
                                     }
                                 )
                             }
@@ -271,7 +273,8 @@ fun PropertyDetailScreen(
                             color = current.status.color(),
                             onClick = { showStatusSheet = true },
                             containerColor = Color.White.copy(alpha = 0.92f),
-                            textColor = Color.Black
+                            textColor = Color.Black,
+                            icon = current.status.icon()
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
@@ -533,6 +536,20 @@ fun PropertyDetailScreen(
                     hasFollowUp = current.followUpAt != null,
                     onSelect = { timestamp -> viewModel.setFollowUp(current, timestamp) },
                     onDismiss = { showFollowUpDialog = false }
+                )
+            }
+
+            if (showDeleteConfirm) {
+                ConfirmationDialog(
+                    title = "حذف این ملک؟",
+                    text = "«${current.title}» برای همیشه حذف می‌شود و این کار قابل بازگشت نیست.",
+                    confirmLabel = "حذف",
+                    danger = true,
+                    onConfirm = {
+                        viewModel.deleteProperty(current)
+                        onDeleted()
+                    },
+                    onDismiss = { showDeleteConfirm = false }
                 )
             }
 

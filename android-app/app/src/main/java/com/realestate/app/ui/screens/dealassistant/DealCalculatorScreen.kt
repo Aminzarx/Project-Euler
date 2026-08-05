@@ -51,6 +51,7 @@ import com.realestate.app.data.dealassistant.whatPercent
 import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.CollapsibleSection
 import com.realestate.app.ui.components.MoneyField
+import com.realestate.app.ui.components.normalizeDigits
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.viewmodel.DealAssistantViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
@@ -121,7 +122,9 @@ fun DealCalculatorScreen(
 internal fun NumberField(label: String, value: String, onValueChange: (String) -> Unit, suffix: String? = null, modifier: Modifier = Modifier) {
     OutlinedTextField(
         value = value,
-        onValueChange = { input -> onValueChange(input.filter { it.isDigit() || it == '.' }) },
+        onValueChange = { input ->
+            onValueChange(normalizeDigits(input).filter { it in '0'..'9' || it == '.' })
+        },
         label = { Text(if (suffix != null) "$label ($suffix)" else label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         singleLine = true,
@@ -385,7 +388,7 @@ private fun DateCalculatorTool() {
 internal fun NumberFieldCompact(label: String, value: String, modifier: Modifier = Modifier.width(90.dp), onValueChange: (String) -> Unit) {
     OutlinedTextField(
         value = value,
-        onValueChange = { input -> onValueChange(input.filter { it.isDigit() }) },
+        onValueChange = { input -> onValueChange(normalizeDigits(input).filter { it in '0'..'9' }) },
         label = { Text(label) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         singleLine = true,
