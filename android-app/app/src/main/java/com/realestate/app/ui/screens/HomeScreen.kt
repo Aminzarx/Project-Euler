@@ -463,6 +463,7 @@ private fun TimelineEventType.icon(): ImageVector = when (this) {
     TimelineEventType.ARCHIVED -> Icons.Rounded.History
     TimelineEventType.RESTORED -> Icons.Rounded.CheckCircle
     TimelineEventType.NOTE_ADDED -> Icons.Rounded.StickyNote2
+    TimelineEventType.FOLLOW_UP_SET -> Icons.Rounded.EventAvailable
 }
 
 private fun groupActivitiesByRecency(
