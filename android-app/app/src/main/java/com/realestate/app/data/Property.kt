@@ -32,7 +32,9 @@ data class Property(
     val dateAdded: Long = System.currentTimeMillis(),
     val lastModifiedAt: Long = System.currentTimeMillis(),
     val lastViewedAt: Long? = null,
-    val lastSharedAt: Long? = null
+    val lastSharedAt: Long? = null,
+    val viewCount: Int = 0,
+    val followUpAt: Long? = null
 )
 
 /** Derived, human-readable identifier - never stored, always computed from [Property.id]. */

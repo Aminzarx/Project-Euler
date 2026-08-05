@@ -93,6 +93,8 @@ private fun Property.toJson(): JSONObject = JSONObject().apply {
     put("lastModifiedAt", lastModifiedAt)
     put("lastViewedAt", lastViewedAt ?: JSONObject.NULL)
     put("lastSharedAt", lastSharedAt ?: JSONObject.NULL)
+    put("viewCount", viewCount)
+    put("followUpAt", followUpAt ?: JSONObject.NULL)
 }
 
 private fun JSONObject.toProperty(): Property = Property(
@@ -117,7 +119,9 @@ private fun JSONObject.toProperty(): Property = Property(
     dateAdded = getLong("dateAdded"),
     lastModifiedAt = optLong("lastModifiedAt", System.currentTimeMillis()),
     lastViewedAt = if (isNull("lastViewedAt")) null else getLong("lastViewedAt"),
-    lastSharedAt = if (isNull("lastSharedAt")) null else getLong("lastSharedAt")
+    lastSharedAt = if (isNull("lastSharedAt")) null else getLong("lastSharedAt"),
+    viewCount = optInt("viewCount", 0),
+    followUpAt = if (has("followUpAt") && !isNull("followUpAt")) getLong("followUpAt") else null
 )
 
 private fun Note.toJson(): JSONObject = JSONObject().apply {

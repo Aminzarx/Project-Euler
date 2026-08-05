@@ -1,5 +1,7 @@
 package com.realestate.app.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,11 +29,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.data.Property
-import com.realestate.app.ui.components.PropertyCard
+import com.realestate.app.ui.components.SwipeablePropertyRow
+import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.viewmodel.PropertyViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -103,6 +107,7 @@ private fun FavoritesList(
     onPropertyClick: (Long) -> Unit,
     viewModel: PropertyViewModel
 ) {
+    val context = LocalContext.current
     if (favorites.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
@@ -114,13 +119,29 @@ private fun FavoritesList(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(favorites, key = { it.id }) { property ->
-                PropertyCard(
+                SwipeablePropertyRow(
                     property = property,
+                    selectionMode = false,
+                    isSelected = false,
                     onClick = { onPropertyClick(property.id) },
-                    onFavoriteClick = { viewModel.toggleFavorite(property) }
+                    onLongPress = {},
+                    onToggleFavorite = { viewModel.toggleFavorite(property) },
+                    onCall = {
+                        if (property.ownerPhone.isNotBlank()) {
+                            context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${property.ownerPhone}")))
+                        }
+                    },
+                    onShare = {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, buildShareMessage(property))
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری ملک"))
+                        viewModel.markShared(property)
+                    }
                 )
             }
         }

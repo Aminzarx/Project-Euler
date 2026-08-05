@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.Call
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.outlined.Home
@@ -67,8 +68,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.code
-import com.realestate.app.ui.components.AppCard
-import com.realestate.app.ui.components.PrimaryButton
+import com.realestate.app.ui.components.CircleIconButton
+import com.realestate.app.ui.components.CollapsibleSection
 import com.realestate.app.ui.components.StatusPillBadge
 import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.ui.components.color
@@ -105,6 +106,7 @@ fun PropertyDetailScreen(
     var showAddTagDialog by remember { mutableStateOf(false) }
     var showAddNoteDialog by remember { mutableStateOf(false) }
     var showFolderDialog by remember { mutableStateOf(false) }
+    var showFollowUpDialog by remember { mutableStateOf(false) }
     var hasMarkedViewed by remember(propertyId) { mutableStateOf(false) }
 
     LaunchedEffect(property) {
@@ -152,6 +154,10 @@ fun PropertyDetailScreen(
                                 DropdownMenuItem(
                                     text = { Text("پوشه علاقه‌مندی") },
                                     onClick = { showMenu = false; showFolderDialog = true }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("تنظیم پیگیری") },
+                                    onClick = { showMenu = false; showFollowUpDialog = true }
                                 )
                                 if (p.status == PropertyStatus.ARCHIVED) {
                                     DropdownMenuItem(
@@ -291,8 +297,39 @@ fun PropertyDetailScreen(
                     }
                 }
 
-                Column(modifier = Modifier.padding(Spacing.screen)) {
-                AppCard(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.screen, vertical = Spacing.md),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    QuickAction(
+                        icon = Icons.Outlined.Call,
+                        label = "تماس",
+                        enabled = current.ownerPhone.isNotBlank(),
+                        onClick = {
+                            context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${current.ownerPhone}")))
+                        }
+                    )
+                    QuickAction(
+                        icon = Icons.Outlined.Share,
+                        label = "اشتراک",
+                        onClick = {
+                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_TEXT, buildShareMessage(current))
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری ملک"))
+                            viewModel.markShared(current)
+                        }
+                    )
+                    QuickAction(
+                        icon = Icons.Outlined.Edit,
+                        label = "ویرایش",
+                        onClick = { onEdit(current.id) }
+                    )
+                }
+
+                Column(modifier = Modifier.padding(horizontal = Spacing.screen)) {
+                CollapsibleSection(title = "اطلاعات ملک", initiallyExpanded = true) {
                     DetailRow(label = "شهر", value = current.city)
                     DetailRow(label = "آدرس", value = current.address)
                     DetailRow(label = "متراژ", value = "${current.area} متر مربع")
@@ -301,25 +338,18 @@ fun PropertyDetailScreen(
                         DetailRow(label = "مالک", value = current.ownerName)
                     }
                     if (current.ownerPhone.isNotBlank()) {
-                        DetailRow(
-                            label = "شماره تماس",
-                            value = current.ownerPhone,
-                            trailing = {
-                                IconButton(onClick = {
-                                    val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${current.ownerPhone}"))
-                                    context.startActivity(dialIntent)
-                                }) {
-                                    Icon(Icons.Outlined.Call, contentDescription = "تماس با مالک", tint = MaterialTheme.colorScheme.primary)
-                                }
-                            }
-                        )
+                        DetailRow(label = "شماره تماس", value = current.ownerPhone)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(Spacing.cardGap))
-                AppCard(modifier = Modifier.fillMaxWidth()) {
-                    SectionHeader(title = "برچسب‌ها") { showAddTagDialog = true }
-                    Spacer(modifier = Modifier.height(8.dp))
+                CollapsibleSection(
+                    title = "برچسب‌ها",
+                    subtitle = if (current.tags.isEmpty()) null else "${current.tags.size} برچسب"
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { showAddTagDialog = true }) { Text("افزودن برچسب") }
+                    }
                     if (current.tags.isEmpty()) {
                         Text(
                             "برچسبی اضافه نشده",
@@ -340,31 +370,21 @@ fun PropertyDetailScreen(
                 }
 
                 Spacer(modifier = Modifier.height(Spacing.cardGap))
-                AppCard(modifier = Modifier.fillMaxWidth()) {
-                    Text(text = "توضیحات", style = MaterialTheme.typography.titleLarge)
-                    Spacer(modifier = Modifier.height(4.dp))
+                CollapsibleSection(title = "توضیحات") {
                     Text(text = current.description, style = MaterialTheme.typography.bodyMedium)
                 }
 
                 Spacer(modifier = Modifier.height(Spacing.cardGap))
-                PrimaryButton(
-                    text = "اشتراک‌گذاری ملک",
-                    icon = Icons.Outlined.Share,
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, buildShareMessage(current))
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری ملک"))
-                        viewModel.markShared(current)
+                CollapsibleSection(
+                    title = "یادداشت‌ها",
+                    subtitle = if (notes.isEmpty()) null else "${notes.size} یادداشت"
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showAddNoteDialog = true }) { Text("افزودن یادداشت") }
                     }
-                )
-
-                Spacer(modifier = Modifier.height(Spacing.cardGap))
-                AppCard(modifier = Modifier.fillMaxWidth()) {
-                    SectionHeader(title = "یادداشت‌ها") { showAddNoteDialog = true }
-                    Spacer(modifier = Modifier.height(8.dp))
                     if (notes.isEmpty()) {
                         Text(
                             "یادداشتی ثبت نشده",
@@ -389,9 +409,10 @@ fun PropertyDetailScreen(
                 }
 
                 Spacer(modifier = Modifier.height(Spacing.cardGap))
-                AppCard(modifier = Modifier.fillMaxWidth()) {
-                    Text(text = "تاریخچه", style = MaterialTheme.typography.titleLarge)
-                    Spacer(modifier = Modifier.height(12.dp))
+                CollapsibleSection(
+                    title = "تاریخچه",
+                    subtitle = if (timeline.isEmpty()) null else "${timeline.size} رویداد"
+                ) {
                     if (timeline.isEmpty()) {
                         Text(
                             "هنوز رویدادی ثبت نشده",
@@ -493,19 +514,36 @@ fun PropertyDetailScreen(
                 )
             }
 
+            if (showFollowUpDialog) {
+                FollowUpDialog(
+                    hasFollowUp = current.followUpAt != null,
+                    onSelect = { timestamp -> viewModel.setFollowUp(current, timestamp) },
+                    onDismiss = { showFollowUpDialog = false }
+                )
+            }
+
         }
     }
 }
 
 @Composable
-private fun SectionHeader(title: String, onAddClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = title, style = MaterialTheme.typography.titleMedium)
-        TextButton(onClick = onAddClick) { Text("افزودن") }
+private fun QuickAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        CircleIconButton(
+            icon = icon,
+            onClick = onClick,
+            contentDescription = label,
+            containerColor = if (enabled) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            size = 52.dp
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -596,6 +634,8 @@ private fun AddNoteDialog(onAdd: (String) -> Unit, onDismiss: () -> Unit) {
     )
 }
 
+private val presetWorkQueues = listOf("پیگیری امروز", "VIP", "سرمایه‌گذاری", "فوری", "این هفته")
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FavoriteFolderDialog(
@@ -605,27 +645,32 @@ private fun FavoriteFolderDialog(
     onDismiss: () -> Unit
 ) {
     var text by remember { mutableStateOf(currentFolder ?: "") }
+    val suggestions = (presetWorkQueues + existingFolders).distinct()
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("پوشه علاقه‌مندی") },
+        title = { Text("صف کاری") },
         text = {
             Column {
+                Text(
+                    "این ملک را به یکی از صف‌های کاری اضافه کن یا یک صف جدید بساز",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(10.dp))
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
                     placeholder = { Text("مثلاً مشتریان امروز") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (existingFolders.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        existingFolders.forEach { folder ->
-                            FilterChip(
-                                selected = folder == text,
-                                onClick = { text = folder },
-                                label = { Text(folder) }
-                            )
-                        }
+                Spacer(modifier = Modifier.height(10.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    suggestions.forEach { folder ->
+                        FilterChip(
+                            selected = folder == text,
+                            onClick = { text = folder },
+                            label = { Text(folder) }
+                        )
                     }
                 }
             }
@@ -638,6 +683,58 @@ private fun FavoriteFolderDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("انصراف") }
+        }
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FollowUpDialog(
+    hasFollowUp: Boolean,
+    onSelect: (Long?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val dayMillis = 24L * 60 * 60 * 1000
+    val options = listOf(
+        "امروز" to 0L,
+        "فردا" to dayMillis,
+        "۳ روز دیگر" to dayMillis * 3,
+        "هفته دیگر" to dayMillis * 7
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("تنظیم پیگیری") },
+        text = {
+            Column {
+                Text(
+                    "این ملک در «پیگیری‌های امروز» یادآوری می‌شود",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    options.forEach { (label, offset) ->
+                        AssistChip(
+                            onClick = {
+                                onSelect(System.currentTimeMillis() + offset)
+                                onDismiss()
+                            },
+                            label = { Text(label) }
+                        )
+                    }
+                }
+                if (hasFollowUp) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    TextButton(onClick = {
+                        onSelect(null)
+                        onDismiss()
+                    }) { Text("حذف پیگیری") }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("بستن") }
         }
     )
 }

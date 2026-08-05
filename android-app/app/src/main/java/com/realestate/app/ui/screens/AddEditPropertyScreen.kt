@@ -146,8 +146,8 @@ fun AddEditPropertyScreen(
     }
 
     val isEditMode = propertyId != null
-    val isFormValid = title.isNotBlank() && city.isNotBlank() && address.isNotBlank() &&
-        price.toLongOrNull() != null && area.toDoubleOrNull() != null && rooms.toIntOrNull() != null
+    // Only a title is required — save fast, fill everything else in later.
+    val isFormValid = title.isNotBlank()
 
     Scaffold(
         topBar = {
@@ -411,7 +411,9 @@ fun AddEditPropertyScreen(
                         favoriteFolder = existing?.favoriteFolder,
                         dateAdded = existing?.dateAdded ?: System.currentTimeMillis(),
                         lastViewedAt = existing?.lastViewedAt,
-                        lastSharedAt = existing?.lastSharedAt
+                        lastSharedAt = existing?.lastSharedAt,
+                        viewCount = existing?.viewCount ?: 0,
+                        followUpAt = existing?.followUpAt
                     )
                     if (isEditMode) {
                         viewModel.updateProperty(newProperty)

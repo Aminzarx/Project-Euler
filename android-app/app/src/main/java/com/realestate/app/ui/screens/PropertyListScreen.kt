@@ -1,5 +1,7 @@
 package com.realestate.app.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +20,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.DropdownMenu
@@ -36,12 +40,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -50,7 +58,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.data.DealType
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
-import com.realestate.app.ui.components.PropertyCard
+import com.realestate.app.ui.components.SwipeablePropertyRow
+import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.ui.components.label
 import com.realestate.app.viewmodel.PropertyFilter
 import com.realestate.app.viewmodel.PropertyViewModel
@@ -62,22 +71,49 @@ fun PropertyListScreen(
     onPropertyClick: (Long) -> Unit,
     onAddClick: () -> Unit
 ) {
+    val context = LocalContext.current
     val properties by viewModel.filteredProperties.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val cities by viewModel.availableCities.collectAsStateWithLifecycle()
     val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
+    val selectedIds by viewModel.selectedIds.collectAsStateWithLifecycle()
     var showFilterSheet by remember { mutableStateOf(false) }
+    val searchFocusRequester = remember { FocusRequester() }
+    val selectionMode = selectedIds.isNotEmpty()
+
+    LaunchedEffect(Unit) {
+        searchFocusRequester.requestFocus()
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("املاک") },
-                actions = {
-                    IconButton(onClick = { showFilterSheet = true }) {
-                        Icon(Icons.Outlined.FilterList, contentDescription = "فیلترها")
+            if (selectionMode) {
+                TopAppBar(
+                    title = { Text("${selectedIds.size} انتخاب شده") },
+                    navigationIcon = {
+                        IconButton(onClick = { viewModel.clearSelection() }) {
+                            Icon(Icons.Outlined.Close, contentDescription = "لغو انتخاب")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = {
+                            val selected = properties.filter { selectedIds.contains(it.id) }
+                            viewModel.deleteSelected(selected)
+                        }) {
+                            Icon(Icons.Outlined.Delete, contentDescription = "حذف موارد انتخاب‌شده")
+                        }
                     }
-                }
-            )
+                )
+            } else {
+                TopAppBar(
+                    title = { Text("املاک") },
+                    actions = {
+                        IconButton(onClick = { showFilterSheet = true }) {
+                            Icon(Icons.Outlined.FilterList, contentDescription = "فیلترها")
+                        }
+                    }
+                )
+            }
         },
         floatingActionButton = {
             FloatingActionButton(
@@ -96,7 +132,8 @@ fun PropertyListScreen(
                 onValueChange = { viewModel.updateFilter(filter.copy(query = it)) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                    .focusRequester(searchFocusRequester),
                 shape = com.realestate.app.ui.components.PillShape,
                 placeholder = { Text("جستجو بر اساس عنوان، شهر، آدرس یا کد ملک") },
                 leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
@@ -169,13 +206,35 @@ fun PropertyListScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(properties, key = { it.id }) { property ->
-                        PropertyCard(
+                        SwipeablePropertyRow(
                             property = property,
-                            onClick = { onPropertyClick(property.id) },
-                            onFavoriteClick = { viewModel.toggleFavorite(property) }
+                            selectionMode = selectionMode,
+                            isSelected = selectedIds.contains(property.id),
+                            onClick = {
+                                if (selectionMode) {
+                                    viewModel.toggleSelection(property.id)
+                                } else {
+                                    onPropertyClick(property.id)
+                                }
+                            },
+                            onLongPress = { viewModel.toggleSelection(property.id) },
+                            onToggleFavorite = { viewModel.toggleFavorite(property) },
+                            onCall = {
+                                if (property.ownerPhone.isNotBlank()) {
+                                    context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${property.ownerPhone}")))
+                                }
+                            },
+                            onShare = {
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, buildShareMessage(property))
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری ملک"))
+                                viewModel.markShared(property)
+                            }
                         )
                     }
                 }

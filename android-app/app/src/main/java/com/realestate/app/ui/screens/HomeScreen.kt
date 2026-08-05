@@ -1,7 +1,5 @@
 package com.realestate.app.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,22 +12,23 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.PushPin
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -46,31 +45,28 @@ import com.realestate.app.ui.components.PropertyMiniCard
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.ui.theme.heroGradient
 import com.realestate.app.viewmodel.PropertyViewModel
-import com.realestate.app.viewmodel.WalletViewModel
-import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 /**
  * Home is a working desk, not a dashboard: search first, then the properties the agent is
- * already touching (recently used, pinned), what just happened (recent activity), and the wallet.
- * Nothing else competes for attention here — favorites has its own tab.
+ * already touching (recently opened, frequently used, pinned), and what needs attention today.
+ * Nothing else competes for attention here — wallet lives in Profile, favorites has its own tab.
  */
 @Composable
 fun HomeScreen(
     viewModel: PropertyViewModel,
-    walletViewModel: WalletViewModel,
     onPropertyClick: (Long) -> Unit,
     onAddClick: () -> Unit,
-    onSearchClick: () -> Unit,
-    onOpenWallet: () -> Unit
+    onSearchClick: () -> Unit
 ) {
     val allProperties by viewModel.allProperties.collectAsStateWithLifecycle()
     val recentlyViewed by viewModel.recentlyViewedProperties.collectAsStateWithLifecycle()
+    val frequentProperties by viewModel.frequentProperties.collectAsStateWithLifecycle()
     val pinned by viewModel.pinnedProperties.collectAsStateWithLifecycle()
+    val todayFollowUps by viewModel.todayFollowUps.collectAsStateWithLifecycle()
     val recentActivities by viewModel.recentActivities.collectAsStateWithLifecycle()
-    val balance by walletViewModel.balance.collectAsStateWithLifecycle()
 
     Scaffold(
         floatingActionButton = {
@@ -119,12 +115,47 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            if (todayFollowUps.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(Spacing.xl))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.EventAvailable, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "پیگیری‌های امروز", style = MaterialTheme.typography.titleLarge)
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                    todayFollowUps.forEach { property ->
+                        AppListRow(
+                            icon = Icons.Outlined.EventAvailable,
+                            title = property.title,
+                            subtitle = "${property.city} · ${formatActivityTime(property.followUpAt ?: 0L)}",
+                            onClick = { onPropertyClick(property.id) }
+                        )
+                    }
+                }
+            }
+
             if (recentlyViewed.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(Spacing.xl))
                 Text(text = "به‌تازگی دیده‌شده", style = MaterialTheme.typography.titleLarge)
                 Spacer(modifier = Modifier.height(10.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(recentlyViewed, key = { it.id }) { property ->
+                        PropertyMiniCard(property = property, onClick = { onPropertyClick(property.id) })
+                    }
+                }
+            }
+
+            if (frequentProperties.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(Spacing.xl))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.TrendingUp, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(text = "پرکاربردترین ملک‌ها", style = MaterialTheme.typography.titleLarge)
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(frequentProperties, key = { it.id }) { property ->
                         PropertyMiniCard(property = property, onClick = { onPropertyClick(property.id) })
                     }
                 }
@@ -159,34 +190,6 @@ fun HomeScreen(
                         )
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(Spacing.xl))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(heroGradient())
-                    .clickable(onClick = onOpenWallet)
-                    .padding(20.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Outlined.AccountBalanceWallet,
-                    contentDescription = null,
-                    tint = Color.White
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("کیف پول", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.75f))
-                    Text(
-                        "${NumberFormat.getNumberInstance(Locale.US).format(balance)} تومان",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White
-                    )
-                }
-                TextButton(onClick = onOpenWallet) { Text("مشاهده", color = Color.White) }
             }
 
             Spacer(modifier = Modifier.height(Spacing.xl))

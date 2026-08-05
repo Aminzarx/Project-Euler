@@ -87,7 +87,7 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
             val matchesMaxPrice = filter.maxPrice == null || property.price <= filter.maxPrice
             matchesQuery && matchesCity && matchesDealType && matchesPropertyType &&
                 matchesStatus && matchesTag && matchesMinPrice && matchesMaxPrice
-        }
+        }.sortedByDescending { it.isPinned }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val favoriteProperties: StateFlow<List<Property>> = repository.favoriteProperties
@@ -98,6 +98,20 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
 
     val pinnedProperties: StateFlow<List<Property>> = allProperties
         .map { list -> list.filter { it.isPinned } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Properties opened the most — a separate signal from "recently viewed" (most recent, not most frequent). */
+    val frequentProperties: StateFlow<List<Property>> = allProperties
+        .map { list -> list.filter { it.viewCount > 0 }.sortedByDescending { it.viewCount }.take(10) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Properties with a follow-up due today or overdue, soonest first. */
+    val todayFollowUps: StateFlow<List<Property>> = allProperties
+        .map { list ->
+            val endOfToday = endOfTodayMillis()
+            list.filter { it.followUpAt != null && it.followUpAt <= endOfToday }
+                .sortedBy { it.followUpAt }
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val availableCities: StateFlow<List<String>> = repository.allProperties
@@ -230,7 +244,11 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun markViewed(property: Property) = viewModelScope.launch {
-        repository.update(property.copy(lastViewedAt = System.currentTimeMillis()))
+        repository.update(property.copy(lastViewedAt = System.currentTimeMillis(), viewCount = property.viewCount + 1))
+    }
+
+    fun setFollowUp(property: Property, timestamp: Long?) = viewModelScope.launch {
+        repository.update(property.copy(followUpAt = timestamp))
     }
 
     fun markShared(property: Property) = viewModelScope.launch {
@@ -244,4 +262,31 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
         extrasRepository.addNote(propertyId, trimmed)
         extrasRepository.logEvent(propertyId, TimelineEventType.NOTE_ADDED, "یادداشت جدید افزوده شد")
     }
+
+    private val _selectedIds = MutableStateFlow<Set<Long>>(emptySet())
+    val selectedIds: StateFlow<Set<Long>> = _selectedIds
+
+    fun toggleSelection(propertyId: Long) {
+        _selectedIds.value = _selectedIds.value.let { current ->
+            if (current.contains(propertyId)) current - propertyId else current + propertyId
+        }
+    }
+
+    fun clearSelection() {
+        _selectedIds.value = emptySet()
+    }
+
+    fun deleteSelected(properties: List<Property>) = viewModelScope.launch {
+        properties.forEach { repository.delete(it) }
+        clearSelection()
+    }
+}
+
+private fun endOfTodayMillis(): Long {
+    val calendar = java.util.Calendar.getInstance()
+    calendar.set(java.util.Calendar.HOUR_OF_DAY, 23)
+    calendar.set(java.util.Calendar.MINUTE, 59)
+    calendar.set(java.util.Calendar.SECOND, 59)
+    calendar.set(java.util.Calendar.MILLISECOND, 999)
+    return calendar.timeInMillis
 }

@@ -4,18 +4,23 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -39,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.data.Property
 import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.components.StoryCardContent
+import com.realestate.app.ui.components.StoryTemplate
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
@@ -59,6 +65,7 @@ fun StoryCardScreen(
     val agentPhone = profile.mobileNumber
     val agencyName = profile.agencyName
     var showCaptureDialog by remember { mutableStateOf(false) }
+    var selectedTemplate by remember { mutableStateOf(StoryTemplate.GRADIENT) }
 
     Scaffold(
         topBar = {
@@ -82,10 +89,26 @@ fun StoryCardScreen(
                 modifier = Modifier.padding(padding).fillMaxSize().padding(Spacing.screen),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    StoryTemplate.entries.forEach { template ->
+                        FilterChip(
+                            selected = template == selectedTemplate,
+                            onClick = { selectedTemplate = template },
+                            label = { Text(template.label) }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
                 StoryCardContent(
                     property = current,
                     agentPhone = agentPhone,
                     agencyName = agencyName,
+                    template = selectedTemplate,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(20.dp))
@@ -102,6 +125,7 @@ fun StoryCardScreen(
                     property = current,
                     agentPhone = agentPhone,
                     agencyName = agencyName,
+                    template = selectedTemplate,
                     onDismiss = { showCaptureDialog = false }
                 )
             }
@@ -114,6 +138,7 @@ private fun StoryCardCaptureDialog(
     property: Property,
     agentPhone: String,
     agencyName: String,
+    template: StoryTemplate,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -124,6 +149,7 @@ private fun StoryCardCaptureDialog(
             property = property,
             agentPhone = agentPhone,
             agencyName = agencyName,
+            template = template,
             modifier = Modifier.width(360.dp)
         )
 

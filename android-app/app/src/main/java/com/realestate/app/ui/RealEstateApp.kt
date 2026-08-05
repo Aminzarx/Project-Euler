@@ -124,7 +124,6 @@ fun RealEstateApp(
             composable(Screen.Home.route) {
                 HomeScreen(
                     viewModel = viewModel,
-                    walletViewModel = walletViewModel,
                     onPropertyClick = { id -> navController.navigate(Screen.Detail.createRoute(id)) },
                     onAddClick = { navController.navigate(Screen.AddEdit.createRoute()) },
                     onSearchClick = {
@@ -133,8 +132,7 @@ fun RealEstateApp(
                             launchSingleTop = true
                             restoreState = true
                         }
-                    },
-                    onOpenWallet = { navController.navigate(Screen.Wallet.route) }
+                    }
                 )
             }
             composable(Screen.List.route) {
