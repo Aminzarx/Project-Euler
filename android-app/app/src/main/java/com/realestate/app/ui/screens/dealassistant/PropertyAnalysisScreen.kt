@@ -51,11 +51,6 @@ import com.realestate.app.ui.components.label
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.viewmodel.DealAssistantViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
-import java.text.NumberFormat
-import java.util.Locale
-
-private fun money(value: Double): String = NumberFormat.getNumberInstance(Locale.US).format(value.toLong())
-private fun percent(value: Double): String = "%.1f٪".format(value)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
