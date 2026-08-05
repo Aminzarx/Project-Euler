@@ -5,7 +5,13 @@ import com.realestate.app.data.code
 import java.text.NumberFormat
 import java.util.Locale
 
-fun buildShareMessage(property: Property): String {
+/**
+ * agentPhone is the agent's own contact number, not [Property.ownerPhone]. Sharing the owner's
+ * number directly with a prospective buyer would let them bypass the agent entirely (and their
+ * commission) — the Story Card feature already got this right by design; this brings the plain
+ * text share message shared from list/detail/favorites screens in line with it.
+ */
+fun buildShareMessage(property: Property, agentPhone: String): String {
     val price = NumberFormat.getNumberInstance(Locale.US).format(property.price)
     return buildString {
         appendLine("🏠 ${property.title}")
@@ -17,6 +23,8 @@ fun buildShareMessage(property: Property): String {
         appendLine("قیمت: $price تومان")
         appendLine()
         appendLine("کد ملک: ${property.code}")
-        appendLine("تماس: ${property.ownerPhone}")
+        if (agentPhone.isNotBlank()) {
+            appendLine("تماس: $agentPhone")
+        }
     }
 }

@@ -61,15 +61,18 @@ import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.ui.components.label
 import com.realestate.app.viewmodel.PropertyFilter
 import com.realestate.app.viewmodel.PropertyViewModel
+import com.realestate.app.viewmodel.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PropertyListScreen(
     viewModel: PropertyViewModel,
+    profileViewModel: ProfileViewModel,
     onPropertyClick: (Long) -> Unit,
     onAddClick: () -> Unit
 ) {
     val context = LocalContext.current
+    val agentPhone = profileViewModel.profile.collectAsStateWithLifecycle().value.mobileNumber
     val properties by viewModel.filteredProperties.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val cities by viewModel.availableCities.collectAsStateWithLifecycle()
@@ -261,7 +264,7 @@ fun PropertyListScreen(
                             onShare = {
                                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                     type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, buildShareMessage(property))
+                                    putExtra(Intent.EXTRA_TEXT, buildShareMessage(property, agentPhone))
                                 }
                                 context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری ملک"))
                                 viewModel.markShared(property)

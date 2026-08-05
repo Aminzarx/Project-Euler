@@ -59,6 +59,7 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
     var instagram by remember { mutableStateOf("") }
     var telegram by remember { mutableStateOf("") }
     var profilePhotoUri by remember { mutableStateOf<String?>(null) }
+    var agencyLogoUri by remember { mutableStateOf<String?>(null) }
     var loaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(profile) {
@@ -70,6 +71,7 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
             instagram = profile.instagram
             telegram = profile.telegram
             profilePhotoUri = profile.profilePhotoUri
+            agencyLogoUri = profile.agencyLogoUri
             loaded = true
         }
     }
@@ -84,6 +86,19 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
                 // برخی منابع اجازه دسترسی دائمی نمی‌دهند
             }
             profilePhotoUri = uri.toString()
+        }
+    }
+
+    val logoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: SecurityException) {
+                // برخی منابع اجازه دسترسی دائمی نمی‌دهند
+            }
+            agencyLogoUri = uri.toString()
         }
     }
 
@@ -106,7 +121,8 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
                                 biography = biography.trim(),
                                 instagram = instagram.trim(),
                                 telegram = telegram.trim(),
-                                profilePhotoUri = profilePhotoUri
+                                profilePhotoUri = profilePhotoUri,
+                                agencyLogoUri = agencyLogoUri
                             )
                         }
                         onDone()
@@ -158,6 +174,33 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
                 label = { Text("نام آژانس/بنگاه") },
                 modifier = Modifier.fillMaxWidth()
             )
+            Spacer12()
+            Text("لوگوی آژانس", style = MaterialTheme.typography.labelLarge)
+            Text(
+                "روی کارت‌های استوری به‌جای آیکن پیش‌فرض نمایش داده می‌شود",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { logoPicker.launch("image/*") },
+                contentAlignment = Alignment.Center
+            ) {
+                if (agencyLogoUri != null) {
+                    AsyncImage(
+                        model = agencyLogoUri,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(Icons.Rounded.AddAPhoto, contentDescription = "افزودن لوگوی آژانس")
+                }
+            }
             Spacer12()
             OutlinedTextField(
                 value = businessAddress,

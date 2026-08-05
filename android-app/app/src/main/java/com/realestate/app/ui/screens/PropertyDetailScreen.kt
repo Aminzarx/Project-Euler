@@ -110,6 +110,7 @@ private const val STALE_PROPERTY_DAYS = 14L
 fun PropertyDetailScreen(
     propertyId: Long,
     viewModel: PropertyViewModel,
+    profileViewModel: com.realestate.app.viewmodel.ProfileViewModel,
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
     onDeleted: () -> Unit,
@@ -118,6 +119,7 @@ fun PropertyDetailScreen(
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+    val agentPhone = profileViewModel.profile.collectAsStateWithLifecycle().value.mobileNumber
     val property by viewModel.getPropertyById(propertyId).collectAsStateWithLifecycle(initialValue = null)
     val allProperties by viewModel.allProperties.collectAsStateWithLifecycle()
     val notes by viewModel.getNotesForProperty(propertyId).collectAsStateWithLifecycle(initialValue = emptyList())
@@ -369,7 +371,7 @@ fun PropertyDetailScreen(
                         onClick = {
                             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, buildShareMessage(current))
+                                putExtra(Intent.EXTRA_TEXT, buildShareMessage(current, agentPhone))
                             }
                             context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری ملک"))
                             viewModel.markShared(current)

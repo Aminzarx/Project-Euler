@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.data.Property
 import com.realestate.app.ui.components.SwipeablePropertyRow
 import com.realestate.app.ui.components.buildShareMessage
+import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
 
 private enum class FavoriteSort(val label: String) {
@@ -56,10 +57,12 @@ private fun List<Property>.sortedFor(sort: FavoriteSort): List<Property> = when 
 @Composable
 fun FavoritesScreen(
     viewModel: PropertyViewModel,
+    profileViewModel: ProfileViewModel,
     onPropertyClick: (Long) -> Unit
 ) {
     val favorites by viewModel.favoriteProperties.collectAsStateWithLifecycle()
     val folders by viewModel.favoriteFolders.collectAsStateWithLifecycle()
+    val agentPhone = profileViewModel.profile.collectAsStateWithLifecycle().value.mobileNumber
     var selectedFolder by remember { mutableStateOf<String?>(null) }
     var sortOption by remember { mutableStateOf(FavoriteSort.RECENT) }
 
@@ -120,7 +123,7 @@ fun FavoritesScreen(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-                FavoritesList(visibleFavorites, onPropertyClick, viewModel)
+                FavoritesList(visibleFavorites, onPropertyClick, viewModel, agentPhone)
             }
         }
     }
@@ -130,7 +133,8 @@ fun FavoritesScreen(
 private fun FavoritesList(
     favorites: List<Property>,
     onPropertyClick: (Long) -> Unit,
-    viewModel: PropertyViewModel
+    viewModel: PropertyViewModel,
+    agentPhone: String
 ) {
     val context = LocalContext.current
     if (favorites.isEmpty()) {
@@ -162,7 +166,7 @@ private fun FavoritesList(
                     onShare = {
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, buildShareMessage(property))
+                            putExtra(Intent.EXTRA_TEXT, buildShareMessage(property, agentPhone))
                         }
                         context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری ملک"))
                         viewModel.markShared(property)

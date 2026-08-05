@@ -194,6 +194,7 @@ fun RealEstateApp(
             composable(Screen.List.route) {
                 PropertyListScreen(
                     viewModel = viewModel,
+                    profileViewModel = profileViewModel,
                     onPropertyClick = { id -> navController.navigate(Screen.Detail.createRoute(id)) },
                     onAddClick = { navController.navigate(Screen.AddEdit.createRoute()) }
                 )
@@ -201,6 +202,7 @@ fun RealEstateApp(
             composable(Screen.Favorites.route) {
                 FavoritesScreen(
                     viewModel = viewModel,
+                    profileViewModel = profileViewModel,
                     onPropertyClick = { id -> navController.navigate(Screen.Detail.createRoute(id)) }
                 )
             }
@@ -242,6 +244,7 @@ fun RealEstateApp(
                 PropertyDetailScreen(
                     propertyId = propertyId,
                     viewModel = viewModel,
+                    profileViewModel = profileViewModel,
                     onBack = { navController.popBackStack() },
                     onEdit = { id -> navController.navigate(Screen.AddEdit.createRoute(id)) },
                     onDeleted = { navController.popBackStack() },
