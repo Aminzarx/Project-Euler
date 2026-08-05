@@ -13,10 +13,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -66,7 +66,7 @@ fun PropertyCard(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Outlined.Home,
+                        imageVector = Icons.Rounded.Home,
                         contentDescription = null,
                         modifier = Modifier.align(Alignment.Center)
                     )
@@ -92,7 +92,7 @@ fun PropertyCard(
                     if (property.isPinned) {
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
-                            Icons.Outlined.PushPin,
+                            Icons.Rounded.PushPin,
                             contentDescription = "سنجاق‌شده",
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.primary
@@ -116,7 +116,7 @@ fun PropertyCard(
                 onFavoriteClick()
             }) {
                 Icon(
-                    imageVector = if (property.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    imageVector = if (property.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                     contentDescription = "علاقه‌مندی",
                     tint = if (property.isFavorite) MaterialTheme.extendedColors.danger else MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -153,7 +153,7 @@ fun PropertyMiniCard(
                     )
                 } else {
                     Icon(
-                        imageVector = Icons.Outlined.Home,
+                        imageVector = Icons.Rounded.Home,
                         contentDescription = null,
                         modifier = Modifier.align(Alignment.Center)
                     )

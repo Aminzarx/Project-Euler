@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,9 +18,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -40,9 +41,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-val CardShape = RoundedCornerShape(22.dp)
+val CardShape = RoundedCornerShape(14.dp)
 val PillShape = RoundedCornerShape(50)
-val RowShape = RoundedCornerShape(18.dp)
+val RowShape = RoundedCornerShape(12.dp)
+val MenuShape = RoundedCornerShape(16.dp)
 
 private val ShadowTint = Color.Black.copy(alpha = 0.05f)
 
@@ -227,7 +229,7 @@ fun AppListRow(
                 trailing()
             } else {
                 Icon(
-                    Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                    Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -246,7 +248,7 @@ data class BottomNavItem(
 /** Floating rounded bottom navigation — brand-colored active pill, gray inactive icons, soft shadow above content. */
 @Composable
 fun FloatingBottomNav(items: List<BottomNavItem>, modifier: Modifier = Modifier) {
-    val navShape = RoundedCornerShape(32.dp)
+    val navShape = RoundedCornerShape(24.dp)
     Surface(
         shape = navShape,
         color = MaterialTheme.colorScheme.surface,
@@ -316,6 +318,51 @@ fun StatusPillBadge(
 }
 
 /**
+ * Premium-styled overflow / selection menu — softer elevation, a corner radius consistent with
+ * the rest of the design system, and theme-integrated colors instead of Android's default chrome.
+ * Drop-in replacement for [androidx.compose.material3.DropdownMenu]: importing this instead is
+ * enough to restyle every three-dot and select menu in the app.
+ */
+@Composable
+fun DropdownMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    androidx.compose.material3.DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+        modifier = modifier,
+        shape = MenuShape,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp,
+        shadowElevation = 6.dp,
+        content = content
+    )
+}
+
+/** Drop-in replacement for [androidx.compose.material3.DropdownMenuItem] with roomier spacing and theme colors. */
+@Composable
+fun DropdownMenuItem(
+    text: @Composable () -> Unit,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    androidx.compose.material3.DropdownMenuItem(
+        text = text,
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        colors = androidx.compose.material3.MenuDefaults.itemColors(
+            textColor = MaterialTheme.colorScheme.onSurface
+        ),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 4.dp)
+    )
+}
+
+/**
  * A card section that starts collapsed (or expanded) and toggles open on tap — used to keep
  * secondary content (description, notes, timeline) out of the way until the user asks for it.
  */
@@ -347,7 +394,7 @@ fun CollapsibleSection(
                 }
             }
             Icon(
-                if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+                if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
                 contentDescription = if (expanded) "بستن" else "باز کردن",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )

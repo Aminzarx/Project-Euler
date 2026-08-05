@@ -15,14 +15,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.outlined.Call
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material.icons.outlined.RadioButtonUnchecked
-import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -107,8 +107,8 @@ fun SwipeablePropertyRow(
                 }
             ) {
                 when {
-                    isCall -> Icon(Icons.Outlined.Call, contentDescription = "تماس", tint = Color.White)
-                    isShare -> Icon(Icons.Outlined.Share, contentDescription = "اشتراک‌گذاری", tint = Color.White)
+                    isCall -> Icon(Icons.Rounded.Call, contentDescription = "تماس", tint = Color.White)
+                    isShare -> Icon(Icons.Rounded.Share, contentDescription = "اشتراک‌گذاری", tint = Color.White)
                     else -> Unit
                 }
             }
@@ -127,7 +127,7 @@ fun SwipeablePropertyRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (selectionMode) {
                     Icon(
-                        if (isSelected) Icons.Outlined.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                        if (isSelected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
                         contentDescription = null,
                         tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(22.dp)
@@ -149,7 +149,7 @@ fun SwipeablePropertyRow(
                         )
                     } else {
                         Icon(
-                            Icons.Outlined.Home,
+                            Icons.Rounded.Home,
                             contentDescription = null,
                             modifier = Modifier.align(Alignment.Center)
                         )
@@ -175,7 +175,7 @@ fun SwipeablePropertyRow(
                         if (property.isPinned) {
                             Spacer(modifier = Modifier.width(4.dp))
                             Icon(
-                                Icons.Outlined.PushPin,
+                                Icons.Rounded.PushPin,
                                 contentDescription = "سنجاق‌شده",
                                 modifier = Modifier.size(12.dp),
                                 tint = MaterialTheme.colorScheme.primary
@@ -192,7 +192,7 @@ fun SwipeablePropertyRow(
                 }
                 if (!selectionMode) {
                     Icon(
-                        if (property.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        if (property.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                         contentDescription = "علاقه‌مندی",
                         tint = if (property.isFavorite) MaterialTheme.extendedColors.danger else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)

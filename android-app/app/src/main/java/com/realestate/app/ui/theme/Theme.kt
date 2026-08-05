@@ -60,13 +60,13 @@ private val DarkColorScheme = darkColorScheme(
     onError = OnDangerDark
 )
 
-/** Soft, borderless rounded-corner scale used across every card, sheet and image in the app. */
+/** Restrained, borderless rounded-corner scale used across every card, sheet and image in the app. */
 val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(12.dp),
-    small = RoundedCornerShape(16.dp),
-    medium = RoundedCornerShape(22.dp),
-    large = RoundedCornerShape(24.dp),
-    extraLarge = RoundedCornerShape(28.dp)
+    extraSmall = RoundedCornerShape(6.dp),
+    small = RoundedCornerShape(10.dp),
+    medium = RoundedCornerShape(14.dp),
+    large = RoundedCornerShape(16.dp),
+    extraLarge = RoundedCornerShape(20.dp)
 )
 
 @Composable

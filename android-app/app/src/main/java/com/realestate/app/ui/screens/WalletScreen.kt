@@ -17,11 +17,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Error
-import androidx.compose.material.icons.outlined.HourglassEmpty
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Error
+import androidx.compose.material.icons.rounded.HourglassEmpty
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -76,7 +76,7 @@ fun WalletScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
                 title = { Text("کیف پول") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "بازگشت")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "بازگشت")
                     }
                 }
             )
@@ -107,7 +107,7 @@ fun WalletScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
                     PrimaryButton(
                         text = "شارژ کیف پول",
                         onClick = { showRechargeSheet = true },
-                        icon = Icons.Outlined.Add,
+                        icon = Icons.Rounded.Add,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -158,9 +158,9 @@ private fun TransactionRow(tx: WalletTransaction) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             val (icon, tint) = when (tx.status) {
-                TransactionStatus.SUCCESS -> Icons.Outlined.CheckCircle to MaterialTheme.extendedColors.success
-                TransactionStatus.FAILED -> Icons.Outlined.Error to MaterialTheme.extendedColors.danger
-                TransactionStatus.PENDING -> Icons.Outlined.HourglassEmpty to MaterialTheme.extendedColors.warning
+                TransactionStatus.SUCCESS -> Icons.Rounded.CheckCircle to MaterialTheme.extendedColors.success
+                TransactionStatus.FAILED -> Icons.Rounded.Error to MaterialTheme.extendedColors.danger
+                TransactionStatus.PENDING -> Icons.Rounded.HourglassEmpty to MaterialTheme.extendedColors.warning
             }
             Icon(icon, contentDescription = null, tint = tint)
             Spacer(modifier = Modifier.width(12.dp))
@@ -241,7 +241,7 @@ private fun RechargeSheet(
                     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
-                                Icons.Outlined.CheckCircle,
+                                Icons.Rounded.CheckCircle,
                                 contentDescription = null,
                                 tint = MaterialTheme.extendedColors.success,
                                 modifier = Modifier.size(48.dp)
@@ -258,7 +258,7 @@ private fun RechargeSheet(
                     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
-                                Icons.Outlined.Error,
+                                Icons.Rounded.Error,
                                 contentDescription = null,
                                 tint = MaterialTheme.extendedColors.danger,
                                 modifier = Modifier.size(48.dp)

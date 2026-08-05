@@ -15,16 +15,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.EventAvailable
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.TrendingUp
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.EventAvailable
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.TrendingUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -68,18 +66,7 @@ fun HomeScreen(
     val todayFollowUps by viewModel.todayFollowUps.collectAsStateWithLifecycle()
     val recentActivities by viewModel.recentActivities.collectAsStateWithLifecycle()
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddClick,
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(Icons.Outlined.Add, contentDescription = "افزودن ملک")
-            }
-        }
-    ) { padding ->
+    Scaffold { padding ->
         if (allProperties.isEmpty()) {
             EmptyHomeState(modifier = Modifier.padding(padding), onAddClick = onAddClick)
             return@Scaffold
@@ -97,7 +84,7 @@ fun HomeScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Rounded.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
                         text = "جستجوی سریع ملک...",
@@ -111,14 +98,14 @@ fun HomeScreen(
             PrimaryButton(
                 text = "افزودن ملک جدید",
                 onClick = onAddClick,
-                icon = Icons.Outlined.Add,
+                icon = Icons.Rounded.Add,
                 modifier = Modifier.fillMaxWidth()
             )
 
             if (todayFollowUps.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(Spacing.xl))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.EventAvailable, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.EventAvailable, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(text = "پیگیری‌های امروز", style = MaterialTheme.typography.titleLarge)
                 }
@@ -126,7 +113,7 @@ fun HomeScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     todayFollowUps.forEach { property ->
                         AppListRow(
-                            icon = Icons.Outlined.EventAvailable,
+                            icon = Icons.Rounded.EventAvailable,
                             title = property.title,
                             subtitle = "${property.city} · ${formatActivityTime(property.followUpAt ?: 0L)}",
                             onClick = { onPropertyClick(property.id) }
@@ -149,7 +136,7 @@ fun HomeScreen(
             if (frequentProperties.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(Spacing.xl))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.TrendingUp, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.TrendingUp, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(text = "پرکاربردترین ملک‌ها", style = MaterialTheme.typography.titleLarge)
                 }
@@ -164,7 +151,7 @@ fun HomeScreen(
             if (pinned.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(Spacing.xl))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.PushPin, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.PushPin, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(text = "سنجاق‌شده", style = MaterialTheme.typography.titleLarge)
                 }
@@ -183,7 +170,7 @@ fun HomeScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     recentActivities.forEach { activity ->
                         AppListRow(
-                            icon = Icons.Outlined.History,
+                            icon = Icons.Rounded.History,
                             title = activity.event.description,
                             subtitle = "${activity.propertyTitle} · ${formatActivityTime(activity.event.createdAt)}",
                             onClick = { onPropertyClick(activity.propertyId) }
@@ -213,7 +200,7 @@ private fun EmptyHomeState(onAddClick: () -> Unit, modifier: Modifier = Modifier
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Home,
+                    imageVector = Icons.Rounded.Home,
                     contentDescription = null,
                     modifier = Modifier.height(40.dp),
                     tint = Color.White
@@ -236,7 +223,7 @@ private fun EmptyHomeState(onAddClick: () -> Unit, modifier: Modifier = Modifier
             PrimaryButton(
                 text = "افزودن اولین ملک",
                 onClick = onAddClick,
-                icon = Icons.Outlined.Add,
+                icon = Icons.Rounded.Add,
                 modifier = Modifier.fillMaxWidth(0.8f)
             )
         }

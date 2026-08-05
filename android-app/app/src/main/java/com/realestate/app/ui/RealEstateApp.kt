@@ -5,10 +5,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.List
-import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.List
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -48,10 +48,10 @@ import com.realestate.app.viewmodel.WalletViewModel
 private data class BottomTab(val screen: Screen, val label: String, val icon: ImageVector)
 
 private val bottomTabs = listOf(
-    BottomTab(Screen.Home, "خانه", Icons.Outlined.Home),
-    BottomTab(Screen.List, "املاک", Icons.Outlined.List),
-    BottomTab(Screen.Favorites, "علاقه‌مندی‌ها", Icons.Filled.Favorite),
-    BottomTab(Screen.Profile, "پروفایل", Icons.Outlined.Person)
+    BottomTab(Screen.Home, "خانه", Icons.Rounded.Home),
+    BottomTab(Screen.List, "املاک", Icons.Rounded.List),
+    BottomTab(Screen.Favorites, "علاقه‌مندی‌ها", Icons.Rounded.Favorite),
+    BottomTab(Screen.Profile, "پروفایل", Icons.Rounded.Person)
 )
 
 @Composable

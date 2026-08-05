@@ -22,22 +22,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.Call
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.PushPin
-import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import com.realestate.app.ui.components.DropdownMenu
+import com.realestate.app.ui.components.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -123,20 +123,20 @@ fun PropertyDetailScreen(
                 title = { Text(property?.title ?: "جزئیات ملک") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "بازگشت")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "بازگشت")
                     }
                 },
                 actions = {
                     property?.let { p ->
                         IconButton(onClick = { viewModel.toggleFavorite(p) }) {
                             Icon(
-                                imageVector = if (p.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                imageVector = if (p.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
                                 contentDescription = "علاقه‌مندی"
                             )
                         }
                         Box {
                             IconButton(onClick = { showMenu = true }) {
-                                Icon(Icons.Outlined.MoreVert, contentDescription = "بیشتر")
+                                Icon(Icons.Rounded.MoreVert, contentDescription = "بیشتر")
                             }
                             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                                 DropdownMenuItem(
@@ -215,7 +215,7 @@ fun PropertyDetailScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Outlined.Home,
+                                Icons.Rounded.Home,
                                 contentDescription = null,
                                 tint = Color.White.copy(alpha = 0.85f),
                                 modifier = Modifier.size(72.dp)
@@ -240,7 +240,7 @@ fun PropertyDetailScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                Icons.Outlined.PushPin,
+                                Icons.Rounded.PushPin,
                                 contentDescription = "سنجاق‌شده",
                                 tint = Color.White,
                                 modifier = Modifier.size(18.dp)
@@ -282,7 +282,7 @@ fun PropertyDetailScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
-                                Icons.Outlined.ContentCopy,
+                                Icons.Rounded.ContentCopy,
                                 contentDescription = "کپی کد ملک",
                                 tint = Color.White.copy(alpha = 0.85f),
                                 modifier = Modifier.size(14.dp)
@@ -302,7 +302,7 @@ fun PropertyDetailScreen(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     QuickAction(
-                        icon = Icons.Outlined.Call,
+                        icon = Icons.Rounded.Call,
                         label = "تماس",
                         enabled = current.ownerPhone.isNotBlank(),
                         onClick = {
@@ -310,7 +310,7 @@ fun PropertyDetailScreen(
                         }
                     )
                     QuickAction(
-                        icon = Icons.Outlined.Share,
+                        icon = Icons.Rounded.Share,
                         label = "اشتراک",
                         onClick = {
                             val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -322,7 +322,7 @@ fun PropertyDetailScreen(
                         }
                     )
                     QuickAction(
-                        icon = Icons.Outlined.Edit,
+                        icon = Icons.Rounded.Edit,
                         label = "ویرایش",
                         onClick = { onEdit(current.id) }
                     )
@@ -362,7 +362,7 @@ fun PropertyDetailScreen(
                                 AssistChip(
                                     onClick = { viewModel.removeTag(current, tag) },
                                     label = { Text(tag) },
-                                    trailingIcon = { Icon(Icons.Outlined.Close, contentDescription = "حذف برچسب", modifier = Modifier.size(16.dp)) }
+                                    trailingIcon = { Icon(Icons.Rounded.Close, contentDescription = "حذف برچسب", modifier = Modifier.size(16.dp)) }
                                 )
                             }
                         }
@@ -478,7 +478,7 @@ fun PropertyDetailScreen(
                                 )
                                 if (status == current.status) {
                                     Icon(
-                                        Icons.Outlined.Check,
+                                        Icons.Rounded.Check,
                                         contentDescription = "انتخاب‌شده",
                                         tint = MaterialTheme.colorScheme.primary
                                     )

@@ -5,13 +5,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-/** Deep brand-blue three-point gradient for hero surfaces (wallet card, auth header, story card). */
+/** Calm brand-blue three-point gradient for hero surfaces (wallet card, auth header, story card). */
 @Composable
 fun heroGradient(): Brush = Brush.linearGradient(
     colorStops = arrayOf(
-        0f to Color(0xFF5B7CFA),
-        0.55f to Color(0xFF3457D5),
-        1f to Color(0xFF1E3A8A)
+        0f to Color(0xFF6E8CBD),
+        0.55f to Color(0xFF4C6B9A),
+        1f to Color(0xFF293D5C)
     )
 )
 

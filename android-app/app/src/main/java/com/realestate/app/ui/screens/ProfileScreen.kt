@@ -18,12 +18,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Logout
-import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Storefront
+import androidx.compose.material.icons.automirrored.rounded.Logout
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,7 +72,7 @@ fun ProfileScreen(
                 title = { Text("پروفایل") },
                 actions = {
                     IconButton(onClick = onEditProfile) {
-                        Icon(Icons.Outlined.Edit, contentDescription = "ویرایش پروفایل")
+                        Icon(Icons.Rounded.Edit, contentDescription = "ویرایش پروفایل")
                     }
                 }
             )
@@ -117,7 +117,7 @@ fun ProfileScreen(
                             )
                         } else {
                             Icon(
-                                Icons.Outlined.Person,
+                                Icons.Rounded.Person,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(40.dp)
@@ -152,14 +152,14 @@ fun ProfileScreen(
                     .offset(y = (-24).dp)
             ) {
                 AppListRow(
-                    icon = Icons.Outlined.AccountBalanceWallet,
+                    icon = Icons.Rounded.AccountBalanceWallet,
                     title = "کیف پول",
                     subtitle = "${NumberFormat.getNumberInstance(Locale.US).format(balance)} تومان",
                     onClick = onOpenWallet
                 )
                 Spacer(modifier = Modifier.height(Spacing.md))
                 AppListRow(
-                    icon = Icons.Outlined.Storefront,
+                    icon = Icons.Rounded.Storefront,
                     title = "فروشگاه ما",
                     subtitle = "خرید تجهیزات و ابزارهای اختصاصی مشاوران",
                     onClick = {
@@ -168,7 +168,7 @@ fun ProfileScreen(
                 )
                 Spacer(modifier = Modifier.height(Spacing.md))
                 AppListRow(
-                    icon = Icons.Outlined.Settings,
+                    icon = Icons.Rounded.Settings,
                     title = "تنظیمات",
                     subtitle = "ظاهر برنامه، پشتیبان‌گیری و موارد دیگر",
                     onClick = onOpenSettings
@@ -201,7 +201,7 @@ fun ProfileScreen(
                 SecondaryButton(
                     text = "خروج از حساب",
                     onClick = { authViewModel.logout() },
-                    icon = Icons.AutoMirrored.Outlined.Logout,
+                    icon = Icons.AutoMirrored.Rounded.Logout,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(Spacing.xl))

@@ -22,12 +22,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.AddAPhoto
-import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.AddAPhoto
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import com.realestate.app.ui.components.DropdownMenu
+import com.realestate.app.ui.components.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -155,7 +155,7 @@ fun AddEditPropertyScreen(
                 title = { Text(if (isEditMode) "ویرایش ملک" else "افزودن ملک") },
                 navigationIcon = {
                     IconButton(onClick = onDone) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "بازگشت")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "بازگشت")
                     }
                 }
             )
@@ -186,7 +186,7 @@ fun AddEditPropertyScreen(
                     )
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Outlined.AddAPhoto, contentDescription = null)
+                        Icon(Icons.Rounded.AddAPhoto, contentDescription = null)
                         Spacer(modifier = Modifier.height(4.dp))
                         Text("افزودن تصویر")
                     }
@@ -343,7 +343,7 @@ fun AddEditPropertyScreen(
                                 onClick = { tags = tags - tag },
                                 label = { Text(tag) },
                                 trailingIcon = {
-                                    Icon(Icons.Outlined.Close, contentDescription = "حذف برچسب", modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Rounded.Close, contentDescription = "حذف برچسب", modifier = Modifier.size(16.dp))
                                 }
                             )
                         }

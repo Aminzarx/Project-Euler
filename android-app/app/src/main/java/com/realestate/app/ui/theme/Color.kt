@@ -4,7 +4,8 @@ import androidx.compose.ui.graphics.Color
 
 // Premium minimal palette — light
 // Brand: the interactive accent (buttons, active nav, links). Ink: body text/icon color.
-val BrandLight = Color(0xFF3457D5)
+// A softer, desaturated slate-blue — calmer and less aggressive than a saturated primary blue.
+val BrandLight = Color(0xFF4C6B9A)
 val OnBrandLight = Color(0xFFFFFFFF)
 val InkLight = Color(0xFF16181D)
 val BackgroundLight = Color(0xFFFAFAFA)
@@ -23,8 +24,8 @@ val InfoLight = Color(0xFF3B82F6)
 val OnInfoLight = Color(0xFFFFFFFF)
 
 // Premium minimal palette — dark
-val BrandDark = Color(0xFF7C93FF)
-val OnBrandDark = Color(0xFF0B1330)
+val BrandDark = Color(0xFF9BB2DD)
+val OnBrandDark = Color(0xFF15243D)
 val InkDark = Color(0xFFF2F3F5)
 val BackgroundDark = Color(0xFF0B0C0F)
 val SurfaceDark = Color(0xFF1B1D22)

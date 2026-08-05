@@ -19,13 +19,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.FilterList
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.Search
+import com.realestate.app.ui.components.DropdownMenu
+import com.realestate.app.ui.components.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -92,7 +92,7 @@ fun PropertyListScreen(
                     title = { Text("${selectedIds.size} انتخاب شده") },
                     navigationIcon = {
                         IconButton(onClick = { viewModel.clearSelection() }) {
-                            Icon(Icons.Outlined.Close, contentDescription = "لغو انتخاب")
+                            Icon(Icons.Rounded.Close, contentDescription = "لغو انتخاب")
                         }
                     },
                     actions = {
@@ -100,7 +100,7 @@ fun PropertyListScreen(
                             val selected = properties.filter { selectedIds.contains(it.id) }
                             viewModel.deleteSelected(selected)
                         }) {
-                            Icon(Icons.Outlined.Delete, contentDescription = "حذف موارد انتخاب‌شده")
+                            Icon(Icons.Rounded.Delete, contentDescription = "حذف موارد انتخاب‌شده")
                         }
                     }
                 )
@@ -109,7 +109,7 @@ fun PropertyListScreen(
                     title = { Text("املاک") },
                     actions = {
                         IconButton(onClick = { showFilterSheet = true }) {
-                            Icon(Icons.Outlined.FilterList, contentDescription = "فیلترها")
+                            Icon(Icons.Rounded.FilterList, contentDescription = "فیلترها")
                         }
                     }
                 )
@@ -122,7 +122,7 @@ fun PropertyListScreen(
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Icon(Icons.Outlined.Add, contentDescription = "افزودن ملک")
+                Icon(Icons.Rounded.Add, contentDescription = "افزودن ملک")
             }
         }
     ) { padding ->
@@ -136,7 +136,7 @@ fun PropertyListScreen(
                     .focusRequester(searchFocusRequester),
                 shape = com.realestate.app.ui.components.PillShape,
                 placeholder = { Text("جستجو بر اساس عنوان، شهر، آدرس یا کد ملک") },
-                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 singleLine = true,
                 colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
