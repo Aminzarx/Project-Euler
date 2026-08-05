@@ -56,7 +56,12 @@ private fun Modifier.softShadow(shape: Shape, elevation: Dp): Modifier = this.sh
     spotColor = ShadowTint
 )
 
-/** Elegant borderless rounded card with a very soft shadow — the base surface for every section. */
+/**
+ * Elegant borderless rounded card with a very soft shadow — the base surface for every section.
+ * When [onClick] is omitted, this renders a plain (non-clickable) Surface rather than a
+ * disabled-clickable one, so it never intercepts touch/focus meant for interactive content
+ * placed inside it (form fields, buttons, etc.).
+ */
 @Composable
 fun AppCard(
     modifier: Modifier = Modifier,
@@ -65,16 +70,29 @@ fun AppCard(
     contentPadding: PaddingValues = PaddingValues(20.dp),
     content: @Composable () -> Unit
 ) {
-    Surface(
-        onClick = onClick ?: {},
-        enabled = onClick != null,
-        shape = shape,
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 0.dp,
-        modifier = modifier.softShadow(shape, 8.dp)
-    ) {
-        Box(modifier = Modifier.padding(contentPadding)) {
-            Column(content = { content() })
+    val cardModifier = modifier.softShadow(shape, 8.dp)
+    if (onClick != null) {
+        Surface(
+            onClick = onClick,
+            shape = shape,
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 0.dp,
+            modifier = cardModifier
+        ) {
+            Box(modifier = Modifier.padding(contentPadding)) {
+                Column(content = { content() })
+            }
+        }
+    } else {
+        Surface(
+            shape = shape,
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 0.dp,
+            modifier = cardModifier
+        ) {
+            Box(modifier = Modifier.padding(contentPadding)) {
+                Column(content = { content() })
+            }
         }
     }
 }
@@ -295,14 +313,7 @@ fun StatusPillBadge(
     containerColor: Color = MaterialTheme.colorScheme.surface,
     textColor: Color = MaterialTheme.colorScheme.onSurface
 ) {
-    Surface(
-        onClick = onClick ?: {},
-        enabled = onClick != null,
-        shape = PillShape,
-        color = containerColor,
-        shadowElevation = 0.dp,
-        modifier = modifier
-    ) {
+    val badgeContent: @Composable () -> Unit = {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -316,6 +327,24 @@ fun StatusPillBadge(
             Spacer(modifier = Modifier.width(6.dp))
             Text(text, style = MaterialTheme.typography.labelMedium, color = textColor)
         }
+    }
+    if (onClick != null) {
+        Surface(
+            onClick = onClick,
+            shape = PillShape,
+            color = containerColor,
+            shadowElevation = 0.dp,
+            modifier = modifier,
+            content = badgeContent
+        )
+    } else {
+        Surface(
+            shape = PillShape,
+            color = containerColor,
+            shadowElevation = 0.dp,
+            modifier = modifier,
+            content = badgeContent
+        )
     }
 }
 
