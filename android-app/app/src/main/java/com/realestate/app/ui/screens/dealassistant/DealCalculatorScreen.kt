@@ -49,6 +49,7 @@ import com.realestate.app.data.dealassistant.defaultCommissionRate
 import com.realestate.app.data.dealassistant.percentOf
 import com.realestate.app.data.dealassistant.whatPercent
 import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.CollapsibleSection
 import com.realestate.app.ui.components.MoneyField
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.viewmodel.DealAssistantViewModel
@@ -147,6 +148,15 @@ internal fun ResultsCard(rows: List<Pair<String, String>>) {
 
 internal fun String.toAmount(): Double = toDoubleOrNull() ?: 0.0
 
+/** A collapsed-by-default explanation of the formula behind a tool's result — tap to reveal. */
+@Composable
+internal fun MethodologyNote(text: String) {
+    Spacer(modifier = Modifier.height(Spacing.md))
+    CollapsibleSection(title = "روش محاسبه", subtitle = "برای دیدن فرمول‌ها لمس کنید") {
+        Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
 /** The numeric keyboard has no minus key, so "negative" is a toggle rather than something typed. */
 @Composable
 internal fun IncreaseDecreaseToggle(isIncrease: Boolean, onChange: (Boolean) -> Unit) {
@@ -174,6 +184,7 @@ private fun CommissionCalculator(prefillPrice: Long?) {
             "مجموع کارمزد" to "${money(result.total)} تومان"
         )
     )
+    MethodologyNote("کارمزد هر طرف = قیمت کل ملک × درصد کارمزد ÷ ۱۰۰. چون معمولاً هم خریدار و هم فروشنده کارمزد پرداخت می‌کنند، مجموع کارمزد دو برابر سهم هر طرف است.")
 }
 
 @Composable
@@ -207,6 +218,7 @@ private fun PurchaseCostCalculator(prefillPrice: Long?) {
             "هزینه تخمینی کل خرید" to "${money(result.total)} تومان"
         )
     )
+    MethodologyNote("هر یک از هزینه‌ها (کارمزد، مالیات، ثبت، انتقال) به‌صورت درصدی از قیمت ملک محاسبه می‌شود. هزینه تخمینی کل خرید = قیمت ملک + مجموع این هزینه‌ها.")
 }
 
 private val rentalConversionPresets = listOf(2.0, 2.5, 3.0, 3.5)
@@ -252,6 +264,8 @@ private fun RentalConversionCalculator() {
     var monthlyRent by remember { mutableStateOf("") }
     MoneyField("اجاره ماهانه (تومان)", monthlyRent, { monthlyRent = it }, modifier = Modifier.fillMaxWidth())
     ResultsCard(listOf("رهن معادل" to "${money(calculateDepositFromRent(monthlyRent.toAmount(), rate.toAmount()))} تومان"))
+
+    MethodologyNote("اجاره ماهانه = مبلغ تبدیل‌شونده × نرخ تبدیل ماهانه ÷ ۱۰۰. رهن باقی‌مانده = رهن کامل − مبلغ تبدیل‌شونده. در محاسبه برعکس نیز از همین رابطه استفاده می‌شود: رهن معادل = اجاره ماهانه × ۱۰۰ ÷ نرخ تبدیل.")
 }
 
 @Composable
