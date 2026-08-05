@@ -99,6 +99,10 @@ fun RealEstateApp(
             )
             if (result == SnackbarResult.ActionPerformed) {
                 viewModel.undoLastDelete()
+            } else {
+                // Undo window closed without a tap — safe to clean up the property's
+                // notes/timeline now so they don't linger as orphaned rows forever.
+                viewModel.finalizeDelete()
             }
         }
     }

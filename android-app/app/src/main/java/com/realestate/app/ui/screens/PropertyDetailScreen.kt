@@ -23,17 +23,24 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.StickyNote2
+import androidx.compose.material.icons.rounded.TrendingUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import com.realestate.app.ui.components.DropdownMenu
@@ -75,6 +82,7 @@ import com.realestate.app.data.dealassistant.calculateCommission
 import com.realestate.app.data.dealassistant.calculatePricePerMeter
 import com.realestate.app.data.dealassistant.defaultCommissionRate
 import com.realestate.app.data.dealassistant.estimateMarketValue
+import com.realestate.app.data.property.TimelineEventType
 import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.CircleIconButton
 import com.realestate.app.ui.components.CollapsibleSection
@@ -94,6 +102,8 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+private const val STALE_PROPERTY_DAYS = 14L
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -122,7 +132,10 @@ fun PropertyDetailScreen(
     var showFolderDialog by remember { mutableStateOf(false) }
     var showFollowUpDialog by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var editingNote by remember { mutableStateOf<com.realestate.app.data.property.Note?>(null) }
     var hasMarkedViewed by remember(propertyId) { mutableStateOf(false) }
+    var hasLoadedOnce by remember(propertyId) { mutableStateOf(false) }
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
 
     LaunchedEffect(property) {
         val p = property
@@ -132,7 +145,29 @@ fun PropertyDetailScreen(
         }
     }
 
+    // Room's Flow emits at least once almost immediately, but "null" from that first emission
+    // and "no emission yet" are indistinguishable through collectAsStateWithLifecycle's single
+    // initialValue — so this separately confirms a real emission happened before ever showing
+    // "ملک یافت نشد" (never show it while the very first load is still in flight).
+    LaunchedEffect(propertyId) {
+        viewModel.getPropertyById(propertyId).collect { hasLoadedOnce = true }
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.noteDeletionEvents.collect {
+            val result = snackbarHostState.showSnackbar(
+                message = "یادداشت حذف شد",
+                actionLabel = "بازگردانی",
+                duration = androidx.compose.material3.SnackbarDuration.Short
+            )
+            if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                viewModel.undoLastNoteDelete()
+            }
+        }
+    }
+
     Scaffold(
+        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(property?.title ?: "جزئیات ملک") },
@@ -167,7 +202,7 @@ fun PropertyDetailScreen(
                                     onClick = { showMenu = false; viewModel.togglePinned(p) }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("پوشه علاقه‌مندی") },
+                                    text = { Text("صف کاری") },
                                     onClick = { showMenu = false; showFolderDialog = true }
                                 )
                                 DropdownMenuItem(
@@ -202,7 +237,11 @@ fun PropertyDetailScreen(
         val current = property
         if (current == null) {
             Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("ملک یافت نشد")
+                if (!hasLoadedOnce) {
+                    androidx.compose.material3.CircularProgressIndicator()
+                } else {
+                    Text("ملک یافت نشد")
+                }
             }
         } else {
             Column(
@@ -344,6 +383,27 @@ fun PropertyDetailScreen(
                 }
 
                 Column(modifier = Modifier.padding(horizontal = Spacing.screen)) {
+                val daysSinceUpdate = (System.currentTimeMillis() - current.lastModifiedAt) / (24 * 60 * 60 * 1000L)
+                if (daysSinceUpdate >= STALE_PROPERTY_DAYS && current.status != PropertyStatus.ARCHIVED &&
+                    current.status != PropertyStatus.SOLD && current.status != PropertyStatus.RENTED
+                ) {
+                    AppCard(modifier = Modifier.fillMaxWidth()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Rounded.History,
+                                contentDescription = null,
+                                tint = MaterialTheme.extendedColors.warning
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                "این ملک $daysSinceUpdate روزه بروزرسانی نشده — شاید وقتشه اطلاعاتش رو بازبینی کنی",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(Spacing.cardGap))
+                }
                 DealAssistantSection(current = current, allProperties = allProperties, onOpenDealTool = onOpenDealTool)
                 Spacer(modifier = Modifier.height(Spacing.cardGap))
                 CollapsibleSection(title = "اطلاعات ملک", initiallyExpanded = true) {
@@ -411,14 +471,30 @@ fun PropertyDetailScreen(
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             notes.forEach { note ->
-                                Column {
-                                    Text(note.content, style = MaterialTheme.typography.bodyMedium)
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        formatDateTime(note.createdAt),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                Row(verticalAlignment = Alignment.Top) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(note.content, style = MaterialTheme.typography.bodyMedium)
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            formatDateTime(note.createdAt),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    IconButton(onClick = { editingNote = note }) {
+                                        Icon(
+                                            Icons.Rounded.Edit,
+                                            contentDescription = "ویرایش یادداشت",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    IconButton(onClick = { viewModel.deleteNote(note) }) {
+                                        Icon(
+                                            Icons.Rounded.Delete,
+                                            contentDescription = "حذف یادداشت",
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -440,11 +516,11 @@ fun PropertyDetailScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             timeline.forEach { event ->
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(6.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary)
+                                    Icon(
+                                        event.type.icon(),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Column {
@@ -519,6 +595,14 @@ fun PropertyDetailScreen(
                 AddNoteDialog(
                     onAdd = { content -> viewModel.addNote(current.id, content) },
                     onDismiss = { showAddNoteDialog = false }
+                )
+            }
+
+            editingNote?.let { note ->
+                EditNoteDialog(
+                    initialText = note.content,
+                    onSave = { newContent -> viewModel.updateNote(note.copy(content = newContent)) },
+                    onDismiss = { editingNote = null }
                 )
             }
 
@@ -731,6 +815,32 @@ private fun AddNoteDialog(onAdd: (String) -> Unit, onDismiss: () -> Unit) {
     )
 }
 
+@Composable
+private fun EditNoteDialog(initialText: String, onSave: (String) -> Unit, onDismiss: () -> Unit) {
+    var text by remember { mutableStateOf(initialText) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("ویرایش یادداشت") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                minLines = 3,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                if (text.isNotBlank()) onSave(text)
+                onDismiss()
+            }) { Text("ذخیره") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("انصراف") }
+        }
+    )
+}
+
 private val presetWorkQueues = listOf("پیگیری امروز", "VIP", "سرمایه‌گذاری", "فوری", "این هفته")
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -798,6 +908,7 @@ private fun FollowUpDialog(
         "۳ روز دیگر" to dayMillis * 3,
         "هفته دیگر" to dayMillis * 7
     )
+    var customDays by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("تنظیم پیگیری") },
@@ -820,6 +931,33 @@ private fun FollowUpDialog(
                         )
                     }
                 }
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    "یا یک تاریخ دلخواه (چند روز دیگر):",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = customDays,
+                        onValueChange = { customDays = it.filter { c -> c.isDigit() } },
+                        placeholder = { Text("مثلاً ۱۰") },
+                        singleLine = true,
+                        modifier = Modifier.width(100.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    TextButton(
+                        onClick = {
+                            val days = customDays.toLongOrNull()
+                            if (days != null && days > 0) {
+                                onSelect(System.currentTimeMillis() + dayMillis * days)
+                                onDismiss()
+                            }
+                        },
+                        enabled = customDays.toLongOrNull()?.let { it > 0 } == true
+                    ) { Text("تنظیم") }
+                }
                 if (hasFollowUp) {
                     Spacer(modifier = Modifier.height(10.dp))
                     TextButton(onClick = {
@@ -838,3 +976,14 @@ private fun FollowUpDialog(
 
 private fun formatDateTime(timestamp: Long): String =
     SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(Date(timestamp))
+
+private fun TimelineEventType.icon(): androidx.compose.ui.graphics.vector.ImageVector = when (this) {
+    TimelineEventType.CREATED -> Icons.Rounded.Add
+    TimelineEventType.EDITED -> Icons.Rounded.Edit
+    TimelineEventType.PRICE_CHANGED -> Icons.Rounded.TrendingUp
+    TimelineEventType.SHARED -> Icons.Rounded.Share
+    TimelineEventType.ARCHIVED -> Icons.Rounded.History
+    TimelineEventType.RESTORED -> Icons.Rounded.CheckCircle
+    TimelineEventType.NOTE_ADDED -> Icons.Rounded.StickyNote2
+    TimelineEventType.FOLLOW_UP_SET -> Icons.Rounded.EventAvailable
+}

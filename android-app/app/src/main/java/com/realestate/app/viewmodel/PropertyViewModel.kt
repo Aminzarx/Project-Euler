@@ -11,6 +11,7 @@ import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
 import com.realestate.app.data.code
 import com.realestate.app.data.datastore.SearchHistoryRepository
+import com.realestate.app.data.property.Note
 import com.realestate.app.data.property.PropertyExtrasRepository
 import com.realestate.app.data.property.TimelineEvent
 import com.realestate.app.data.property.TimelineEventType
@@ -26,6 +27,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 
 data class PropertyFilter(
@@ -162,6 +165,16 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /** Call once the delete snackbar is dismissed without the user tapping Undo, so the
+     *  property's notes/timeline (kept around during the undo window) don't linger as
+     *  orphaned rows forever. */
+    fun finalizeDelete() = viewModelScope.launch {
+        lastDeletedProperty?.let { property ->
+            extrasRepository.deleteAllForProperty(property.id)
+            lastDeletedProperty = null
+        }
+    }
+
     fun updateFilter(newFilter: PropertyFilter) {
         _filter.value = newFilter
     }
@@ -179,6 +192,27 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     fun getNotesForProperty(propertyId: Long) = extrasRepository.getNotesForProperty(propertyId)
 
     fun getTimelineForProperty(propertyId: Long) = extrasRepository.getTimelineForProperty(propertyId)
+
+    fun updateNote(note: Note) = viewModelScope.launch {
+        extrasRepository.updateNote(note)
+    }
+
+    private var lastDeletedNote: Note? = null
+    private val _noteDeletionEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val noteDeletionEvents: SharedFlow<Unit> = _noteDeletionEvents
+
+    fun deleteNote(note: Note) = viewModelScope.launch {
+        lastDeletedNote = note
+        extrasRepository.deleteNote(note.id)
+        _noteDeletionEvents.emit(Unit)
+    }
+
+    fun undoLastNoteDelete() = viewModelScope.launch {
+        lastDeletedNote?.let { note ->
+            extrasRepository.restoreNote(note)
+            lastDeletedNote = null
+        }
+    }
 
     fun addProperty(property: Property) = viewModelScope.launch {
         val id = repository.insert(property)
@@ -239,8 +273,16 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
         repository.update(property.copy(isPinned = !property.isPinned))
     }
 
+    // Assigning a work queue implies "keep this on my radar" — so it also marks the property as
+    // favorite, otherwise it would silently never show up in the screen that lists work queues.
     fun setFavoriteFolder(property: Property, folder: String?) = viewModelScope.launch {
-        repository.update(property.copy(favoriteFolder = folder?.trim()?.takeIf { it.isNotEmpty() }))
+        val trimmedFolder = folder?.trim()?.takeIf { it.isNotEmpty() }
+        repository.update(
+            property.copy(
+                favoriteFolder = trimmedFolder,
+                isFavorite = property.isFavorite || trimmedFolder != null
+            )
+        )
     }
 
     fun markViewed(property: Property) = viewModelScope.launch {
@@ -249,6 +291,10 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
 
     fun setFollowUp(property: Property, timestamp: Long?) = viewModelScope.launch {
         repository.update(property.copy(followUpAt = timestamp))
+        if (timestamp != null) {
+            val formatted = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(Date(timestamp))
+            extrasRepository.logEvent(property.id, TimelineEventType.FOLLOW_UP_SET, "پیگیری برای $formatted تنظیم شد")
+        }
     }
 
     fun markShared(property: Property) = viewModelScope.launch {

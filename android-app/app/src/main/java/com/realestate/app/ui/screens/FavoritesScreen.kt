@@ -136,7 +136,7 @@ private fun FavoritesList(
     if (favorites.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                "ملکی در این پوشه نیست",
+                "ملکی در این صف نیست",
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
