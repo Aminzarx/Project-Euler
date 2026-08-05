@@ -2,6 +2,7 @@ package com.realestate.app.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -16,10 +17,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AddAPhoto
+import androidx.compose.material.icons.rounded.FormatQuote
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.Notes
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Send
+import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,11 +48,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.viewmodel.ProfileViewModel
 
@@ -50,17 +64,21 @@ import com.realestate.app.viewmodel.ProfileViewModel
 @Composable
 fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val profile by viewModel.profile.collectAsStateWithLifecycle()
 
     var fullName by remember { mutableStateOf("") }
     var agencyName by remember { mutableStateOf("") }
     var businessAddress by remember { mutableStateOf("") }
     var biography by remember { mutableStateOf("") }
+    var slogan by remember { mutableStateOf("") }
     var instagram by remember { mutableStateOf("") }
     var telegram by remember { mutableStateOf("") }
+    var website by remember { mutableStateOf("") }
     var profilePhotoUri by remember { mutableStateOf<String?>(null) }
     var agencyLogoUri by remember { mutableStateOf<String?>(null) }
     var loaded by remember { mutableStateOf(false) }
+    var showNameError by remember { mutableStateOf(false) }
 
     LaunchedEffect(profile) {
         if (!loaded) {
@@ -68,8 +86,10 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
             agencyName = profile.agencyName
             businessAddress = profile.businessAddress
             biography = profile.biography
+            slogan = profile.slogan
             instagram = profile.instagram
             telegram = profile.telegram
+            website = profile.website
             profilePhotoUri = profile.profilePhotoUri
             agencyLogoUri = profile.agencyLogoUri
             loaded = true
@@ -80,12 +100,17 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            try {
+            val persisted = runCatching {
                 context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            } catch (_: SecurityException) {
-                // برخی منابع اجازه دسترسی دائمی نمی‌دهند
-            }
+            }.isSuccess
             profilePhotoUri = uri.toString()
+            if (!persisted) {
+                Toast.makeText(
+                    context,
+                    "این عکس ممکن است بعد از بستن برنامه دوباره نیاز به انتخاب داشته باشد",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 
@@ -93,13 +118,44 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            try {
+            val persisted = runCatching {
                 context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            } catch (_: SecurityException) {
-                // برخی منابع اجازه دسترسی دائمی نمی‌دهند
-            }
+            }.isSuccess
             agencyLogoUri = uri.toString()
+            if (!persisted) {
+                Toast.makeText(
+                    context,
+                    "این لوگو ممکن است بعد از بستن برنامه دوباره نیاز به انتخاب داشته باشد",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
+    }
+
+    val nextAction = KeyboardOptions(imeAction = ImeAction.Next)
+    val nextActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
+
+    fun attemptSave() {
+        if (fullName.isBlank()) {
+            showNameError = true
+            return
+        }
+        viewModel.updateProfile {
+            it.copy(
+                fullName = fullName.trim(),
+                agencyName = agencyName.trim(),
+                businessAddress = businessAddress.trim(),
+                biography = biography.trim(),
+                slogan = slogan.trim(),
+                instagram = instagram.trim(),
+                telegram = telegram.trim(),
+                website = website.trim(),
+                profilePhotoUri = profilePhotoUri,
+                agencyLogoUri = agencyLogoUri
+            )
+        }
+        Toast.makeText(context, "تغییرات ذخیره شد", Toast.LENGTH_SHORT).show()
+        onDone()
     }
 
     Scaffold(
@@ -112,21 +168,7 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
                     }
                 },
                 actions = {
-                    TextButton(onClick = {
-                        viewModel.updateProfile {
-                            it.copy(
-                                fullName = fullName.trim(),
-                                agencyName = agencyName.trim(),
-                                businessAddress = businessAddress.trim(),
-                                biography = biography.trim(),
-                                instagram = instagram.trim(),
-                                telegram = telegram.trim(),
-                                profilePhotoUri = profilePhotoUri,
-                                agencyLogoUri = agencyLogoUri
-                            )
-                        }
-                        onDone()
-                    }) {
+                    TextButton(onClick = ::attemptSave) {
                         Text("ذخیره")
                     }
                 }
@@ -160,82 +202,142 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
                 }
             }
 
-            Spacer12()
-            OutlinedTextField(
-                value = fullName,
-                onValueChange = { fullName = it },
-                label = { Text("نام و نام‌خانوادگی") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer12()
-            OutlinedTextField(
-                value = agencyName,
-                onValueChange = { agencyName = it },
-                label = { Text("نام آژانس/بنگاه") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer12()
-            Text("لوگوی آژانس", style = MaterialTheme.typography.labelLarge)
-            Text(
-                "روی کارت‌های استوری به‌جای آیکن پیش‌فرض نمایش داده می‌شود",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { logoPicker.launch("image/*") },
-                contentAlignment = Alignment.Center
-            ) {
-                if (agencyLogoUri != null) {
-                    AsyncImage(
-                        model = agencyLogoUri,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Icon(Icons.Rounded.AddAPhoto, contentDescription = "افزودن لوگوی آژانس")
-                }
+            Spacer(modifier = Modifier.height(Spacing.lg))
+            SectionLabel("اطلاعات شخصی")
+            AppCard(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = fullName,
+                    onValueChange = { fullName = it; showNameError = false },
+                    label = { Text("نام و نام‌خانوادگی *") },
+                    leadingIcon = { Icon(Icons.Rounded.Person, contentDescription = null) },
+                    isError = showNameError,
+                    supportingText = if (showNameError) {
+                        { Text("این فیلد الزامی است") }
+                    } else null,
+                    singleLine = true,
+                    keyboardOptions = nextAction,
+                    keyboardActions = nextActions,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
-            Spacer12()
-            OutlinedTextField(
-                value = businessAddress,
-                onValueChange = { businessAddress = it },
-                label = { Text("آدرس محل کسب‌وکار") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer12()
-            OutlinedTextField(
-                value = biography,
-                onValueChange = { biography = it },
-                label = { Text("درباره من") },
-                minLines = 3,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer12()
-            OutlinedTextField(
-                value = instagram,
-                onValueChange = { instagram = it },
-                label = { Text("آیدی اینستاگرام") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer12()
-            OutlinedTextField(
-                value = telegram,
-                onValueChange = { telegram = it },
-                label = { Text("آیدی تلگرام") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer12()
+
+            Spacer(modifier = Modifier.height(Spacing.lg))
+            SectionLabel("اطلاعات آژانس")
+            AppCard(modifier = Modifier.fillMaxWidth()) {
+                Text("لوگوی آژانس", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    "روی کارت‌های استوری به‌جای آیکن پیش‌فرض نمایش داده می‌شود",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { logoPicker.launch("image/*") },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (agencyLogoUri != null) {
+                        AsyncImage(
+                            model = agencyLogoUri,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(Icons.Rounded.AddAPhoto, contentDescription = "افزودن لوگوی آژانس")
+                    }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+                OutlinedTextField(
+                    value = agencyName,
+                    onValueChange = { agencyName = it },
+                    label = { Text("نام آژانس/بنگاه") },
+                    leadingIcon = { Icon(Icons.Rounded.Storefront, contentDescription = null) },
+                    singleLine = true,
+                    keyboardOptions = nextAction,
+                    keyboardActions = nextActions,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = slogan,
+                    onValueChange = { slogan = it },
+                    label = { Text("شعار کسب‌وکار") },
+                    leadingIcon = { Icon(Icons.Rounded.FormatQuote, contentDescription = null) },
+                    singleLine = true,
+                    keyboardOptions = nextAction,
+                    keyboardActions = nextActions,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = businessAddress,
+                    onValueChange = { businessAddress = it },
+                    label = { Text("آدرس محل کسب‌وکار") },
+                    leadingIcon = { Icon(Icons.Rounded.LocationOn, contentDescription = null) },
+                    keyboardOptions = nextAction,
+                    keyboardActions = nextActions,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = biography,
+                    onValueChange = { biography = it },
+                    label = { Text("درباره من") },
+                    leadingIcon = { Icon(Icons.Rounded.Notes, contentDescription = null) },
+                    minLines = 3,
+                    keyboardOptions = nextAction,
+                    keyboardActions = nextActions,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(Spacing.lg))
+            SectionLabel("شبکه‌های اجتماعی و وب‌سایت")
+            AppCard(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = instagram,
+                    onValueChange = { instagram = it },
+                    label = { Text("آیدی اینستاگرام") },
+                    leadingIcon = { Icon(Icons.Rounded.Send, contentDescription = null) },
+                    singleLine = true,
+                    keyboardOptions = nextAction,
+                    keyboardActions = nextActions,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = telegram,
+                    onValueChange = { telegram = it },
+                    label = { Text("آیدی تلگرام") },
+                    leadingIcon = { Icon(Icons.Rounded.Send, contentDescription = null) },
+                    singleLine = true,
+                    keyboardOptions = nextAction,
+                    keyboardActions = nextActions,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = website,
+                    onValueChange = { website = it },
+                    label = { Text("وب‌سایت") },
+                    leadingIcon = { Icon(Icons.Rounded.Language, contentDescription = null) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus(); attemptSave() }),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            Spacer(modifier = Modifier.height(Spacing.xl))
         }
     }
 }
 
 @Composable
-private fun Spacer12() {
-    Spacer(modifier = Modifier.height(12.dp))
+private fun SectionLabel(text: String) {
+    Text(text, style = MaterialTheme.typography.titleMedium)
+    Spacer(modifier = Modifier.height(Spacing.sm))
 }

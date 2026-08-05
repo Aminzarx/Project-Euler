@@ -24,6 +24,9 @@ interface PropertyDao {
     @Insert
     suspend fun insert(property: Property): Long
 
+    @Insert
+    suspend fun insertAll(properties: List<Property>)
+
     @Update
     suspend fun update(property: Property)
 

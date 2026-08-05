@@ -39,9 +39,11 @@ import com.realestate.app.ui.components.BottomNavItem
 import com.realestate.app.ui.components.FloatingBottomNav
 import com.realestate.app.ui.components.RouteErrorState
 import com.realestate.app.ui.navigation.Screen
+import com.realestate.app.ui.screens.AboutScreen
 import com.realestate.app.ui.screens.AddEditPropertyScreen
 import com.realestate.app.ui.screens.EditProfileScreen
 import com.realestate.app.ui.screens.FavoritesScreen
+import com.realestate.app.ui.screens.HelpCenterScreen
 import com.realestate.app.ui.screens.HomeScreen
 import com.realestate.app.ui.screens.ProfileScreen
 import com.realestate.app.ui.screens.PropertyDetailScreen
@@ -210,10 +212,14 @@ fun RealEstateApp(
                 ProfileScreen(
                     profileViewModel = profileViewModel,
                     walletViewModel = walletViewModel,
+                    propertyViewModel = viewModel,
                     authViewModel = authViewModel,
                     onEditProfile = { navController.navigate(Screen.EditProfile.route) },
                     onOpenWallet = { navController.navigate(Screen.Wallet.route) },
-                    onOpenSettings = { navController.navigate(Screen.Settings.route) }
+                    onOpenSettings = { navController.navigate(Screen.Settings.route) },
+                    onOpenHelp = { navController.navigate(Screen.HelpCenter.route) },
+                    onOpenAbout = { navController.navigate(Screen.About.route) },
+                    onPropertyClick = { id -> navController.navigate(Screen.Detail.createRoute(id)) }
                 )
             }
             composable(Screen.EditProfile.route) {
@@ -221,6 +227,12 @@ fun RealEstateApp(
                     viewModel = profileViewModel,
                     onDone = { navController.popBackStack() }
                 )
+            }
+            composable(Screen.HelpCenter.route) {
+                HelpCenterScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Screen.About.route) {
+                AboutScreen(onBack = { navController.popBackStack() })
             }
             composable(Screen.Settings.route) {
                 SettingsScreen(

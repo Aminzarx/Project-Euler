@@ -1,14 +1,20 @@
 package com.realestate.app.ui.components
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CompareArrows
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.HourglassEmpty
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.StickyNote2
 import androidx.compose.material.icons.rounded.Storefront
+import androidx.compose.material.icons.rounded.TrendingUp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -16,6 +22,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.realestate.app.data.DealType
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
+import com.realestate.app.data.property.TimelineEventType
 import com.realestate.app.ui.theme.extendedColors
 
 fun PropertyType.label(): String = when (this) {
@@ -71,4 +78,16 @@ fun PropertyStatus.icon(): ImageVector = when (this) {
     PropertyStatus.SOLD -> Icons.Rounded.EmojiEvents
     PropertyStatus.RENTED -> Icons.Rounded.Check
     PropertyStatus.ARCHIVED -> Icons.Rounded.History
+}
+
+/** Per-event-type icon for timeline/activity feeds — shared by HomeScreen and the Profile dashboard. */
+fun TimelineEventType.icon(): ImageVector = when (this) {
+    TimelineEventType.CREATED -> Icons.Rounded.Add
+    TimelineEventType.EDITED -> Icons.Rounded.Edit
+    TimelineEventType.PRICE_CHANGED -> Icons.Rounded.TrendingUp
+    TimelineEventType.SHARED -> Icons.Rounded.Share
+    TimelineEventType.ARCHIVED -> Icons.Rounded.History
+    TimelineEventType.RESTORED -> Icons.Rounded.CheckCircle
+    TimelineEventType.NOTE_ADDED -> Icons.Rounded.StickyNote2
+    TimelineEventType.FOLLOW_UP_SET -> Icons.Rounded.EventAvailable
 }

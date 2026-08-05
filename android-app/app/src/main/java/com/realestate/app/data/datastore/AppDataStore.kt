@@ -29,6 +29,8 @@ private object Keys {
     val BIOGRAPHY = stringPreferencesKey("biography")
     val INSTAGRAM = stringPreferencesKey("instagram")
     val TELEGRAM = stringPreferencesKey("telegram")
+    val WEBSITE = stringPreferencesKey("website")
+    val SLOGAN = stringPreferencesKey("slogan")
     val THEME_PREFERENCE = stringPreferencesKey("theme_preference")
     val RECENT_SEARCHES = stringPreferencesKey("recent_searches")
     val BACKUP_HISTORY = stringPreferencesKey("backup_history")
@@ -84,9 +86,35 @@ data class ProfileData(
     val biography: String = "",
     val instagram: String = "",
     val telegram: String = "",
+    val website: String = "",
+    val slogan: String = "",
     val mobileNumber: String = "",
     val themePreference: ThemePreference = ThemePreference.SYSTEM
 )
+
+/** Which optional branding fields are still empty, in the order it's most useful to fill them in. */
+private val COMPLETION_FIELDS: List<Pair<String, (ProfileData) -> Boolean>> = listOf(
+    "نام و نام‌خانوادگی" to { p: ProfileData -> p.fullName.isNotBlank() },
+    "نام آژانس" to { p: ProfileData -> p.agencyName.isNotBlank() },
+    "عکس پروفایل" to { p: ProfileData -> p.profilePhotoUri != null },
+    "لوگوی آژانس" to { p: ProfileData -> p.agencyLogoUri != null },
+    "آدرس محل کسب‌وکار" to { p: ProfileData -> p.businessAddress.isNotBlank() },
+    "بیوگرافی" to { p: ProfileData -> p.biography.isNotBlank() },
+    "شعار کسب‌وکار" to { p: ProfileData -> p.slogan.isNotBlank() },
+    "شبکه اجتماعی یا وب‌سایت" to { p: ProfileData ->
+        p.instagram.isNotBlank() || p.telegram.isNotBlank() || p.website.isNotBlank()
+    }
+)
+
+/** 0-100. Purely a function of which optional profile fields the agent has filled in — no hidden scoring. */
+fun ProfileData.completionPercent(): Int {
+    val filled = COMPLETION_FIELDS.count { (_, isFilled) -> isFilled(this) }
+    return (filled * 100) / COMPLETION_FIELDS.size
+}
+
+/** Up to 3 concrete, actionable suggestions for what to fill in next. */
+fun ProfileData.missingFieldSuggestions(limit: Int = 3): List<String> =
+    COMPLETION_FIELDS.filterNot { (_, isFilled) -> isFilled(this) }.map { (label, _) -> label }.take(limit)
 
 class ProfileRepository(private val context: Context) {
     val profile: Flow<ProfileData> = context.appDataStore.data.map { prefs ->
@@ -99,6 +127,8 @@ class ProfileRepository(private val context: Context) {
             biography = prefs[Keys.BIOGRAPHY] ?: "",
             instagram = prefs[Keys.INSTAGRAM] ?: "",
             telegram = prefs[Keys.TELEGRAM] ?: "",
+            website = prefs[Keys.WEBSITE] ?: "",
+            slogan = prefs[Keys.SLOGAN] ?: "",
             mobileNumber = prefs[Keys.MOBILE_NUMBER] ?: "",
             themePreference = ThemePreference.entries.find { it.name == prefs[Keys.THEME_PREFERENCE] }
                 ?: ThemePreference.SYSTEM
@@ -116,6 +146,8 @@ class ProfileRepository(private val context: Context) {
             prefs[Keys.BIOGRAPHY] = updated.biography
             prefs[Keys.INSTAGRAM] = updated.instagram
             prefs[Keys.TELEGRAM] = updated.telegram
+            prefs[Keys.WEBSITE] = updated.website
+            prefs[Keys.SLOGAN] = updated.slogan
         }
     }
 
@@ -163,7 +195,13 @@ class RecentToolsRepository(private val context: Context) {
     }
 }
 
-data class BackupHistoryEntry(val timestamp: Long, val propertyCount: Int, val sizeBytes: Long)
+data class BackupHistoryEntry(
+    val timestamp: Long,
+    val propertyCount: Int,
+    val sizeBytes: Long,
+    val noteCount: Int = 0,
+    val transactionCount: Int = 0
+)
 
 class BackupHistoryRepository(private val context: Context) {
     val history: Flow<List<BackupHistoryEntry>> = context.appDataStore.data.map { prefs ->
@@ -178,7 +216,9 @@ class BackupHistoryRepository(private val context: Context) {
                     BackupHistoryEntry(
                         timestamp = obj.getLong("timestamp"),
                         propertyCount = obj.getInt("propertyCount"),
-                        sizeBytes = obj.getLong("sizeBytes")
+                        sizeBytes = obj.getLong("sizeBytes"),
+                        noteCount = obj.optInt("noteCount", 0),
+                        transactionCount = obj.optInt("transactionCount", 0)
                     )
                 }
             }.getOrDefault(emptyList())
@@ -195,6 +235,8 @@ class BackupHistoryRepository(private val context: Context) {
                     put("timestamp", e.timestamp)
                     put("propertyCount", e.propertyCount)
                     put("sizeBytes", e.sizeBytes)
+                    put("noteCount", e.noteCount)
+                    put("transactionCount", e.transactionCount)
                 }
             )
         }

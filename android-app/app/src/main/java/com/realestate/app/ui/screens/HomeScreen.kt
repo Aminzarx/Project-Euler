@@ -26,8 +26,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.History
@@ -36,7 +34,6 @@ import androidx.compose.material.icons.rounded.LocalFlorist
 import androidx.compose.material.icons.rounded.Pets
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.StickyNote2
 import androidx.compose.material.icons.rounded.TrendingUp
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,8 +55,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.realestate.app.data.property.TimelineEventType
 import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.icon
 import com.realestate.app.ui.components.AppListRow
 import com.realestate.app.ui.components.CircleIconButton
 import com.realestate.app.ui.components.PillShape
@@ -453,17 +450,6 @@ private fun SectionHeader(icon: ImageVector, title: String, subtitle: String? = 
             }
         }
     }
-}
-
-private fun TimelineEventType.icon(): ImageVector = when (this) {
-    TimelineEventType.CREATED -> Icons.Rounded.Add
-    TimelineEventType.EDITED -> Icons.Rounded.Edit
-    TimelineEventType.PRICE_CHANGED -> Icons.Rounded.TrendingUp
-    TimelineEventType.SHARED -> Icons.Rounded.Share
-    TimelineEventType.ARCHIVED -> Icons.Rounded.History
-    TimelineEventType.RESTORED -> Icons.Rounded.CheckCircle
-    TimelineEventType.NOTE_ADDED -> Icons.Rounded.StickyNote2
-    TimelineEventType.FOLLOW_UP_SET -> Icons.Rounded.EventAvailable
 }
 
 private fun groupActivitiesByRecency(

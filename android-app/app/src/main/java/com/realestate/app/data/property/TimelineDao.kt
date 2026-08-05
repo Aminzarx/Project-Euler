@@ -19,6 +19,9 @@ interface TimelineDao {
     @Insert
     suspend fun insert(event: TimelineEvent): Long
 
+    @Insert
+    suspend fun insertAll(events: List<TimelineEvent>)
+
     @Query("DELETE FROM timeline_events WHERE propertyId = :propertyId")
     suspend fun deleteForProperty(propertyId: Long)
 

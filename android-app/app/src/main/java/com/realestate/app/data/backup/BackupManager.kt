@@ -2,6 +2,7 @@ package com.realestate.app.data.backup
 
 import android.content.Context
 import android.net.Uri
+import androidx.room.withTransaction
 import com.realestate.app.data.AppDatabase
 import com.realestate.app.data.DealType
 import com.realestate.app.data.Property
@@ -13,24 +14,60 @@ import com.realestate.app.data.property.TimelineEventType
 import com.realestate.app.data.wallet.TransactionStatus
 import com.realestate.app.data.wallet.TransactionType
 import com.realestate.app.data.wallet.WalletTransaction
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-data class BackupResult(val propertyCount: Int, val sizeBytes: Long)
+private const val BACKUP_FORMAT_VERSION = 1
 
-/** Offline JSON backup/restore for the whole local database. No network involved. */
+data class BackupResult(
+    val propertyCount: Int,
+    val noteCount: Int,
+    val eventCount: Int,
+    val transactionCount: Int,
+    val sizeBytes: Long
+)
+
+/**
+ * A read-only look at a backup file's contents (counts, format version, size) before committing
+ * to a restore. Restoring replaces the entire local database, so agents need to know what
+ * they're about to load before they confirm it — this is what powers that confirmation dialog.
+ */
+data class BackupPreview(
+    val formatVersion: Int,
+    val propertyCount: Int,
+    val noteCount: Int,
+    val eventCount: Int,
+    val transactionCount: Int,
+    val sizeBytes: Long
+)
+
+/**
+ * Offline JSON backup/restore for the whole local database. No network involved — the file is
+ * handed off through Android's Storage Access Framework (the system document picker), which
+ * already lets a user save to or open from any cloud-backed provider installed on the device
+ * (Google Drive, Dropbox, OneDrive, ...) without this app needing its own cloud integration.
+ * If a dedicated cloud sync feature is ever added, it plugs in here as an alternate source/sink
+ * for the same JSON payload this class already produces and consumes.
+ *
+ * The backup file is plain, unencrypted JSON and may contain customer names and phone numbers.
+ * Encrypting it (e.g. a passphrase-derived key via Android's Keystore/EncryptedFile) is a
+ * reasonable future addition, but doing that safely needs its own dedicated design and testing —
+ * left as a deliberate seam rather than bolted on here.
+ */
 class BackupManager(private val context: Context) {
     private val db = AppDatabase.getInstance(context)
 
-    suspend fun createBackup(uri: Uri): BackupResult {
+    suspend fun createBackup(uri: Uri): BackupResult = withContext(Dispatchers.IO) {
         val properties = db.propertyDao().getAllProperties().first()
         val notes = db.noteDao().getAllNotes().first()
         val events = db.timelineDao().getAllEvents().first()
         val transactions = db.walletDao().getAllTransactions().first()
 
         val json = JSONObject().apply {
-            put("version", 1)
+            put("version", BACKUP_FORMAT_VERSION)
             put("properties", JSONArray(properties.map { it.toJson() }))
             put("notes", JSONArray(notes.map { it.toJson() }))
             put("timelineEvents", JSONArray(events.map { it.toJson() }))
@@ -39,32 +76,53 @@ class BackupManager(private val context: Context) {
         val bytes = json.toString(2).toByteArray(Charsets.UTF_8)
         context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
             ?: error("امکان نوشتن فایل پشتیبان وجود ندارد")
-        return BackupResult(properties.size, bytes.size.toLong())
+        BackupResult(properties.size, notes.size, events.size, transactions.size, bytes.size.toLong())
     }
 
-    suspend fun restoreBackup(uri: Uri): BackupResult {
-        val text = context.contentResolver.openInputStream(uri)?.use { stream ->
-            stream.readBytes().toString(Charsets.UTF_8)
-        } ?: error("امکان خواندن فایل پشتیبان وجود ندارد")
+    /** Reads and parses the file to report what it contains, without touching the database. */
+    suspend fun peekBackup(uri: Uri): BackupPreview = withContext(Dispatchers.IO) {
+        val text = readBackupText(uri)
+        val json = JSONObject(text)
+        BackupPreview(
+            formatVersion = json.optInt("version", 1),
+            propertyCount = json.getJSONArray("properties").length(),
+            noteCount = json.optJSONArray("notes")?.length() ?: 0,
+            eventCount = json.optJSONArray("timelineEvents")?.length() ?: 0,
+            transactionCount = json.optJSONArray("walletTransactions")?.length() ?: 0,
+            sizeBytes = text.toByteArray(Charsets.UTF_8).size.toLong()
+        )
+    }
+
+    suspend fun restoreBackup(uri: Uri): BackupResult = withContext(Dispatchers.IO) {
+        val text = readBackupText(uri)
 
         val json = JSONObject(text)
         val properties = json.getJSONArray("properties").toObjectList { it.toProperty() }
-        val notes = json.getJSONArray("notes").toObjectList { it.toNote() }
-        val events = json.getJSONArray("timelineEvents").toObjectList { it.toTimelineEvent() }
-        val transactions = json.getJSONArray("walletTransactions").toObjectList { it.toWalletTransaction() }
+        val notes = json.optJSONArray("notes")?.toObjectList { it.toNote() } ?: emptyList()
+        val events = json.optJSONArray("timelineEvents")?.toObjectList { it.toTimelineEvent() } ?: emptyList()
+        val transactions = json.optJSONArray("walletTransactions")?.toObjectList { it.toWalletTransaction() } ?: emptyList()
 
-        db.propertyDao().deleteAll()
-        db.noteDao().deleteAll()
-        db.timelineDao().deleteAll()
-        db.walletDao().deleteAll()
+        // Wrapped in a single database transaction so a crash or force-close mid-restore can't
+        // leave the database half-wiped/half-restored — either the whole swap lands, or none of it does.
+        db.withTransaction {
+            db.propertyDao().deleteAll()
+            db.noteDao().deleteAll()
+            db.timelineDao().deleteAll()
+            db.walletDao().deleteAll()
 
-        properties.forEach { db.propertyDao().insert(it) }
-        notes.forEach { db.noteDao().insert(it) }
-        events.forEach { db.timelineDao().insert(it) }
-        transactions.forEach { db.walletDao().insert(it) }
+            db.propertyDao().insertAll(properties)
+            db.noteDao().insertAll(notes)
+            db.timelineDao().insertAll(events)
+            db.walletDao().insertAll(transactions)
+        }
 
-        return BackupResult(properties.size, text.toByteArray(Charsets.UTF_8).size.toLong())
+        BackupResult(properties.size, notes.size, events.size, transactions.size, text.toByteArray(Charsets.UTF_8).size.toLong())
     }
+
+    private fun readBackupText(uri: Uri): String =
+        context.contentResolver.openInputStream(uri)?.use { stream ->
+            stream.readBytes().toString(Charsets.UTF_8)
+        } ?: error("امکان خواندن فایل پشتیبان وجود ندارد")
 }
 
 private inline fun <T> JSONArray.toObjectList(map: (JSONObject) -> T): List<T> =

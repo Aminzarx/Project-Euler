@@ -14,6 +14,9 @@ interface WalletDao {
     @Insert
     suspend fun insert(transaction: WalletTransaction): Long
 
+    @Insert
+    suspend fun insertAll(transactions: List<WalletTransaction>)
+
     @Update
     suspend fun update(transaction: WalletTransaction)
 
