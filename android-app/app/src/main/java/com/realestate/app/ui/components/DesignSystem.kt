@@ -1,5 +1,6 @@
 package com.realestate.app.ui.components
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,6 +33,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +44,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.realestate.app.ui.theme.extendedColors
@@ -269,6 +277,7 @@ data class BottomNavItem(
 @Composable
 fun FloatingBottomNav(items: List<BottomNavItem>, modifier: Modifier = Modifier) {
     val navShape = RoundedCornerShape(24.dp)
+    val haptic = LocalHapticFeedback.current
     Surface(
         shape = navShape,
         color = MaterialTheme.colorScheme.surface,
@@ -283,16 +292,36 @@ fun FloatingBottomNav(items: List<BottomNavItem>, modifier: Modifier = Modifier)
             verticalAlignment = Alignment.CenterVertically
         ) {
             items.forEach { item ->
-                Surface(
-                    onClick = item.onClick,
-                    shape = CircleShape,
-                    color = if (item.selected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                    contentColor = if (item.selected) {
+                // 48dp is the Material accessibility minimum touch target; the selected item grows
+                // slightly larger as a visual cue, animated rather than snapping instantly.
+                val size by animateDpAsState(
+                    targetValue = if (item.selected) 52.dp else 48.dp,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                    label = "nav-item-size"
+                )
+                val containerColor by animateColorAsState(
+                    targetValue = if (item.selected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                    animationSpec = tween(220),
+                    label = "nav-item-bg"
+                )
+                val contentColor by animateColorAsState(
+                    targetValue = if (item.selected) {
                         MaterialTheme.colorScheme.onPrimary
                     } else {
                         MaterialTheme.colorScheme.onSurfaceVariant
                     },
-                    modifier = Modifier.size(if (item.selected) 50.dp else 44.dp)
+                    animationSpec = tween(220),
+                    label = "nav-item-fg"
+                )
+                Surface(
+                    onClick = {
+                        if (!item.selected) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        item.onClick()
+                    },
+                    shape = CircleShape,
+                    color = containerColor,
+                    contentColor = contentColor,
+                    modifier = Modifier.size(size)
                 ) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         Icon(item.icon, contentDescription = item.label, modifier = Modifier.size(22.dp))
@@ -439,6 +468,48 @@ fun CollapsibleSection(
         if (expanded) {
             Spacer(modifier = Modifier.height(12.dp))
             content()
+        }
+    }
+}
+
+/**
+ * Graceful recovery screen for a broken/unreachable navigation destination (an unknown or
+ * invalid argument in a route) — used instead of leaving the user staring at a blank screen.
+ */
+@Composable
+fun RouteErrorState(
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+    title: String = "این صفحه در دسترس نیست",
+    subtitle: String = "به‌نظر می‌رسد لینک یا مسیر مورد نظر معتبر نیست. می‌توانید به صفحه قبل بازگردید.",
+    actionLabel: String = "بازگشت"
+) {
+    Box(modifier = modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(88.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.extendedColors.danger.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Rounded.Error,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp),
+                    tint = MaterialTheme.extendedColors.danger
+                )
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(title, style = MaterialTheme.typography.titleLarge)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            PrimaryButton(text = actionLabel, onClick = onBack, modifier = Modifier.fillMaxWidth())
         }
     }
 }

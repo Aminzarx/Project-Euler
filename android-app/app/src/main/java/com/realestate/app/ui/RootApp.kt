@@ -1,14 +1,37 @@
 package com.realestate.app.ui
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.realestate.app.R
 import com.realestate.app.data.datastore.ThemePreference
 import com.realestate.app.ui.auth.AuthFlow
 import com.realestate.app.ui.theme.RealEstateAppTheme
@@ -38,21 +61,67 @@ fun RootApp(
 
     RealEstateAppTheme(darkTheme = useDarkTheme) {
         val isLoggedIn by authViewModel.isLoggedIn.collectAsStateWithLifecycle()
-        when (isLoggedIn) {
-            null -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+        // A single Crossfade across all three top-level states (loading/auth/main) turns what used
+        // to be an abrupt cut between them into one continuous, intentional transition.
+        Crossfade(targetState = isLoggedIn, animationSpec = tween(350), label = "root-app-state") { loginState ->
+            when (loginState) {
+                null -> BrandedLoadingState()
+
+                false -> AuthFlow(viewModel = authViewModel)
+
+                true -> RealEstateApp(
+                    viewModel = propertyViewModel,
+                    walletViewModel = walletViewModel,
+                    profileViewModel = profileViewModel,
+                    authViewModel = authViewModel,
+                    backupViewModel = backupViewModel,
+                    dealAssistantViewModel = dealAssistantViewModel
+                )
             }
+        }
+    }
+}
 
-            false -> AuthFlow(viewModel = authViewModel)
-
-            true -> RealEstateApp(
-                viewModel = propertyViewModel,
-                walletViewModel = walletViewModel,
-                profileViewModel = profileViewModel,
-                authViewModel = authViewModel,
-                backupViewModel = backupViewModel,
-                dealAssistantViewModel = dealAssistantViewModel
+/** Branded launch state shown while the saved session is being read — replaces a bare spinner. */
+@Composable
+private fun BrandedLoadingState() {
+    var appeared by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { appeared = true }
+    val scale by animateFloatAsState(
+        targetValue = if (appeared) 1f else 0.75f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "splash-logo-scale"
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (appeared) 1f else 0f,
+        animationSpec = tween(400),
+        label = "splash-logo-alpha"
+    )
+    Box(
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(
+                painter = painterResource(R.drawable.ic_launcher),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(88.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                        this.alpha = alpha
+                    }
             )
+            Text(
+                text = stringResource(R.string.app_name),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(top = 20.dp).graphicsLayer { this.alpha = alpha }
+            )
+            Box(modifier = Modifier.padding(top = 28.dp)) {
+                CircularProgressIndicator(modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
+            }
         }
     }
 }

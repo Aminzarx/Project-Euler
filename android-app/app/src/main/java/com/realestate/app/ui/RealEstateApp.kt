@@ -1,5 +1,6 @@
 package com.realestate.app.ui
 
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -36,6 +37,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.realestate.app.ui.components.BottomNavItem
 import com.realestate.app.ui.components.FloatingBottomNav
+import com.realestate.app.ui.components.RouteErrorState
 import com.realestate.app.ui.navigation.Screen
 import com.realestate.app.ui.screens.AddEditPropertyScreen
 import com.realestate.app.ui.screens.EditProfileScreen
@@ -62,6 +64,10 @@ private val bottomTabs = listOf(
     BottomTab(Screen.Favorites, "علاقه‌مندی‌ها", Icons.Rounded.Favorite),
     BottomTab(Screen.Profile, "پروفایل", Icons.Rounded.Person)
 )
+
+/** The 5 bottom-tab destinations switch between each other laterally (fade through); every other
+ *  route is a hierarchical push/pop, which slides in from the reading-direction edge instead. */
+private val topLevelRoutes = bottomTabs.map { it.screen.route }.toSet()
 
 @Composable
 fun RealEstateApp(
@@ -123,14 +129,48 @@ fun RealEstateApp(
             }
         }
     ) { innerPadding ->
+        fun isTabSwitch(scope: AnimatedContentTransitionScope<androidx.navigation.NavBackStackEntry>): Boolean {
+            val from = scope.initialState.destination.route
+            val to = scope.targetState.destination.route
+            return from in topLevelRoutes && to in topLevelRoutes
+        }
+
         NavHost(
             navController = navController,
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(innerPadding),
-            enterTransition = { fadeIn(animationSpec = tween(220)) },
-            exitTransition = { fadeOut(animationSpec = tween(180)) },
-            popEnterTransition = { fadeIn(animationSpec = tween(220)) },
-            popExitTransition = { fadeOut(animationSpec = tween(180)) }
+            enterTransition = {
+                if (isTabSwitch(this)) {
+                    fadeIn(animationSpec = tween(200))
+                } else {
+                    slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, animationSpec = tween(300)) +
+                        fadeIn(animationSpec = tween(300))
+                }
+            },
+            exitTransition = {
+                if (isTabSwitch(this)) {
+                    fadeOut(animationSpec = tween(150))
+                } else {
+                    slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Start, animationSpec = tween(300)) +
+                        fadeOut(animationSpec = tween(200))
+                }
+            },
+            popEnterTransition = {
+                if (isTabSwitch(this)) {
+                    fadeIn(animationSpec = tween(200))
+                } else {
+                    slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, animationSpec = tween(300)) +
+                        fadeIn(animationSpec = tween(300))
+                }
+            },
+            popExitTransition = {
+                if (isTabSwitch(this)) {
+                    fadeOut(animationSpec = tween(150))
+                } else {
+                    slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.End, animationSpec = tween(300)) +
+                        fadeOut(animationSpec = tween(200))
+                }
+            }
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(
@@ -270,6 +310,8 @@ fun RealEstateApp(
                         propertyViewModel = viewModel,
                         onBack = { navController.popBackStack() }
                     )
+                } else {
+                    RouteErrorState(onBack = { navController.popBackStack() })
                 }
             }
             composable(
@@ -292,6 +334,8 @@ fun RealEstateApp(
                         propertyViewModel = viewModel,
                         onBack = { navController.popBackStack() }
                     )
+                } else {
+                    RouteErrorState(onBack = { navController.popBackStack() })
                 }
             }
             composable(Screen.QuickNotes.route) {
