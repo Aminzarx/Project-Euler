@@ -183,7 +183,8 @@ fun RealEstateApp(
                             launchSingleTop = true
                             restoreState = true
                         }
-                    }
+                    },
+                    onOpenQuickNotes = { navController.navigate(Screen.QuickNotes.route) }
                 )
             }
             composable(Screen.List.route) {

@@ -129,7 +129,8 @@ fun PropertyCard(
 fun PropertyMiniCard(
     property: Property,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    subtitle: String? = null
 ) {
     AppCard(
         modifier = modifier.width(160.dp),
@@ -158,6 +159,36 @@ fun PropertyMiniCard(
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(6.dp)
+                        .size(10.dp)
+                        .clip(CircleShape)
+                        .background(property.status.color())
+                )
+                if (property.isFavorite) {
+                    Icon(
+                        Icons.Rounded.Favorite,
+                        contentDescription = "موردعلاقه",
+                        tint = MaterialTheme.extendedColors.danger,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp)
+                            .size(16.dp)
+                    )
+                }
+                if (property.isPinned) {
+                    Icon(
+                        Icons.Rounded.PushPin,
+                        contentDescription = "سنجاق‌شده",
+                        tint = MaterialTheme.colorScheme.surface,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(6.dp)
+                            .size(14.dp)
+                    )
+                }
             }
             Column(modifier = Modifier.padding(10.dp)) {
                 Text(
@@ -174,6 +205,16 @@ fun PropertyMiniCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (subtitle != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
