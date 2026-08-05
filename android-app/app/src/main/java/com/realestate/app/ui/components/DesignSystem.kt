@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.dp
 val CardShape = RoundedCornerShape(14.dp)
 val PillShape = RoundedCornerShape(50)
 val RowShape = RoundedCornerShape(12.dp)
-val MenuShape = RoundedCornerShape(16.dp)
 
 private val ShadowTint = Color.Black.copy(alpha = 0.05f)
 
@@ -318,10 +317,11 @@ fun StatusPillBadge(
 }
 
 /**
- * Premium-styled overflow / selection menu — softer elevation, a corner radius consistent with
- * the rest of the design system, and theme-integrated colors instead of Android's default chrome.
- * Drop-in replacement for [androidx.compose.material3.DropdownMenu]: importing this instead is
- * enough to restyle every three-dot and select menu in the app.
+ * Overflow / selection menu, restyled at the item level (spacing, typography, theme colors) since
+ * this Material3 version doesn't expose container styling params on [androidx.compose.material3.DropdownMenu]
+ * itself — its corner radius already follows the design system via [MaterialTheme.shapes.extraSmall].
+ * Drop-in replacement: importing this instead of the Material3 original is enough to restyle every
+ * three-dot and select menu in the app.
  */
 @Composable
 fun DropdownMenu(
@@ -334,10 +334,6 @@ fun DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
         modifier = modifier,
-        shape = MenuShape,
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp,
-        shadowElevation = 6.dp,
         content = content
     )
 }
