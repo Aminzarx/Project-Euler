@@ -2,6 +2,8 @@ package com.realestate.app.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -28,6 +31,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.AssistChip
 import com.realestate.app.ui.components.DropdownMenu
 import com.realestate.app.ui.components.DropdownMenuItem
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -50,6 +54,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -60,6 +66,7 @@ import com.realestate.app.data.Property
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
 import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.ConfirmationDialog
 import com.realestate.app.ui.components.MoneyField
 import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.components.RequiredFieldLabel
@@ -103,6 +110,18 @@ fun AddEditPropertyScreen(
     var typeMenuExpanded by remember { mutableStateOf(false) }
     var statusMenuExpanded by remember { mutableStateOf(false) }
 
+    // Nothing to load in add-mode; edit-mode starts "not yet loaded" until the property's Flow
+    // emits at least once, so a real "not found" (deleted elsewhere) is never confused with
+    // "still loading" — both used to render as the same blank form.
+    var hasLoadedOnce by remember(propertyId) { mutableStateOf(propertyId == null) }
+    var hasUnsavedChanges by remember { mutableStateOf(false) }
+    var showExitConfirm by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+    // Fields silently prefilled from the last-added property (smartDefaults) rather than typed
+    // by the user - flagged as "پیشنهادی" until the user edits that specific field, so a
+    // suggestion is never mistaken for real data the user actually entered.
+    var autoFilledFields by remember { mutableStateOf(setOf<String>()) }
+
     LaunchedEffect(existing) {
         val p = existing
         if (p != null && !loadedExisting) {
@@ -122,13 +141,24 @@ fun AddEditPropertyScreen(
             imageUri = p.imageUri
             loadedExisting = true
         }
+        if (p != null) hasLoadedOnce = true
+    }
+
+    // Separate collection to detect "the Flow emitted at least once" independent of whether
+    // that emission was null - see the same pattern/rationale in PropertyDetailScreen.kt.
+    LaunchedEffect(propertyId) {
+        if (propertyId != null) {
+            viewModel.getPropertyById(propertyId).collect { hasLoadedOnce = true }
+        }
     }
 
     LaunchedEffect(smartDefaults) {
         if (propertyId == null && city.isBlank()) {
-            smartDefaults.city?.let { city = it }
-            smartDefaults.propertyType?.let { propertyType = it }
-            smartDefaults.dealType?.let { dealType = it }
+            val filled = mutableSetOf<String>()
+            smartDefaults.city?.let { city = it; filled += "city" }
+            smartDefaults.propertyType?.let { propertyType = it; filled += "propertyType" }
+            smartDefaults.dealType?.let { dealType = it; filled += "dealType" }
+            autoFilledFields = filled
         }
     }
 
@@ -145,25 +175,57 @@ fun AddEditPropertyScreen(
                 // برخی منابع اجازه دسترسی دائمی نمی‌دهند؛ عکس فقط تا پایان این نشست قابل نمایش خواهد بود
             }
             imageUri = uri.toString()
+            hasUnsavedChanges = true
         }
     }
 
     val isEditMode = propertyId != null
     // Only a title is required — save fast, fill everything else in later.
     val isFormValid = title.isNotBlank()
+    val propertyDeletedElsewhere = isEditMode && hasLoadedOnce && existing == null
+
+    val attemptExit = {
+        if (hasUnsavedChanges) showExitConfirm = true else onDone()
+    }
+
+    BackHandler(onBack = attemptExit)
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text(if (isEditMode) "ویرایش ملک" else "افزودن ملک") },
                 navigationIcon = {
-                    IconButton(onClick = onDone) {
+                    IconButton(onClick = attemptExit) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "بازگشت")
                     }
                 }
             )
         }
     ) { padding ->
+        if (isEditMode && !hasLoadedOnce) {
+            Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@Scaffold
+        }
+
+        if (propertyDeletedElsewhere) {
+            Box(modifier = Modifier.padding(padding).fillMaxSize().padding(Spacing.screen), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("این ملک دیگر وجود ندارد", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "احتمالاً از جای دیگری حذف شده. تغییرات اینجا قابل ذخیره نیست.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    PrimaryButton(text = "بازگشت", onClick = onDone)
+                }
+            }
+            return@Scaffold
+        }
+
         Column(
             modifier = Modifier
                 .padding(padding)
@@ -177,7 +239,8 @@ fun AddEditPropertyScreen(
                     .height(160.dp)
                     .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { imagePicker.launch("image/*") },
+                    .clickable { imagePicker.launch("image/*") }
+                    .semantics { contentDescription = "افزودن یا تغییر تصویر ملک" },
                 contentAlignment = Alignment.Center
             ) {
                 if (imageUri != null) {
@@ -187,6 +250,18 @@ fun AddEditPropertyScreen(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
+                    IconButton(
+                        onClick = {
+                            imageUri = null
+                            hasUnsavedChanges = true
+                        },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp)
+                            .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.small)
+                    ) {
+                        Icon(Icons.Rounded.Close, contentDescription = "حذف تصویر")
+                    }
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Rounded.AddAPhoto, contentDescription = null)
@@ -203,7 +278,7 @@ fun AddEditPropertyScreen(
             AppCard(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = title,
-                    onValueChange = { title = it },
+                    onValueChange = { title = it; hasUnsavedChanges = true },
                     label = { RequiredFieldLabel("عنوان ملک") },
                     supportingText = { Text("این فیلد برای ذخیره ملک ضروری است") },
                     modifier = Modifier.fillMaxWidth()
@@ -211,7 +286,7 @@ fun AddEditPropertyScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = description,
-                    onValueChange = { description = it },
+                    onValueChange = { description = it; hasUnsavedChanges = true },
                     label = { Text("توضیحات") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3
@@ -226,29 +301,48 @@ fun AddEditPropertyScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = dealType == DealType.SALE,
-                        onClick = { dealType = DealType.SALE },
+                        onClick = { dealType = DealType.SALE; hasUnsavedChanges = true; autoFilledFields = autoFilledFields - "dealType" },
                         label = { Text("فروش") }
                     )
                     FilterChip(
                         selected = dealType == DealType.RENT,
-                        onClick = { dealType = DealType.RENT },
+                        onClick = { dealType = DealType.RENT; hasUnsavedChanges = true; autoFilledFields = autoFilledFields - "dealType" },
                         label = { Text("اجاره") }
                     )
+                    if ("dealType" in autoFilledFields) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        SuggestedBadge()
+                    }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MoneyField(
                         label = if (dealType == DealType.RENT) "اجاره ماهانه (تومان)" else "قیمت کل ملک (تومان)",
                         value = price,
-                        onValueChange = { price = it },
+                        onValueChange = { price = it; hasUnsavedChanges = true },
+                        helperText = if (price.isBlank()) "اگر خالی بماند، صفر ذخیره می‌شود" else null,
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
                         value = area,
                         onValueChange = { input ->
-                            area = normalizeDigits(input).filter { it in '0'..'9' || it == '.' }
+                            val digitsOnly = normalizeDigits(input).filter { it in '0'..'9' || it == '.' }
+                            // Allow only the first decimal point typed - "1.2.3" would otherwise
+                            // pass the digits-or-dot filter and fail toDoubleOrNull() silently.
+                            val firstDot = digitsOnly.indexOf('.')
+                            area = if (firstDot == -1) {
+                                digitsOnly
+                            } else {
+                                digitsOnly.substring(0, firstDot + 1) + digitsOnly.substring(firstDot + 1).replace(".", "")
+                            }
+                            hasUnsavedChanges = true
                         },
                         label = { Text("متراژ (متر مربع)") },
+                        supportingText = if (area.isBlank()) {
+                            { Text("اگر خالی بماند، صفر ذخیره می‌شود") }
+                        } else {
+                            null
+                        },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.weight(1f)
                     )
@@ -256,28 +350,40 @@ fun AddEditPropertyScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = rooms,
-                    onValueChange = { rooms = it.filter { c -> c.isDigit() } },
+                    onValueChange = { rooms = it.filter { c -> c.isDigit() }; hasUnsavedChanges = true },
                     label = { Text("تعداد اتاق") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                ExposedDropdownMenuBox(expanded = typeMenuExpanded, onExpandedChange = { typeMenuExpanded = it }) {
-                    OutlinedTextField(
-                        value = propertyType.label(),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("نوع ملک") },
-                        modifier = Modifier.menuAnchor().fillMaxWidth(),
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeMenuExpanded) }
-                    )
-                    DropdownMenu(expanded = typeMenuExpanded, onDismissRequest = { typeMenuExpanded = false }) {
-                        PropertyType.entries.forEach { type ->
-                            DropdownMenuItem(text = { Text(type.label()) }, onClick = {
-                                propertyType = type
-                                typeMenuExpanded = false
-                            })
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ExposedDropdownMenuBox(
+                        expanded = typeMenuExpanded,
+                        onExpandedChange = { typeMenuExpanded = it },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = propertyType.label(),
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("نوع ملک") },
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeMenuExpanded) }
+                        )
+                        DropdownMenu(expanded = typeMenuExpanded, onDismissRequest = { typeMenuExpanded = false }) {
+                            PropertyType.entries.forEach { type ->
+                                DropdownMenuItem(text = { Text(type.label()) }, onClick = {
+                                    propertyType = type
+                                    typeMenuExpanded = false
+                                    hasUnsavedChanges = true
+                                    autoFilledFields = autoFilledFields - "propertyType"
+                                })
+                            }
                         }
+                    }
+                    if ("propertyType" in autoFilledFields) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        SuggestedBadge()
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -295,6 +401,7 @@ fun AddEditPropertyScreen(
                             DropdownMenuItem(text = { Text(entry.label()) }, onClick = {
                                 status = entry
                                 statusMenuExpanded = false
+                                hasUnsavedChanges = true
                             })
                         }
                     }
@@ -308,28 +415,33 @@ fun AddEditPropertyScreen(
             AppCard(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = city,
-                    onValueChange = { city = it },
+                    onValueChange = { city = it; hasUnsavedChanges = true; autoFilledFields = autoFilledFields - "city" },
                     label = { Text("شهر") },
+                    supportingText = if ("city" in autoFilledFields) {
+                        { Text("پیشنهادی — بر اساس آخرین ملک ثبت‌شده") }
+                    } else {
+                        null
+                    },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = address,
-                    onValueChange = { address = it },
+                    onValueChange = { address = it; hasUnsavedChanges = true },
                     label = { Text("آدرس") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = ownerName,
-                    onValueChange = { ownerName = it },
+                    onValueChange = { ownerName = it; hasUnsavedChanges = true },
                     label = { Text("نام مالک") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = ownerPhone,
-                    onValueChange = { ownerPhone = it },
+                    onValueChange = { ownerPhone = it; hasUnsavedChanges = true },
                     label = { Text("شماره تماس") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth()
@@ -345,7 +457,7 @@ fun AddEditPropertyScreen(
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         tags.forEach { tag ->
                             AssistChip(
-                                onClick = { tags = tags - tag },
+                                onClick = { tags = tags - tag; hasUnsavedChanges = true },
                                 label = { Text(tag) },
                                 trailingIcon = {
                                     Icon(Icons.Rounded.Close, contentDescription = "حذف برچسب", modifier = Modifier.size(16.dp))
@@ -362,6 +474,15 @@ fun AddEditPropertyScreen(
                     placeholder = { Text("مثلاً فوری، VIP") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            if (tagInput.isNotBlank()) {
+                                tags = tags + tagInput.trim()
+                                tagInput = ""
+                                hasUnsavedChanges = true
+                            }
+                        }
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
                 val tagSuggestions = allTags.filterNot { tags.contains(it) }
@@ -371,6 +492,7 @@ fun AddEditPropertyScreen(
                         modifier = Modifier.clickable {
                             tags = tags + tagInput.trim()
                             tagInput = ""
+                            hasUnsavedChanges = true
                         },
                         text = "افزودن «${tagInput.trim()}»",
                         color = MaterialTheme.colorScheme.primary,
@@ -382,7 +504,7 @@ fun AddEditPropertyScreen(
                         tagSuggestions.take(8).forEach { suggestion ->
                             FilterChip(
                                 selected = false,
-                                onClick = { tags = tags + suggestion },
+                                onClick = { tags = tags + suggestion; hasUnsavedChanges = true },
                                 label = { Text(suggestion) }
                             )
                         }
@@ -395,6 +517,8 @@ fun AddEditPropertyScreen(
             PrimaryButton(
                 text = if (isEditMode) "ذخیره تغییرات" else "افزودن ملک",
                 onClick = {
+                    if (isSaving) return@PrimaryButton
+                    isSaving = true
                     val newProperty = Property(
                         id = propertyId ?: 0,
                         title = title.trim(),
@@ -422,16 +546,41 @@ fun AddEditPropertyScreen(
                     )
                     if (isEditMode) {
                         viewModel.updateProperty(newProperty)
+                        Toast.makeText(context, "تغییرات ذخیره شد", Toast.LENGTH_SHORT).show()
                     } else {
                         viewModel.addProperty(newProperty)
+                        Toast.makeText(context, "ملک ذخیره شد", Toast.LENGTH_SHORT).show()
                     }
                     onDone()
                 },
-                enabled = isFormValid,
+                enabled = isFormValid && !isSaving,
+                loading = isSaving,
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(16.dp))
         }
+
+        if (showExitConfirm) {
+            ConfirmationDialog(
+                title = "خروج بدون ذخیره؟",
+                text = "تغییراتی که وارد کرده‌اید ذخیره نشده و از دست می‌رود.",
+                confirmLabel = "خروج بدون ذخیره",
+                danger = true,
+                onConfirm = onDone,
+                onDismiss = { showExitConfirm = false }
+            )
+        }
     }
+}
+
+/** Small "این مقدار پیشنهادیه" marker next to a field auto-filled from smartDefaults, so a
+ *  suggestion is never mistaken for something the user actually typed. */
+@Composable
+private fun SuggestedBadge() {
+    Text(
+        "پیشنهادی",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.primary
+    )
 }
