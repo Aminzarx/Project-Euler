@@ -18,8 +18,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.EventAvailable
+import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.LocalFlorist
+import androidx.compose.material.icons.rounded.Pets
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.TrendingUp
@@ -32,16 +35,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.AppListRow
+import com.realestate.app.ui.components.CircleIconButton
 import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.components.PropertyMiniCard
 import com.realestate.app.ui.theme.Spacing
-import com.realestate.app.ui.theme.heroGradient
+import com.realestate.app.ui.theme.extendedColors
 import com.realestate.app.viewmodel.PropertyViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -78,18 +81,27 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(Spacing.screen)
         ) {
-            AppCard(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onSearchClick,
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "جستجوی سریع ملک...",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircleIconButton(
+                    icon = Icons.Rounded.FilterList,
+                    onClick = onSearchClick,
+                    contentDescription = "فیلترها",
+                    size = 52.dp
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                AppCard(
+                    modifier = Modifier.weight(1f),
+                    onClick = onSearchClick,
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "جستجوی سریع ملک...",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
@@ -193,18 +205,57 @@ private fun EmptyHomeState(onAddClick: () -> Unit, modifier: Modifier = Modifier
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
                 modifier = Modifier
-                    .height(96.dp)
-                    .fillMaxWidth(0.5f)
-                    .clip(MaterialTheme.shapes.large)
-                    .background(heroGradient()),
+                    .size(220.dp)
+                    .clip(MaterialTheme.shapes.extraLarge)
+                    .background(MaterialTheme.extendedColors.accent.copy(alpha = 0.35f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Home,
-                    contentDescription = null,
-                    modifier = Modifier.height(40.dp),
-                    tint = Color.White
-                )
+                Box(
+                    modifier = Modifier
+                        .size(96.dp)
+                        .clip(MaterialTheme.shapes.large)
+                        .background(MaterialTheme.extendedColors.accent),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Home,
+                        contentDescription = null,
+                        modifier = Modifier.size(44.dp),
+                        tint = MaterialTheme.extendedColors.onAccent
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                        .size(40.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surface),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.LocalFlorist,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.extendedColors.onAccent
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                        .size(40.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.surface),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Pets,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.extendedColors.onAccent
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(20.dp))
             Text(

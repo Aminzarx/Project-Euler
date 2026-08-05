@@ -97,7 +97,7 @@ fun AppCard(
     }
 }
 
-/** Rounded pill button — brand-colored background, white text. The app's primary call to action. */
+/** Rounded pill button — warm accent background, dark ink text. The app's primary call to action. */
 @Composable
 fun PrimaryButton(
     text: String,
@@ -111,8 +111,8 @@ fun PrimaryButton(
         onClick = onClick,
         enabled = enabled && !loading,
         shape = PillShape,
-        color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.extendedColors.disabled,
-        contentColor = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.extendedColors.onDisabled,
+        color = if (enabled) MaterialTheme.extendedColors.accent else MaterialTheme.extendedColors.disabled,
+        contentColor = if (enabled) MaterialTheme.extendedColors.onAccent else MaterialTheme.extendedColors.onDisabled,
         modifier = modifier.height(52.dp)
     ) {
         Row(
@@ -123,7 +123,7 @@ fun PrimaryButton(
             if (loading) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(20.dp),
-                    color = MaterialTheme.colorScheme.onPrimary,
+                    color = MaterialTheme.extendedColors.onAccent,
                     strokeWidth = 2.dp
                 )
             } else {

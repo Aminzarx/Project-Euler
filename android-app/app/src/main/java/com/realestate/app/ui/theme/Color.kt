@@ -2,13 +2,16 @@ package com.realestate.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Premium minimal palette — light
-// Brand: the interactive accent (buttons, active nav, links). Ink: body text/icon color.
-// A softer, desaturated slate-blue — calmer and less aggressive than a saturated primary blue.
+// Warm neutral palette — light
+// Brand: the interactive accent (nav, links, focus). Accent: the warm CTA/illustration tone.
+// Ink: body text/icon color.
 val BrandLight = Color(0xFF4C6B9A)
 val OnBrandLight = Color(0xFFFFFFFF)
+// Warm tan — primary call-to-action buttons and illustration panels.
+val AccentLight = Color(0xFFD9C3A0)
+val OnAccentLight = Color(0xFF2A2620)
 val InkLight = Color(0xFF16181D)
-val BackgroundLight = Color(0xFFFAFAFA)
+val BackgroundLight = Color(0xFFF6EEE3)
 val SurfaceLight = Color(0xFFFFFFFF)
 val SecondaryTextLight = Color(0xFF77797F)
 val DividerLight = Color(0xFFF0F1F4)
@@ -28,12 +31,14 @@ val OnWarningLight = Color(0xFFFFFFFF)
 val InfoLight = Color(0xFF3B82F6)
 val OnInfoLight = Color(0xFFFFFFFF)
 
-// Premium minimal palette — dark
+// Warm neutral palette — dark
 val BrandDark = Color(0xFF9BB2DD)
 val OnBrandDark = Color(0xFF15243D)
+val AccentDark = Color(0xFFB99B6E)
+val OnAccentDark = Color(0xFF1C1712)
 val InkDark = Color(0xFFF2F3F5)
-val BackgroundDark = Color(0xFF0B0C0F)
-val SurfaceDark = Color(0xFF1B1D22)
+val BackgroundDark = Color(0xFF16130F)
+val SurfaceDark = Color(0xFF211D19)
 val SecondaryTextDark = Color(0xFF9A9CA5)
 val DividerDark = Color(0xFF2A2C33)
 val OutlineDark = Color(0xFF636874)

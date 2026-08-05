@@ -17,7 +17,9 @@ data class ExtendedColors(
     val secondaryText: Color,
     val divider: Color,
     val disabled: Color,
-    val onDisabled: Color
+    val onDisabled: Color,
+    val accent: Color,
+    val onAccent: Color
 )
 
 val LightExtendedColors = ExtendedColors(
@@ -32,7 +34,9 @@ val LightExtendedColors = ExtendedColors(
     secondaryText = SecondaryTextLight,
     divider = DividerLight,
     disabled = DisabledLight,
-    onDisabled = OnDisabledLight
+    onDisabled = OnDisabledLight,
+    accent = AccentLight,
+    onAccent = OnAccentLight
 )
 
 val DarkExtendedColors = ExtendedColors(
@@ -47,7 +51,9 @@ val DarkExtendedColors = ExtendedColors(
     secondaryText = SecondaryTextDark,
     divider = DividerDark,
     disabled = DisabledDark,
-    onDisabled = OnDisabledDark
+    onDisabled = OnDisabledDark,
+    accent = AccentDark,
+    onAccent = OnAccentDark
 )
 
 val LocalExtendedColors = staticCompositionLocalOf { LightExtendedColors }
