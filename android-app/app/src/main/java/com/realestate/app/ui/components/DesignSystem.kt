@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.realestate.app.ui.theme.extendedColors
 
 val CardShape = RoundedCornerShape(14.dp)
 val PillShape = RoundedCornerShape(50)
@@ -92,8 +93,8 @@ fun PrimaryButton(
         onClick = onClick,
         enabled = enabled && !loading,
         shape = PillShape,
-        color = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
+        color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.extendedColors.disabled,
+        contentColor = if (enabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.extendedColors.onDisabled,
         modifier = modifier.height(52.dp)
     ) {
         Row(
@@ -131,8 +132,8 @@ fun SecondaryButton(
         onClick = onClick,
         enabled = enabled,
         shape = PillShape,
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
+        color = if (enabled) MaterialTheme.colorScheme.surface else MaterialTheme.extendedColors.disabled,
+        contentColor = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.extendedColors.onDisabled,
         shadowElevation = 0.dp,
         modifier = modifier.height(52.dp).softShadow(PillShape, 5.dp)
     ) {
@@ -160,13 +161,15 @@ fun CircleIconButton(
     containerColor: Color = MaterialTheme.colorScheme.surface,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     size: Dp = 44.dp,
-    elevated: Boolean = true
+    elevated: Boolean = true,
+    enabled: Boolean = true
 ) {
     Surface(
         onClick = onClick,
+        enabled = enabled,
         shape = CircleShape,
-        color = containerColor,
-        contentColor = contentColor,
+        color = if (enabled) containerColor else MaterialTheme.extendedColors.disabled,
+        contentColor = if (enabled) contentColor else MaterialTheme.extendedColors.onDisabled,
         shadowElevation = 0.dp,
         modifier = modifier.size(size).let { if (elevated) it.softShadow(CircleShape, 5.dp) else it }
     ) {
@@ -313,6 +316,15 @@ fun StatusPillBadge(
             Spacer(modifier = Modifier.width(6.dp))
             Text(text, style = MaterialTheme.typography.labelMedium, color = textColor)
         }
+    }
+}
+
+/** Field label with a colored required-marker — use on the label of any field that must be filled in before saving. */
+@Composable
+fun RequiredFieldLabel(text: String, modifier: Modifier = Modifier) {
+    Row(modifier = modifier) {
+        Text(text)
+        Text(" *", color = MaterialTheme.extendedColors.danger)
     }
 }
 

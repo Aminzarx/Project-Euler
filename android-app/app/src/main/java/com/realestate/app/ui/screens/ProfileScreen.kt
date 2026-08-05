@@ -18,11 +18,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,6 +33,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,7 +46,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.realestate.app.ui.STORE_URL
 import com.realestate.app.ui.components.AppListRow
-import com.realestate.app.ui.components.SecondaryButton
+import com.realestate.app.ui.components.DropdownMenu
+import com.realestate.app.ui.components.DropdownMenuItem
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.ui.theme.heroGradient
 import com.realestate.app.viewmodel.AuthViewModel
@@ -65,6 +69,7 @@ fun ProfileScreen(
     val profile by profileViewModel.profile.collectAsStateWithLifecycle()
     val balance by walletViewModel.balance.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var showMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -73,6 +78,20 @@ fun ProfileScreen(
                 actions = {
                     IconButton(onClick = onEditProfile) {
                         Icon(Icons.Rounded.Edit, contentDescription = "ویرایش پروفایل")
+                    }
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Rounded.MoreVert, contentDescription = "بیشتر")
+                        }
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("خروج از حساب") },
+                                onClick = {
+                                    showMenu = false
+                                    authViewModel.logout()
+                                }
+                            )
+                        }
                     }
                 }
             )
@@ -197,13 +216,6 @@ fun ProfileScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(Spacing.xl))
-                SecondaryButton(
-                    text = "خروج از حساب",
-                    onClick = { authViewModel.logout() },
-                    icon = Icons.AutoMirrored.Rounded.Logout,
-                    modifier = Modifier.fillMaxWidth()
-                )
                 Spacer(modifier = Modifier.height(Spacing.xl))
             }
         }

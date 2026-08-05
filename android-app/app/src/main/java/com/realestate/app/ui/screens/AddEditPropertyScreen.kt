@@ -61,6 +61,7 @@ import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
 import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.PrimaryButton
+import com.realestate.app.ui.components.RequiredFieldLabel
 import com.realestate.app.ui.components.label
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.viewmodel.PropertyViewModel
@@ -201,7 +202,8 @@ fun AddEditPropertyScreen(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("عنوان ملک") },
+                    label = { RequiredFieldLabel("عنوان ملک") },
+                    supportingText = { Text("این فیلد برای ذخیره ملک ضروری است") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(8.dp))

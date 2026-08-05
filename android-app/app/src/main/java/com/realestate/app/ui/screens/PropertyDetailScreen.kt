@@ -538,9 +538,10 @@ private fun QuickAction(
             icon = icon,
             onClick = onClick,
             contentDescription = label,
-            containerColor = if (enabled) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            size = 52.dp
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary,
+            size = 52.dp,
+            enabled = enabled
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

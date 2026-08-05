@@ -12,7 +12,12 @@ val BackgroundLight = Color(0xFFFAFAFA)
 val SurfaceLight = Color(0xFFFFFFFF)
 val SecondaryTextLight = Color(0xFF77797F)
 val DividerLight = Color(0xFFF0F1F4)
-val OutlineLight = Color(0xFFF0F1F4)
+// Distinct from the divider on purpose: input borders need to read as clearly interactive/editable,
+// not blend into the barely-there card separators. ~3:1 against white, meeting WCAG's non-text
+// contrast guidance for UI component boundaries.
+val OutlineLight = Color(0xFF8E939E)
+val DisabledLight = Color(0xFFE1E2E6)
+val OnDisabledLight = Color(0xFF9A9CA5)
 
 val SuccessLight = Color(0xFF22C55E)
 val OnSuccessLight = Color(0xFFFFFFFF)
@@ -31,7 +36,9 @@ val BackgroundDark = Color(0xFF0B0C0F)
 val SurfaceDark = Color(0xFF1B1D22)
 val SecondaryTextDark = Color(0xFF9A9CA5)
 val DividerDark = Color(0xFF2A2C33)
-val OutlineDark = Color(0xFF2A2C33)
+val OutlineDark = Color(0xFF636874)
+val DisabledDark = Color(0xFF33353C)
+val OnDisabledDark = Color(0xFF6D6F78)
 
 val SuccessDark = Color(0xFF34D399)
 val OnSuccessDark = Color(0xFF06210F)
