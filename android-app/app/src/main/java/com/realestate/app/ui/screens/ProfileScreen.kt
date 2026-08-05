@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.AccountBalanceWallet
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EventAvailable
@@ -124,6 +125,8 @@ fun ProfileScreen(
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             DropdownMenuItem(
                                 text = { Text("خروج از حساب") },
+                                leadingIcon = Icons.AutoMirrored.Rounded.Logout,
+                                danger = true,
                                 onClick = {
                                     showMenu = false
                                     showLogoutConfirm = true

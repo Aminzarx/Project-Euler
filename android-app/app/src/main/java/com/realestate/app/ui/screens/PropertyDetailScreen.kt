@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.MoreVert
@@ -41,9 +43,11 @@ import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.StickyNote2
 import androidx.compose.material.icons.rounded.TrendingUp
+import androidx.compose.material.icons.rounded.Unarchive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import com.realestate.app.ui.components.DropdownMenu
+import com.realestate.app.ui.components.DropdownMenuDivider
 import com.realestate.app.ui.components.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -193,37 +197,48 @@ fun PropertyDetailScreen(
                             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                                 DropdownMenuItem(
                                     text = { Text("کارت استوری") },
+                                    leadingIcon = Icons.Rounded.Share,
                                     onClick = { showMenu = false; onStoryCard(p.id) }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("ویرایش") },
+                                    leadingIcon = Icons.Rounded.Edit,
                                     onClick = { showMenu = false; onEdit(p.id) }
                                 )
+                                DropdownMenuDivider()
                                 DropdownMenuItem(
                                     text = { Text(if (p.isPinned) "برداشتن سنجاق" else "سنجاق کردن") },
+                                    leadingIcon = Icons.Rounded.PushPin,
                                     onClick = { showMenu = false; viewModel.togglePinned(p) }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("صف کاری") },
+                                    leadingIcon = Icons.Rounded.Folder,
                                     onClick = { showMenu = false; showFolderDialog = true }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("تنظیم پیگیری") },
+                                    leadingIcon = Icons.Rounded.EventAvailable,
                                     onClick = { showMenu = false; showFollowUpDialog = true }
                                 )
+                                DropdownMenuDivider()
                                 if (p.status == PropertyStatus.ARCHIVED) {
                                     DropdownMenuItem(
                                         text = { Text("بازگردانی از بایگانی") },
+                                        leadingIcon = Icons.Rounded.Unarchive,
                                         onClick = { showMenu = false; viewModel.restoreProperty(p) }
                                     )
                                 } else {
                                     DropdownMenuItem(
                                         text = { Text("بایگانی") },
+                                        leadingIcon = Icons.Rounded.Archive,
                                         onClick = { showMenu = false; viewModel.archiveProperty(p) }
                                     )
                                 }
                                 DropdownMenuItem(
                                     text = { Text("حذف") },
+                                    leadingIcon = Icons.Rounded.Delete,
+                                    danger = true,
                                     onClick = {
                                         showMenu = false
                                         showDeleteConfirm = true

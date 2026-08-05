@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -468,39 +469,66 @@ fun RequiredFieldLabel(text: String, modifier: Modifier = Modifier) {
  * itself — its corner radius already follows the design system via [MaterialTheme.shapes.extraSmall].
  * Drop-in replacement: importing this instead of the Material3 original is enough to restyle every
  * three-dot and select menu in the app.
+ *
+ * Defaults to a small vertical [offset] below its anchor so the menu never opens flush against the
+ * icon that triggered it — a hairline gap reads as an intentional popover instead of a stuck-on panel.
  */
 @Composable
 fun DropdownMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
+    offset: androidx.compose.ui.unit.DpOffset = androidx.compose.ui.unit.DpOffset(0.dp, 6.dp),
     content: @Composable ColumnScope.() -> Unit
 ) {
     androidx.compose.material3.DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
-        modifier = modifier,
+        modifier = modifier.widthIn(min = 190.dp),
+        offset = offset,
         content = content
     )
 }
 
-/** Drop-in replacement for [androidx.compose.material3.DropdownMenuItem] with roomier spacing and theme colors. */
+/**
+ * Drop-in replacement for [androidx.compose.material3.DropdownMenuItem] with roomier spacing,
+ * theme colors, an optional leading icon (every action reads faster with a glyph than plain text
+ * alone), and a [danger] flag that tints both the icon and label for destructive actions
+ * (delete, remove, sign out) so they're visually distinct from routine ones before the user reads
+ * a single word.
+ */
 @Composable
 fun DropdownMenuItem(
     text: @Composable () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    leadingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    danger: Boolean = false
 ) {
+    val contentColor = if (danger) MaterialTheme.extendedColors.danger else MaterialTheme.colorScheme.onSurface
     androidx.compose.material3.DropdownMenuItem(
         text = text,
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
+        leadingIcon = leadingIcon?.let { icon ->
+            { Icon(icon, contentDescription = null, tint = contentColor) }
+        },
         colors = androidx.compose.material3.MenuDefaults.itemColors(
-            textColor = MaterialTheme.colorScheme.onSurface
+            textColor = contentColor,
+            leadingIconColor = contentColor
         ),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 4.dp)
+    )
+}
+
+/** A thin separator between logical groups of items inside a [DropdownMenu] — e.g. before a destructive action. */
+@Composable
+fun DropdownMenuDivider() {
+    androidx.compose.material3.HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        color = MaterialTheme.colorScheme.outlineVariant
     )
 }
 
