@@ -32,9 +32,10 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.FileOpen
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -246,7 +247,7 @@ fun PropertyListScreen(
                         },
                         actions = {
                             IconButton(onClick = { viewModel.selectAll(properties.map { it.id }) }) {
-                                Icon(Icons.Rounded.CheckCircle, contentDescription = "انتخاب همه")
+                                Icon(Icons.Rounded.SelectAll, contentDescription = "انتخاب همه")
                             }
                             IconButton(onClick = { showSharePasswordDialog = true }) {
                                 Icon(Icons.Rounded.Share, contentDescription = "اشتراک‌گذاری رمزنگاری‌شده")
@@ -261,10 +262,7 @@ fun PropertyListScreen(
                         title = { Text("املاک") },
                         actions = {
                             IconButton(onClick = { importPicker.launch("*/*") }) {
-                                Icon(Icons.Rounded.Download, contentDescription = "وارد کردن بسته رمزنگاری‌شده")
-                            }
-                            IconButton(onClick = { showFilterSheet = true }) {
-                                Icon(Icons.Rounded.FilterList, contentDescription = "فیلترها")
+                                Icon(Icons.Rounded.FileOpen, contentDescription = "وارد کردن بسته رمزنگاری‌شده")
                             }
                         }
                     )
@@ -300,7 +298,12 @@ fun PropertyListScreen(
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(
                     onSearch = { viewModel.recordSearch(filter.query) }
-                )
+                ),
+                trailingIcon = {
+                    IconButton(onClick = { showFilterSheet = true }) {
+                        Icon(Icons.Rounded.FilterList, contentDescription = "فیلترها")
+                    }
+                }
             )
 
             if (filter.query.isBlank() && recentSearches.isNotEmpty()) {
@@ -881,59 +884,69 @@ private fun FilterSheetContent(
         }
     }
 
-    Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-        Text("فیلترها", style = MaterialTheme.typography.titleLarge)
-        Spacer(modifier = Modifier.height(16.dp))
+    // Kept deliberately compact — City/Type share a row and Status/price fields are tight on
+    // vertical spacing — so Apply/Reset land on screen without scrolling on a typical phone.
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp).fillMaxWidth()) {
+        Text("فیلترها", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(10.dp))
 
-        ExposedDropdownMenuBox(expanded = cityMenuExpanded, onExpandedChange = { cityMenuExpanded = it }) {
-            OutlinedTextField(
-                value = selectedCity ?: "همه شهرها",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("شهر") },
-                modifier = Modifier.menuAnchor().fillMaxWidth(),
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = cityMenuExpanded) }
-            )
-            DropdownMenu(expanded = cityMenuExpanded, onDismissRequest = { cityMenuExpanded = false }) {
-                DropdownMenuItem(text = { Text("همه شهرها") }, onClick = {
-                    selectedCity = null
-                    cityMenuExpanded = false
-                })
-                cities.forEach { city ->
-                    DropdownMenuItem(text = { Text(city) }, onClick = {
-                        selectedCity = city
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            ExposedDropdownMenuBox(
+                expanded = cityMenuExpanded,
+                onExpandedChange = { cityMenuExpanded = it },
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedTextField(
+                    value = selectedCity ?: "همه شهرها",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("شهر") },
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = cityMenuExpanded) }
+                )
+                DropdownMenu(expanded = cityMenuExpanded, onDismissRequest = { cityMenuExpanded = false }) {
+                    DropdownMenuItem(text = { Text("همه شهرها") }, onClick = {
+                        selectedCity = null
                         cityMenuExpanded = false
                     })
+                    cities.forEach { city ->
+                        DropdownMenuItem(text = { Text(city) }, onClick = {
+                            selectedCity = city
+                            cityMenuExpanded = false
+                        })
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        ExposedDropdownMenuBox(expanded = typeMenuExpanded, onExpandedChange = { typeMenuExpanded = it }) {
-            OutlinedTextField(
-                value = selectedType?.label() ?: "همه انواع",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("نوع ملک") },
-                modifier = Modifier.menuAnchor().fillMaxWidth(),
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeMenuExpanded) }
-            )
-            DropdownMenu(expanded = typeMenuExpanded, onDismissRequest = { typeMenuExpanded = false }) {
-                DropdownMenuItem(text = { Text("همه انواع") }, onClick = {
-                    selectedType = null
-                    typeMenuExpanded = false
-                })
-                PropertyType.entries.forEach { type ->
-                    DropdownMenuItem(text = { Text(type.label()) }, onClick = {
-                        selectedType = type
+            ExposedDropdownMenuBox(
+                expanded = typeMenuExpanded,
+                onExpandedChange = { typeMenuExpanded = it },
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedTextField(
+                    value = selectedType?.label() ?: "همه انواع",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("نوع ملک") },
+                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeMenuExpanded) }
+                )
+                DropdownMenu(expanded = typeMenuExpanded, onDismissRequest = { typeMenuExpanded = false }) {
+                    DropdownMenuItem(text = { Text("همه انواع") }, onClick = {
+                        selectedType = null
                         typeMenuExpanded = false
                     })
+                    PropertyType.entries.forEach { type ->
+                        DropdownMenuItem(text = { Text(type.label()) }, onClick = {
+                            selectedType = type
+                            typeMenuExpanded = false
+                        })
+                    }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         ExposedDropdownMenuBox(expanded = statusMenuExpanded, onExpandedChange = { statusMenuExpanded = it }) {
             OutlinedTextField(
@@ -958,7 +971,7 @@ private fun FilterSheetContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(
@@ -977,7 +990,7 @@ private fun FilterSheetContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Text(
             text = "$matchCount ملک با این فیلترها",
@@ -1008,6 +1021,5 @@ private fun FilterSheetContent(
                 modifier = Modifier.weight(1f)
             )
         }
-        Spacer(modifier = Modifier.height(16.dp))
     }
 }
