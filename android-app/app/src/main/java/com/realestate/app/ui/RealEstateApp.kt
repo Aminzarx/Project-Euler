@@ -114,6 +114,13 @@ fun RealEstateApp(
         }
     }
 
+    LaunchedEffect(viewModel) {
+        viewModel.saveEvents.collect { message -> snackbarHostState.showSnackbar(message) }
+    }
+    LaunchedEffect(profileViewModel) {
+        profileViewModel.saveEvents.collect { message -> snackbarHostState.showSnackbar(message) }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {

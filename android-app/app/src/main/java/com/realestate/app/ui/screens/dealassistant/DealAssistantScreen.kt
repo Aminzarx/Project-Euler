@@ -29,7 +29,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,6 +46,7 @@ import com.realestate.app.data.Property
 import com.realestate.app.data.dealassistant.DealCategory
 import com.realestate.app.data.dealassistant.DealToolId
 import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.AppTextButton
 import com.realestate.app.ui.components.GlassAlertDialog
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.ui.theme.extendedColors
@@ -236,7 +236,7 @@ private fun PropertyPickerDialog(properties: List<Property>, onDismiss: () -> Un
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("انصراف") }
+            AppTextButton(text = "انصراف", onClick = onDismiss)
         }
     )
 }

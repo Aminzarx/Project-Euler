@@ -14,18 +14,23 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import com.realestate.app.data.CaseType
 import com.realestate.app.data.DealType
 import com.realestate.app.data.Property
@@ -85,8 +91,19 @@ fun AdTextGeneratorScreen(propertyId: Long, viewModel: PropertyViewModel, onBack
     var style by remember { mutableStateOf(AdTextStyle.PROFESSIONAL) }
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    // See the identical pattern in StoryCardScreen/PropertyDetailScreen: distinguishes "still
+    // loading from Room" from "this is a client request, no ad text applies," so the guidance
+    // text never flashes on screen during the first load.
+    var hasLoadedOnce by remember(propertyId) { mutableStateOf(false) }
+    LaunchedEffect(propertyId) {
+        viewModel.getPropertyById(propertyId).collect { hasLoadedOnce = true }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("متن آگهی") },
@@ -99,7 +116,11 @@ fun AdTextGeneratorScreen(propertyId: Long, viewModel: PropertyViewModel, onBack
         }
     ) { padding ->
         val current = property
-        if (current == null || current.caseType == CaseType.CLIENT_REQUEST) {
+        if (!hasLoadedOnce) {
+            Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (current == null || current.caseType == CaseType.CLIENT_REQUEST) {
             Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
                 if (current != null) {
                     Text(
@@ -125,7 +146,10 @@ fun AdTextGeneratorScreen(propertyId: Long, viewModel: PropertyViewModel, onBack
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PrimaryButton(
                         text = "کپی متن",
-                        onClick = { clipboard.setText(AnnotatedString(text)) },
+                        onClick = {
+                            clipboard.setText(AnnotatedString(text))
+                            coroutineScope.launch { snackbarHostState.showSnackbar("متن کپی شد") }
+                        },
                         icon = Icons.Rounded.ContentCopy,
                         modifier = Modifier.weight(1f)
                     )

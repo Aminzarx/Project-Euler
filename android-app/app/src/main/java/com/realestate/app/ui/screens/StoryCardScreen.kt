@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +34,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -44,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -69,6 +71,7 @@ import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -115,6 +118,8 @@ fun StoryCardScreen(
     var showCta by remember { mutableStateOf(true) }
     var showQrCode by remember { mutableStateOf(false) }
     var selectedBadge by remember { mutableStateOf<StoryBadge?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     val config = StoryCardConfig(
         aspectRatio = aspectRatio,
@@ -129,6 +134,7 @@ fun StoryCardScreen(
     )
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("کارت استوری") },
@@ -207,19 +213,19 @@ fun StoryCardScreen(
                 ) {
                     StoryShareChip(
                         label = "اینستاگرام",
-                        color = Color(0xFFC13584),
+                        color = com.realestate.app.ui.theme.InstagramBrand,
                         modifier = Modifier.weight(1f),
                         onClick = { shareTarget = StoryShareTarget.INSTAGRAM }
                     )
                     StoryShareChip(
                         label = "تلگرام",
-                        color = Color(0xFF2AABEE),
+                        color = com.realestate.app.ui.theme.TelegramBrand,
                         modifier = Modifier.weight(1f),
                         onClick = { shareTarget = StoryShareTarget.TELEGRAM }
                     )
                     StoryShareChip(
                         label = "واتساپ",
-                        color = Color(0xFF25D366),
+                        color = com.realestate.app.ui.theme.WhatsAppBrand,
                         modifier = Modifier.weight(1f),
                         onClick = { shareTarget = StoryShareTarget.WHATSAPP }
                     )
@@ -242,7 +248,12 @@ fun StoryCardScreen(
                     template = selectedTemplate,
                     config = config,
                     target = target,
-                    onDismiss = { shareTarget = null }
+                    onDismiss = { shareTarget = null },
+                    onResult = { message ->
+                        if (message != null) {
+                            coroutineScope.launch { snackbarHostState.showSnackbar(message) }
+                        }
+                    }
                 )
             }
 
@@ -440,7 +451,8 @@ private fun StoryCardCaptureDialog(
     template: StoryTemplate,
     config: StoryCardConfig,
     target: StoryShareTarget,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onResult: (message: String?) -> Unit
 ) {
     val context = LocalContext.current
     var captureReady by remember { mutableStateOf(false) }
@@ -478,14 +490,16 @@ private fun StoryCardCaptureDialog(
                 shareStoryImage(context, uri, target)
             }
             showSpinner = false
-            if (result.isFailure) {
-                Toast.makeText(context, "امکان ساخت تصویر وجود نداشت. لطفاً دوباره تلاش کنید.", Toast.LENGTH_SHORT).show()
-            } else if (target != StoryShareTarget.INSTAGRAM) {
+            val message = when {
+                result.exceptionOrNull() is ActivityNotFoundException -> "${target.label} روی این گوشی نصب نیست"
+                result.isFailure -> "امکان ساخت تصویر وجود نداشت. لطفاً دوباره تلاش کنید."
                 // Instagram/Telegram/WhatsApp switch apps immediately, which is itself the
-                // confirmation; ActivityNotFoundException already toasts its own message.
-                // For the generic Android chooser there's no equally obvious signal, so confirm here.
-                Toast.makeText(context, "کارت ملک آماده اشتراک‌گذاری شد", Toast.LENGTH_SHORT).show()
+                // confirmation. For the generic Android chooser there's no equally obvious
+                // signal, so confirm here.
+                target != StoryShareTarget.INSTAGRAM -> "کارت ملک آماده اشتراک‌گذاری شد"
+                else -> null
             }
+            onResult(message)
             onDismiss()
         }
     }
@@ -510,7 +524,10 @@ private fun StoryCardCaptureDialog(
     }
 }
 
-/** Hands the rendered story image directly to the target app when installed, falling back to the system chooser otherwise. */
+/** Hands the rendered story image directly to the target app when installed, falling back to the
+ *  system chooser otherwise. Lets [ActivityNotFoundException] propagate rather than handling it
+ *  here — the caller's runCatching already distinguishes it from other failures to pick the
+ *  right message. */
 private fun shareStoryImage(context: Context, uri: android.net.Uri, target: StoryShareTarget) {
     if (target == StoryShareTarget.GENERIC || target.packageName == null) {
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
@@ -522,26 +539,22 @@ private fun shareStoryImage(context: Context, uri: android.net.Uri, target: Stor
         return
     }
 
-    try {
-        val intent = if (target == StoryShareTarget.INSTAGRAM) {
-            Intent("com.instagram.share.ADD_TO_STORY").apply {
-                setDataAndType(uri, "image/png")
-                putExtra("interactive_asset_uri", uri)
-                setPackage(target.packageName)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-        } else {
-            Intent(Intent.ACTION_SEND).apply {
-                type = "image/png"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                setPackage(target.packageName)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
+    val intent = if (target == StoryShareTarget.INSTAGRAM) {
+        Intent("com.instagram.share.ADD_TO_STORY").apply {
+            setDataAndType(uri, "image/png")
+            putExtra("interactive_asset_uri", uri)
+            setPackage(target.packageName)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(intent)
-    } catch (e: ActivityNotFoundException) {
-        Toast.makeText(context, "${target.label} روی این گوشی نصب نیست", Toast.LENGTH_SHORT).show()
+    } else {
+        Intent(Intent.ACTION_SEND).apply {
+            type = "image/png"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            setPackage(target.packageName)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
     }
+    context.startActivity(intent)
 }
 
 /** Clears any previously shared card before writing the new one — story cards are single-use, so nothing is worth keeping around. */

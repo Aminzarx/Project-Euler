@@ -121,7 +121,20 @@ fun WalletScreen(viewModel: WalletViewModel, appLockViewModel: AppLockViewModel,
 
             if (transactions.isEmpty()) {
                 Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                    Text("هنوز تراکنشی ثبت نشده", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "هنوز تراکنشی ثبت نشده",
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            "بعد از شارژ کیف پول، تراکنش‌هایت اینجا نمایش داده می‌شود",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
                 }
             } else {
                 LazyColumn(

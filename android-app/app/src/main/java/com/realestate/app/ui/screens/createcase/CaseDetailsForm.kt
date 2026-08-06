@@ -20,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AddAPhoto
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Info
@@ -629,14 +630,15 @@ private fun TagEditor(tags: List<String>, onTagsChange: (List<String>) -> Unit, 
     )
     if (input.isNotBlank()) {
         Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            "افزودن «${input.trim()}»",
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.clickable {
+        // An AssistChip instead of a bare clickable Text — its built-in Material minimum touch
+        // target keeps this tappable at a real finger size, unlike text-glyph-only bounds.
+        AssistChip(
+            onClick = {
                 onTagsChange(tags + input.trim())
                 input = ""
-            }
+            },
+            label = { Text("افزودن «${input.trim()}»") },
+            leadingIcon = { Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.height(16.dp)) }
         )
     }
 }

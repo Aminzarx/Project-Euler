@@ -200,6 +200,13 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     private val _deletionEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val deletionEvents: SharedFlow<String> = _deletionEvents
 
+    // A save navigates straight back off this screen (see CreateCaseWizardScreen.save()), so a
+    // Snackbar hosted on that screen would be torn down before anyone saw it — same reason
+    // deletionEvents lives here instead of on the list screen. RealEstateApp's shell hosts the
+    // Snackbar and outlives the navigation.
+    private val _saveEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val saveEvents: SharedFlow<String> = _saveEvents
+
     fun undoLastDelete() = viewModelScope.launch {
         lastDeletedProperty?.let { property ->
             repository.insert(property)
@@ -259,6 +266,7 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     fun addProperty(property: Property) = viewModelScope.launch {
         val id = repository.insert(property)
         extrasRepository.logEvent(id, TimelineEventType.CREATED, "ملک ثبت شد")
+        _saveEvents.emit("پرونده ثبت شد")
     }
 
     fun updateProperty(property: Property) = viewModelScope.launch {
@@ -274,6 +282,7 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
                 "قیمت از $from به $to تومان تغییر کرد"
             )
         }
+        _saveEvents.emit("تغییرات ذخیره شد")
     }
 
     fun deleteProperty(property: Property) = viewModelScope.launch {

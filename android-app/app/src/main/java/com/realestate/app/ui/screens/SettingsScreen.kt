@@ -2,7 +2,6 @@ package com.realestate.app.ui.screens
 
 import android.Manifest
 import android.os.Build
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
@@ -40,15 +39,17 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,6 +63,7 @@ import com.realestate.app.data.datastore.ThemePreference
 import com.realestate.app.data.formatAppDate
 import com.realestate.app.ui.PinKeypad
 import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.AppTextButton
 import com.realestate.app.ui.components.ConfirmationDialog
 import com.realestate.app.ui.components.GlassAlertDialog
 import com.realestate.app.ui.components.PrimaryButton
@@ -75,6 +77,7 @@ import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
 import com.realestate.app.viewmodel.RestorePreviewState
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Locale
@@ -97,6 +100,8 @@ fun SettingsScreen(
     var searchClearedMessage by remember { mutableStateOf(false) }
     var showPinSetup by remember { mutableStateOf(false) }
     var showPinRemoveConfirm by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     val backupLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -112,7 +117,7 @@ fun SettingsScreen(
         if (granted) {
             appLockViewModel.setNotificationsEnabled(true)
         } else {
-            Toast.makeText(context, "بدون مجوز اعلان، این قابلیت کار نمی‌کند", Toast.LENGTH_SHORT).show()
+            coroutineScope.launch { snackbarHostState.showSnackbar("بدون مجوز اعلان، این قابلیت کار نمی‌کند") }
         }
     }
 
@@ -146,7 +151,8 @@ fun SettingsScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -318,7 +324,7 @@ fun SettingsScreen(
                     onClick = {
                         File(context.cacheDir, "shared").listFiles()?.forEach { it.delete() }
                         cacheRefreshKey++
-                        Toast.makeText(context, "فایل‌های موقت پاک شدند", Toast.LENGTH_SHORT).show()
+                        coroutineScope.launch { snackbarHostState.showSnackbar("فایل‌های موقت پاک شدند") }
                     },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -399,7 +405,7 @@ fun SettingsScreen(
             onConfirmed = { pin ->
                 appLockViewModel.setPin(pin)
                 showPinSetup = false
-                Toast.makeText(context, "قفل برنامه فعال شد", Toast.LENGTH_SHORT).show()
+                coroutineScope.launch { snackbarHostState.showSnackbar("قفل برنامه فعال شد") }
             }
         )
     }
@@ -502,7 +508,7 @@ private fun PinSetupDialog(onDismiss: () -> Unit, onConfirmed: (String) -> Unit)
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("انصراف") }
+            AppTextButton(text = "انصراف", onClick = onDismiss)
         }
     )
 }

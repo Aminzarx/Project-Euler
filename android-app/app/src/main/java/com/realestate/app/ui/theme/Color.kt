@@ -125,3 +125,10 @@ val InverseSurfaceDark = Color(0xFFE7EAF0)
 val InverseOnSurfaceDark = Color(0xFF171C24)
 val InversePrimaryDark = Color(0xFF053C5E)
 val ScrimDark = Color(0xFF000000)
+
+// Third-party brand colors — fixed by the platforms themselves, not part of this app's own
+// palette (so deliberately not theme-/dark-mode-aware). Used only to make the share-target chips
+// on the Story Card screen instantly recognizable as Instagram/Telegram/WhatsApp.
+val InstagramBrand = Color(0xFFC13584)
+val TelegramBrand = Color(0xFF2AABEE)
+val WhatsAppBrand = Color(0xFF25D366)

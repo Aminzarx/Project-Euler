@@ -2,6 +2,7 @@ package com.realestate.app.ui.screens.dealassistant
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -95,13 +97,38 @@ fun PropertyAnalysisScreen(
     }
 }
 
+/** Shared empty/no-selection state for every analysis tool on this screen — heading + supporting
+ *  line, centered, matching the pattern established in PropertyListScreen rather than a bare
+ *  unstyled Text stuck to the top-left. */
+@Composable
+private fun AnalysisEmptyState(title: String, supportingText: String? = null) {
+    Box(modifier = Modifier.fillMaxSize().padding(Spacing.screen), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+            if (supportingText != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    supportingText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun AveragePriceAnalysis(properties: List<Property>) {
+    if (properties.isEmpty()) {
+        AnalysisEmptyState(
+            title = "هنوز ملکی ثبت نشده است",
+            supportingText = "برای دیدن میانگین قیمت، ابتدا چند پرونده مالک ثبت کن"
+        )
+        return
+    }
     Column(modifier = Modifier.padding(Spacing.screen)) {
-        if (properties.isEmpty()) {
-            Text("هنوز ملکی ثبت نشده است.")
-            return@Column
-        }
         val stats = averagePriceStats(properties)
         AppCard(modifier = Modifier.fillMaxWidth()) {
             Column {
@@ -118,11 +145,11 @@ private fun AveragePriceAnalysis(properties: List<Property>) {
 @Composable
 private fun MarketValueAnalysis(properties: List<Property>, propertyId: Long?) {
     val target = properties.find { it.id == propertyId }
+    if (target == null) {
+        AnalysisEmptyState(title = "ملکی برای برآورد انتخاب نشده است")
+        return
+    }
     Column(modifier = Modifier.padding(Spacing.screen)) {
-        if (target == null) {
-            Text("ملکی برای برآورد انتخاب نشده است.")
-            return@Column
-        }
         Text(target.title, style = MaterialTheme.typography.titleLarge)
         Text("${target.city} · ${target.propertyType.label()}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(Spacing.md))
@@ -153,7 +180,10 @@ private fun MarketValueAnalysis(properties: List<Property>, propertyId: Long?) {
 @Composable
 private fun NeighborhoodAnalysis(properties: List<Property>) {
     if (properties.isEmpty()) {
-        Text("هنوز ملکی ثبت نشده است.", modifier = Modifier.padding(Spacing.screen))
+        AnalysisEmptyState(
+            title = "هنوز ملکی ثبت نشده است",
+            supportingText = "برای دیدن آمار محله‌ها، ابتدا چند پرونده مالک ثبت کن"
+        )
         return
     }
     val stats = neighborhoodStats(properties)
@@ -193,7 +223,7 @@ private fun RankingAnalysis(properties: List<Property>) {
     Spacer(modifier = Modifier.height(Spacing.md))
     val ranked = rankProperties(properties, metric)
     if (ranked.isEmpty()) {
-        Text("هنوز ملکی ثبت نشده است.", modifier = Modifier.padding(horizontal = Spacing.screen))
+        AnalysisEmptyState(title = "هنوز ملکی ثبت نشده است")
         return
     }
     LazyColumn(

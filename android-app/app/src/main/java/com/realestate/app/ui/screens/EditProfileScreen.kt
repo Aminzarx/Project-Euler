@@ -2,7 +2,7 @@ package com.realestate.app.ui.screens
 
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -36,14 +36,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,8 +59,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.AppTextButton
+import com.realestate.app.ui.components.ConfirmationDialog
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.viewmodel.ProfileViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,6 +84,30 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
     var agencyLogoUri by remember { mutableStateOf<String?>(null) }
     var loaded by remember { mutableStateOf(false) }
     var showNameError by remember { mutableStateOf(false) }
+    var showDiscardConfirm by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Compared against the loaded profile rather than tracked per-field-edit — simpler, and
+    // correct even for a field the agent edits then reverts back to its original value.
+    val isDirty = loaded && (
+        fullName != profile.fullName ||
+            agencyName != profile.agencyName ||
+            businessAddress != profile.businessAddress ||
+            biography != profile.biography ||
+            slogan != profile.slogan ||
+            instagram != profile.instagram ||
+            telegram != profile.telegram ||
+            website != profile.website ||
+            profilePhotoUri != profile.profilePhotoUri ||
+            agencyLogoUri != profile.agencyLogoUri
+        )
+
+    fun handleBack() {
+        if (isDirty) showDiscardConfirm = true else onDone()
+    }
+
+    BackHandler(onBack = ::handleBack)
 
     LaunchedEffect(profile) {
         if (!loaded) {
@@ -105,11 +134,9 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
             }.isSuccess
             profilePhotoUri = uri.toString()
             if (!persisted) {
-                Toast.makeText(
-                    context,
-                    "این عکس ممکن است بعد از بستن برنامه دوباره نیاز به انتخاب داشته باشد",
-                    Toast.LENGTH_LONG
-                ).show()
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("این عکس ممکن است بعد از بستن برنامه دوباره نیاز به انتخاب داشته باشد")
+                }
             }
         }
     }
@@ -123,11 +150,9 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
             }.isSuccess
             agencyLogoUri = uri.toString()
             if (!persisted) {
-                Toast.makeText(
-                    context,
-                    "این لوگو ممکن است بعد از بستن برنامه دوباره نیاز به انتخاب داشته باشد",
-                    Toast.LENGTH_LONG
-                ).show()
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("این لوگو ممکن است بعد از بستن برنامه دوباره نیاز به انتخاب داشته باشد")
+                }
             }
         }
     }
@@ -154,23 +179,23 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
                 agencyLogoUri = agencyLogoUri
             )
         }
-        Toast.makeText(context, "تغییرات ذخیره شد", Toast.LENGTH_SHORT).show()
+        // The confirmation itself is shown by RealEstateApp's shell (see ProfileViewModel.saveEvents)
+        // once this screen has already popped off the back stack, not here.
         onDone()
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("ویرایش پروفایل") },
                 navigationIcon = {
-                    IconButton(onClick = onDone) {
+                    IconButton(onClick = ::handleBack) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "بازگشت")
                     }
                 },
                 actions = {
-                    TextButton(onClick = ::attemptSave) {
-                        Text("ذخیره")
-                    }
+                    AppTextButton(text = "ذخیره", onClick = ::attemptSave)
                 }
             )
         }
@@ -333,6 +358,17 @@ fun EditProfileScreen(viewModel: ProfileViewModel, onDone: () -> Unit) {
             }
             Spacer(modifier = Modifier.height(Spacing.xl))
         }
+    }
+
+    if (showDiscardConfirm) {
+        ConfirmationDialog(
+            title = "تغییرات ذخیره‌نشده",
+            text = "اگر خارج شوید، تغییراتی که در این صفحه دادید از بین می‌رود.",
+            confirmLabel = "خروج بدون ذخیره",
+            danger = true,
+            onConfirm = onDone,
+            onDismiss = { showDiscardConfirm = false }
+        )
     }
 }
 

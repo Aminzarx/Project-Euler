@@ -2,7 +2,6 @@ package com.realestate.app.ui.screens
 
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -103,6 +102,7 @@ import com.realestate.app.ui.theme.extendedColors
 import com.realestate.app.ui.theme.heroGradient
 import com.realestate.app.ui.theme.imageScrimGradient
 import com.realestate.app.viewmodel.PropertyViewModel
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -143,6 +143,7 @@ fun PropertyDetailScreen(
     var hasMarkedViewed by remember(propertyId) { mutableStateOf(false) }
     var hasLoadedOnce by remember(propertyId) { mutableStateOf(false) }
     val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
     LaunchedEffect(property) {
         val p = property
@@ -346,7 +347,7 @@ fun PropertyDetailScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.clickable {
                                 clipboardManager.setText(AnnotatedString(current.code))
-                                Toast.makeText(context, "کد ملک کپی شد", Toast.LENGTH_SHORT).show()
+                                coroutineScope.launch { snackbarHostState.showSnackbar("کد ملک کپی شد") }
                             }
                         ) {
                             Text(

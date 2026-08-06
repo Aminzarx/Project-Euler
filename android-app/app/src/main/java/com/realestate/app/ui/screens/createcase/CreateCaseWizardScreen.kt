@@ -2,7 +2,6 @@ package com.realestate.app.ui.screens.createcase
 
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -253,12 +252,12 @@ fun CreateCaseWizardScreen(
         if (isSaving) return
         isSaving = true
         val property = buildProperty()
+        // The confirmation itself is shown by RealEstateApp's shell (see PropertyViewModel.saveEvents)
+        // once this screen has already popped off the back stack, not here.
         if (isEditMode) {
             viewModel.updateProperty(property)
-            Toast.makeText(context, "تغییرات ذخیره شد", Toast.LENGTH_SHORT).show()
         } else {
             viewModel.addProperty(property)
-            Toast.makeText(context, "پرونده ثبت شد", Toast.LENGTH_SHORT).show()
         }
         onDone()
     }
