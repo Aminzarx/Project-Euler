@@ -15,6 +15,7 @@ import com.realestate.app.viewmodel.CaseTransferViewModel
 import com.realestate.app.viewmodel.DealAssistantViewModel
 import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
+import com.realestate.app.viewmodel.UpdateCheckViewModel
 import com.realestate.app.viewmodel.WalletViewModel
 
 /** Extends FragmentActivity (not just ComponentActivity) because BiometricPrompt requires a
@@ -28,6 +29,7 @@ class MainActivity : FragmentActivity() {
     private val caseTransferViewModel: CaseTransferViewModel by viewModels()
     private val dealAssistantViewModel: DealAssistantViewModel by viewModels()
     private val appLockViewModel: AppLockViewModel by viewModels()
+    private val updateCheckViewModel: UpdateCheckViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,7 +43,8 @@ class MainActivity : FragmentActivity() {
                 backupViewModel = backupViewModel,
                 caseTransferViewModel = caseTransferViewModel,
                 dealAssistantViewModel = dealAssistantViewModel,
-                appLockViewModel = appLockViewModel
+                appLockViewModel = appLockViewModel,
+                updateCheckViewModel = updateCheckViewModel
             )
         }
     }

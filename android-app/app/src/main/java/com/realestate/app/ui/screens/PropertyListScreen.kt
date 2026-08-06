@@ -42,7 +42,6 @@ import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.Warning
 import com.realestate.app.ui.components.DropdownMenu
 import com.realestate.app.ui.components.DropdownMenuItem
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -95,6 +94,7 @@ import com.realestate.app.data.evaluatePasswordStrength
 import com.realestate.app.data.matchesPriceRange
 import com.realestate.app.data.passwordStrengthHelperText
 import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.GlassAlertDialog
 import com.realestate.app.ui.components.SwipeablePropertyRow
 import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.ui.components.label
@@ -525,7 +525,7 @@ fun PropertyListScreen(
 
 @Composable
 private fun WorkingDialog(stageLabel: String, onCancel: (() -> Unit)? = null) {
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = {},
         properties = androidx.compose.ui.window.DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
         confirmButton = {
@@ -583,7 +583,7 @@ private fun PasswordPromptDialog(
         }
     }
 
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
@@ -672,7 +672,7 @@ private fun ImportPreviewDialog(
     }
     var selectedUids by remember(plan) { mutableStateOf(actionableUids) }
 
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("پیش‌نمایش ورود اطلاعات") },
         text = {

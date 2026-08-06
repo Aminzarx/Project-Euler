@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -48,6 +47,7 @@ import com.realestate.app.data.Property
 import com.realestate.app.data.dealassistant.DealCategory
 import com.realestate.app.data.dealassistant.DealToolId
 import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.GlassAlertDialog
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.ui.theme.extendedColors
 import com.realestate.app.viewmodel.DealAssistantViewModel
@@ -214,7 +214,7 @@ private fun RecentToolChip(tool: DealToolId, onClick: () -> Unit) {
 
 @Composable
 private fun PropertyPickerDialog(properties: List<Property>, onDismiss: () -> Unit, onPick: (Property) -> Unit) {
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("انتخاب ملک") },
         text = {

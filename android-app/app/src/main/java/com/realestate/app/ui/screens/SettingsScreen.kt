@@ -29,7 +29,6 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.Straighten
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -64,6 +63,7 @@ import com.realestate.app.data.formatAppDate
 import com.realestate.app.ui.PinKeypad
 import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.ConfirmationDialog
+import com.realestate.app.ui.components.GlassAlertDialog
 import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.components.SecondaryButton
 import com.realestate.app.ui.theme.Spacing
@@ -452,7 +452,7 @@ private fun PinSetupDialog(onDismiss: () -> Unit, onConfirmed: (String) -> Unit)
     var confirming by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
 
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (!confirming) "یک پین ۴ رقمی وارد کنید" else "پین را دوباره وارد کنید") },
         text = {

@@ -2,6 +2,7 @@ package com.realestate.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -622,6 +623,67 @@ fun RouteErrorState(
 }
 
 /**
+private val GlassDialogShape = RoundedCornerShape(28.dp)
+
+/**
+ * Every dialog in the app renders through this instead of calling Material3's [AlertDialog]
+ * directly — a translucent "frosted glass" surface (soft see-through fill, a faint light-to-dim
+ * edge highlight instead of a flat border, deeper shadow) rather than the flat opaque default, in
+ * keeping with the rest of the app's soft-shadow, borderless-card visual language. On API 31+ the
+ * system also blurs whatever is behind the dialog window for a real (not just simulated) glass
+ * effect; below that it degrades gracefully to just the translucent surface, which alone still
+ * reads as deliberately "glass" rather than stock Material.
+ *
+ * The signature intentionally mirrors Material3's [AlertDialog] (same param names/defaults for
+ * everything callers here actually use) so every existing call site is a drop-in rename.
+ */
+@Composable
+fun GlassAlertDialog(
+    onDismissRequest: () -> Unit,
+    confirmButton: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    dismissButton: (@Composable () -> Unit)? = null,
+    icon: (@Composable () -> Unit)? = null,
+    title: (@Composable () -> Unit)? = null,
+    text: (@Composable () -> Unit)? = null,
+    properties: androidx.compose.ui.window.DialogProperties = androidx.compose.ui.window.DialogProperties()
+) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            val window = (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
+            window?.let {
+                it.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+                it.attributes = it.attributes.apply { blurBehindRadius = 48 }
+            }
+        }
+    }
+
+    val edgeBrush = androidx.compose.ui.graphics.Brush.linearGradient(
+        listOf(
+            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.16f),
+            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.02f)
+        )
+    )
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = confirmButton,
+        dismissButton = dismissButton,
+        icon = icon,
+        title = title,
+        text = text,
+        properties = properties,
+        shape = GlassDialogShape,
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+        tonalElevation = 0.dp,
+        modifier = modifier
+            .softShadow(GlassDialogShape, 32.dp)
+            .clip(GlassDialogShape)
+            .border(width = 1.dp, brush = edgeBrush, shape = GlassDialogShape)
+    )
+}
+
+/**
  * Reusable yes/no confirmation for a consequential action (deleting, discarding, archiving) —
  * use instead of an ad-hoc [AlertDialog] so every "are you sure?" moment in the app looks and
  * behaves the same way. Pass [danger] = true for destructive actions (delete) to color the
@@ -638,7 +700,7 @@ fun ConfirmationDialog(
     dismissLabel: String = "انصراف",
     danger: Boolean = false
 ) {
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         modifier = modifier,
         title = { Text(title) },

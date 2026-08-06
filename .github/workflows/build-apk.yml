@@ -59,7 +59,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest-debug-build
-          name: "Latest debug build"
-          body: "Automatically updated on every push. Commit: ${{ github.sha }}"
+          name: "Latest debug build (#${{ github.run_number }})"
+          body: |
+            Automatically updated on every push. Commit: ${{ github.sha }}
+            versionCode=${{ github.run_number }}
           make_latest: true
           files: android-app/app/build/outputs/apk/debug/app-debug.apk

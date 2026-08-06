@@ -44,7 +44,6 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.StickyNote2
 import androidx.compose.material.icons.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.Unarchive
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import com.realestate.app.ui.components.DropdownMenu
 import com.realestate.app.ui.components.DropdownMenuDivider
@@ -92,6 +91,7 @@ import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.CircleIconButton
 import com.realestate.app.ui.components.CollapsibleSection
 import com.realestate.app.ui.components.ConfirmationDialog
+import com.realestate.app.ui.components.GlassAlertDialog
 import com.realestate.app.ui.components.StatusPillBadge
 import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.ui.components.color
@@ -795,7 +795,7 @@ private fun DetailRow(label: String, value: String, trailing: @Composable (() ->
 @Composable
 private fun AddTagDialog(suggestions: List<String>, onAdd: (String) -> Unit, onDismiss: () -> Unit) {
     var text by remember { mutableStateOf("") }
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("افزودن برچسب") },
         text = {
@@ -838,7 +838,7 @@ private fun AddTagDialog(suggestions: List<String>, onAdd: (String) -> Unit, onD
 @Composable
 private fun AddNoteDialog(onAdd: (String) -> Unit, onDismiss: () -> Unit) {
     var text by remember { mutableStateOf("") }
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("افزودن یادداشت") },
         text = {
@@ -864,7 +864,7 @@ private fun AddNoteDialog(onAdd: (String) -> Unit, onDismiss: () -> Unit) {
 @Composable
 private fun EditNoteDialog(initialText: String, onSave: (String) -> Unit, onDismiss: () -> Unit) {
     var text by remember { mutableStateOf(initialText) }
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("ویرایش یادداشت") },
         text = {
@@ -899,7 +899,7 @@ private fun FavoriteFolderDialog(
 ) {
     var text by remember { mutableStateOf(currentFolder ?: "") }
     val suggestions = (presetWorkQueues + existingFolders).distinct()
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("صف کاری") },
         text = {
@@ -955,7 +955,7 @@ private fun FollowUpDialog(
         "هفته دیگر" to dayMillis * 7
     )
     var customDays by remember { mutableStateOf("") }
-    AlertDialog(
+    GlassAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("تنظیم پیگیری") },
         text = {

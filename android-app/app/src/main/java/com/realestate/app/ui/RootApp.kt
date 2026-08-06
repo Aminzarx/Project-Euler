@@ -1,6 +1,8 @@
 package com.realestate.app.ui
 
 import android.app.Activity
+import android.content.Intent
+import android.net.Uri
 import android.view.WindowManager
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Spring
@@ -16,7 +18,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,7 +46,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.R
 import com.realestate.app.data.datastore.ThemePreference
+import com.realestate.app.data.update.LatestRelease
 import com.realestate.app.ui.auth.AuthFlow
+import com.realestate.app.ui.components.AppTextButton
+import com.realestate.app.ui.components.GlassAlertDialog
+import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.theme.RealEstateAppTheme
 import com.realestate.app.viewmodel.AppLockViewModel
 import com.realestate.app.viewmodel.AuthViewModel
@@ -50,6 +59,8 @@ import com.realestate.app.viewmodel.CaseTransferViewModel
 import com.realestate.app.viewmodel.DealAssistantViewModel
 import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
+import com.realestate.app.viewmodel.UpdateCheckState
+import com.realestate.app.viewmodel.UpdateCheckViewModel
 import com.realestate.app.viewmodel.WalletViewModel
 
 @Composable
@@ -61,7 +72,8 @@ fun RootApp(
     backupViewModel: BackupViewModel,
     caseTransferViewModel: CaseTransferViewModel,
     dealAssistantViewModel: DealAssistantViewModel,
-    appLockViewModel: AppLockViewModel
+    appLockViewModel: AppLockViewModel,
+    updateCheckViewModel: UpdateCheckViewModel
 ) {
     val profile by profileViewModel.profile.collectAsStateWithLifecycle()
     val systemDark = isSystemInDarkTheme()
@@ -104,6 +116,12 @@ fun RootApp(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    // Checked once per app open (this LaunchedEffect fires once per RootApp composition, which
+    // happens once per process launch) — not on every screen visited. The ViewModel itself
+    // no-ops a second call within the same session, so recomposition can't re-trigger it.
+    LaunchedEffect(Unit) { updateCheckViewModel.checkForUpdateOnce() }
+    val updateState by updateCheckViewModel.state.collectAsStateWithLifecycle()
+
     RealEstateAppTheme(darkTheme = useDarkTheme) {
         val isLoggedIn by authViewModel.isLoggedIn.collectAsStateWithLifecycle()
         // A single Crossfade across all three top-level states (loading/auth/main) turns what used
@@ -130,7 +148,40 @@ fun RootApp(
                 }
             }
         }
+
+        // Only surfaced once the agent has actually reached the main app — showing it on top of
+        // the lock screen or the login flow would be a strange first thing to see.
+        val readyForUpdatePrompt = isLoggedIn == true && !(securitySettings.hasPin && !isUnlocked)
+        val update = updateState
+        if (readyForUpdatePrompt && update is UpdateCheckState.UpdateAvailable) {
+            UpdateAvailableDialog(release = update.release, onDismiss = { updateCheckViewModel.dismiss() })
+        }
     }
+}
+
+@Composable
+private fun UpdateAvailableDialog(release: LatestRelease, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    GlassAlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.SystemUpdate, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        title = { Text("نسخه جدید موجود است") },
+        text = {
+            Text("نسخه جدیدتری از اپ منتشر شده. برای استفاده از امکانات و اصلاحات تازه، همین حالا دانلودش کن.")
+        },
+        confirmButton = {
+            PrimaryButton(
+                text = "دانلود",
+                onClick = {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(release.downloadUrl)))
+                    onDismiss()
+                }
+            )
+        },
+        dismissButton = {
+            AppTextButton(text = "بعداً", onClick = onDismiss)
+        }
+    )
 }
 
 /** Branded launch state shown while the saved session is being read — replaces a bare spinner. */
