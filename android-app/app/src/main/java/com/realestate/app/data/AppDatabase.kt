@@ -18,7 +18,7 @@ import com.realestate.app.data.wallet.WalletTransaction
 
 @Database(
     entities = [Property::class, WalletTransaction::class, Note::class, TimelineEvent::class, QuickNote::class],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -147,6 +147,21 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Pure index addition — no column or row is touched, so it is safe on any existing install.
+        // Every name here has to match Room's own convention (`index_<table>_<column>`) exactly,
+        // because Room validates the live schema against its generated one when it opens the
+        // database and throws if an index it expects is missing or named differently.
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_properties_dateAdded` ON `properties` (`dateAdded`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_properties_isFavorite` ON `properties` (`isFavorite`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_properties_lastViewedAt` ON `properties` (`lastViewedAt`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_notes_propertyId` ON `notes` (`propertyId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_timeline_events_propertyId` ON `timeline_events` (`propertyId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_timeline_events_createdAt` ON `timeline_events` (`createdAt`)")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -156,7 +171,10 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "real_estate.db"
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build().also { INSTANCE = it }
+                ).addMigrations(
+                    MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
+                    MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8
+                ).build().also { INSTANCE = it }
             }
         }
     }

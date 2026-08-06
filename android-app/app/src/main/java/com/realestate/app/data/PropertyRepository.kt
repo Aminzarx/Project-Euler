@@ -14,4 +14,6 @@ class PropertyRepository(private val dao: PropertyDao) {
     suspend fun update(property: Property) = dao.update(property)
 
     suspend fun delete(property: Property) = dao.delete(property)
+
+    suspend fun deleteProperties(properties: List<Property>) = dao.deleteProperties(properties)
 }

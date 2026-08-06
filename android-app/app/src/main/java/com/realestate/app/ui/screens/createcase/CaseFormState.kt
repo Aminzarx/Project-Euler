@@ -114,6 +114,41 @@ internal class CaseFormState {
         customExpiryAt = p.customExpiryAt
     }
 
+    /**
+     * Values as of the last [markClean] call — the reference point for [isDirty].
+     *
+     * Deliberately *not* initialised by reading the fields at construction time: the wizard builds
+     * this inside a `remember { }`, whose calculation block runs during composition, so reading the
+     * backing states there would subscribe the whole wizard to every field and make each keystroke
+     * recompose all four steps. It is filled in from a side effect instead, which runs outside
+     * composition and therefore records nothing.
+     */
+    private var baseline: List<Any?>? = null
+
+    /** Marks the current values as the saved state — call after the form is first populated. */
+    fun markClean() {
+        baseline = snapshot()
+    }
+
+    /** Whether anything has been typed/selected since [markClean]. Answers "is there unsaved work
+     *  worth warning about before leaving?" — false until a baseline exists, so a form that hasn't
+     *  finished loading can never trigger a spurious warning. */
+    fun isDirty(): Boolean {
+        val base = baseline ?: return false
+        return snapshot() != base
+    }
+
+    private fun snapshot(): List<Any?> = listOf(
+        title, description, price, area, rooms, city, address, contactName, contactPhone,
+        status, priority, tags, imageUri,
+        mortgageStatus, titleDeedReady, reasonForSelling, viewingHours, keyHolder,
+        paymentConditions, constructionAge, legalStatus, hiddenNotes, floor, totalFloors,
+        landZoning, hasBusinessLicense, ownerFlags,
+        budgetMin, budgetMax, desiredMinArea, desiredMaxArea, desiredBedrooms, preferredAreas,
+        floorPreference, viewPreference, cashAvailable, maxDeposit, maxMonthlyRent,
+        requirementFlags, rentalFlags, expiryType, customExpiryAt
+    )
+
     companion object {
         val OWNER_FLAGS = setOf(CaseFlag.VACANT, CaseFlag.NEGOTIABLE, CaseFlag.IMMEDIATE_SALE, CaseFlag.EXCHANGE_ACCEPTED)
         val REQUIREMENT_FLAGS = setOf(

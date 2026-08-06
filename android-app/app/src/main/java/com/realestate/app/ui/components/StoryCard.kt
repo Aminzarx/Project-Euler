@@ -568,15 +568,22 @@ private fun StoryQrCode(agentPhone: String, modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * Fills an [IntArray] and hands it to [Bitmap.createBitmap] in one shot rather than calling
+ * `setPixel` per pixel. At 240×240 the old form made 57,600 separate JNI calls — each one bounds
+ * checked and each one crossing into native code — on the main thread inside composition, which is
+ * long enough to be a visible stall when the story card first appears.
+ */
 private fun generateQrBitmap(content: String, sizePx: Int): Bitmap? = runCatching {
     val matrix = QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, sizePx, sizePx)
-    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.RGB_565)
-    for (x in 0 until sizePx) {
-        for (y in 0 until sizePx) {
-            bitmap.setPixel(x, y, if (matrix[x, y]) AndroidColor.BLACK else AndroidColor.WHITE)
+    val pixels = IntArray(sizePx * sizePx)
+    for (y in 0 until sizePx) {
+        val rowOffset = y * sizePx
+        for (x in 0 until sizePx) {
+            pixels[rowOffset + x] = if (matrix[x, y]) AndroidColor.BLACK else AndroidColor.WHITE
         }
     }
-    bitmap
+    Bitmap.createBitmap(pixels, sizePx, sizePx, Bitmap.Config.RGB_565)
 }.getOrNull()
 
 /** Professionally placed agent phone number — a pill, never a bare line of text. */

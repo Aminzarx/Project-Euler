@@ -71,11 +71,18 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     private val _filter = MutableStateFlow(PropertyFilter())
     val filter: StateFlow<PropertyFilter> = _filter
 
+    /**
+     * The single subscription to the properties table. Everything below derives from *this*
+     * StateFlow rather than calling `repository.allProperties` again: that property is a cold Room
+     * Flow, so each extra `stateIn` on it used to open its own query and re-map every row (type
+     * converters included) on every single write. Toggling one favorite re-ran the same query four
+     * times. Sharing one upstream keeps it at one.
+     */
     val allProperties: StateFlow<List<Property>> = repository.allProperties
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val filteredProperties: StateFlow<List<Property>> = combine(
-        repository.allProperties, _filter
+        allProperties, _filter
     ) { properties, filter ->
         properties.filter { property ->
             val matchesQuery = filter.query.isBlank() ||
@@ -118,12 +125,14 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val availableCities: StateFlow<List<String>> = repository.allProperties
-        .map { properties -> properties.map { it.city }.distinct().sorted() }
+    // Collected straight into a sorted set instead of map/distinct/sorted, which built three
+    // intermediate lists per emission.
+    val availableCities: StateFlow<List<String>> = allProperties
+        .map { properties -> properties.mapTo(sortedSetOf<String>()) { it.city }.toList() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allTags: StateFlow<List<String>> = repository.allProperties
-        .map { properties -> properties.flatMap { it.tags }.distinct().sorted() }
+    val allTags: StateFlow<List<String>> = allProperties
+        .map { properties -> properties.flatMapTo(sortedSetOf<String>()) { it.tags }.toList() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val favoriteFolders: StateFlow<List<String>> = favoriteProperties
@@ -338,7 +347,7 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun deleteSelected(properties: List<Property>) = viewModelScope.launch {
-        properties.forEach { repository.delete(it) }
+        repository.deleteProperties(properties)
         clearSelection()
     }
 }

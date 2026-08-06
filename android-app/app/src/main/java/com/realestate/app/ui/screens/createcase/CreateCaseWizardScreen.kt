@@ -119,7 +119,16 @@ fun CreateCaseWizardScreen(
             propertyType = p.propertyType
             formState.loadFrom(p)
             loadedIntoForm = true
+            // The record as stored is the "no unsaved changes" reference point — opening a case and
+            // backing straight out must not warn about losing anything.
+            formState.markClean()
         }
+    }
+
+    // For a brand-new case the empty form is the reference point. Set from a side effect rather
+    // than at construction so reading the fields never subscribes the wizard to them.
+    LaunchedEffect(Unit) {
+        if (!isEditMode) formState.markClean()
     }
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -135,8 +144,14 @@ fun CreateCaseWizardScreen(
 
     fun goBack() {
         when {
-            step > 1 && !isEditMode -> step -= 1
-            step == 4 && isEditMode -> onDone()
+            // While editing, steps 1-3 are a detour taken from a chip on the form — back returns to
+            // the form rather than abandoning the whole edit.
+            isEditMode && step < 4 -> step = 4
+            // While creating, stepping back keeps everything already typed, so there is nothing to
+            // warn about.
+            !isEditMode && step > 1 -> step -= 1
+            // Anything left really does leave the screen. Ask first if that would throw work away.
+            formState.isDirty() -> showExitConfirm = true
             else -> onDone()
         }
     }
@@ -461,7 +476,7 @@ private fun PropertyTypeStep(selected: PropertyType?, onSelect: (PropertyType) -
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
-            items(PropertyType.entries) { type ->
+            items(PropertyType.entries, key = { it.name }) { type ->
                 AppCard(
                     onClick = { onSelect(type) },
                     contentPadding = PaddingValues(Spacing.md),

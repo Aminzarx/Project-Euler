@@ -19,9 +19,22 @@ object JalaliDate {
         "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
     )
 
+    /**
+     * [Calendar.getInstance] is not cheap — it resolves the default locale and timezone and
+     * allocates on every call — and this runs once per row in the activity, timeline and follow-up
+     * lists. One scratch Calendar per thread is reused instead; it is only ever written and read
+     * within a single synchronous call, and never escapes, so per-thread confinement is enough.
+     */
+    private val scratchCalendar = object : ThreadLocal<Calendar>() {
+        override fun initialValue(): Calendar = Calendar.getInstance()
+    }
+
+    private fun calendarAt(timestamp: Long): Calendar =
+        scratchCalendar.get()!!.apply { timeInMillis = timestamp }
+
     /** Returns (year, month 1-12, day) in the Jalali calendar for the given epoch millis. */
     fun toJalali(timestamp: Long): Triple<Int, Int, Int> {
-        val cal = Calendar.getInstance().apply { time = Date(timestamp) }
+        val cal = calendarAt(timestamp)
         return gregorianToJalali(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH))
     }
 
@@ -54,11 +67,24 @@ object JalaliDate {
         val (jy, jm, jd) = toJalali(timestamp)
         val datePart = "$jd ${monthNames[jm - 1]} $jy"
         if (!includeTime) return datePart
-        val cal = Calendar.getInstance().apply { time = Date(timestamp) }
+        val cal = calendarAt(timestamp)
         val hh = cal.get(Calendar.HOUR_OF_DAY).toString().padStart(2, '0')
         val mm = cal.get(Calendar.MINUTE).toString().padStart(2, '0')
         return "$datePart، $hh:$mm"
     }
+}
+
+// Building a SimpleDateFormat parses the pattern and loads locale data, which is far too expensive
+// to repeat once per list row. They are cached per thread rather than shared, because
+// SimpleDateFormat is mutable and explicitly not thread-safe.
+//
+// Subclassed rather than ThreadLocal.withInitial: that overload only exists from API 26 and this
+// app ships to minSdk 24, where calling it would be a NoSuchMethodError at runtime.
+private val dateTimeFormat = object : ThreadLocal<SimpleDateFormat>() {
+    override fun initialValue() = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault())
+}
+private val dateOnlyFormat = object : ThreadLocal<SimpleDateFormat>() {
+    override fun initialValue() = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault())
 }
 
 /** Respects the user's Settings → "تقویم شمسی/میلادی" choice for any user-facing date/time text. */
@@ -66,6 +92,6 @@ fun formatAppDate(timestamp: Long, jalali: Boolean, includeTime: Boolean = true)
     if (jalali) {
         JalaliDate.format(timestamp, includeTime)
     } else {
-        val pattern = if (includeTime) "yyyy/MM/dd HH:mm" else "yyyy/MM/dd"
-        SimpleDateFormat(pattern, Locale.getDefault()).format(Date(timestamp))
+        val formatter = if (includeTime) dateTimeFormat.get()!! else dateOnlyFormat.get()!!
+        formatter.format(Date(timestamp))
     }

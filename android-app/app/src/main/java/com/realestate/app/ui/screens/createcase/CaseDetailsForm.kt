@@ -111,9 +111,14 @@ internal fun CaseDetailsForm(
         // Selection summary — tap any chip to jump back and change it.
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             AssistChip(onClick = onEditCaseType, label = { Text(caseType.label()) })
-            if (transactionType != null) {
-                AssistChip(onClick = onEditTransactionType, label = { Text(transactionType.label()) })
-            }
+            // Rendered even with nothing selected. A record created before the Case redesign has a
+            // null transactionType, and tapping this chip is the only route to the step that sets
+            // one — hiding it when empty made that step permanently unreachable for exactly the
+            // records that still need it.
+            AssistChip(
+                onClick = onEditTransactionType,
+                label = { Text(transactionType?.label() ?: "نوع معامله؟") }
+            )
             AssistChip(onClick = onEditPropertyType, label = { Text(propertyType.label()) })
         }
         Spacer(modifier = Modifier.height(Spacing.md))

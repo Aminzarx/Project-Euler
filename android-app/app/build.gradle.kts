@@ -42,6 +42,20 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += listOf(
+            // Strong skipping. Marking Property @Immutable makes it a stable parameter, but most
+            // list-row lambdas also capture a Context or a ViewModel — both unstable types — and a
+            // lambda with any unstable capture is not memoized, so it is a fresh instance on every
+            // recomposition and the row it belongs to can never skip. Strong skipping memoizes
+            // those lambdas anyway (keyed on instance equality, which is exactly right for
+            // singletons like these) and lets composables with unstable parameters skip.
+            //
+            // This is the same optimization the Compose team turned on by default from compiler
+            // 2.0; it is opt-in on the 1.5.x line this project builds against. Deleting these two
+            // lines restores the previous behaviour.
+            "-P",
+            "plugin:androidx.compose.compiler.plugins.kotlin:experimentalStrongSkipping=true"
+        )
     }
 
     buildFeatures {

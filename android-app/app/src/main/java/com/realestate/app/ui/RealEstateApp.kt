@@ -116,8 +116,11 @@ fun RealEstateApp(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (showBottomBar) {
-                FloatingBottomNav(
-                    items = bottomTabs.map { tab ->
+                // Keyed on the route so the five items — and the five click lambdas — are rebuilt
+                // only when the selected tab actually changes, not on every recomposition of the
+                // shell (which happens on every navigation and every snackbar).
+                val navItems = remember(currentRoute, navController) {
+                    bottomTabs.map { tab ->
                         BottomNavItem(
                             icon = tab.icon,
                             label = tab.label,
@@ -132,7 +135,10 @@ fun RealEstateApp(
                                 }
                             }
                         )
-                    },
+                    }
+                }
+                FloatingBottomNav(
+                    items = navItems,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
                 )
             }

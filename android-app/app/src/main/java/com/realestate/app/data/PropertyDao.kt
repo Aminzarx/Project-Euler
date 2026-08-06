@@ -33,6 +33,12 @@ interface PropertyDao {
     @Delete
     suspend fun delete(property: Property)
 
+    /** One transaction for the whole multi-select batch. Deleting them one at a time made Room
+     *  open N transactions and fire N invalidation notifications, so every observing screen
+     *  recomputed once per deleted row instead of once for the batch. */
+    @Delete
+    suspend fun deleteProperties(properties: List<Property>)
+
     @Query("DELETE FROM properties")
     suspend fun deleteAll()
 }

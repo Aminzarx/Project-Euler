@@ -1,6 +1,8 @@
 package com.realestate.app.data
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 enum class DealType { SALE, RENT }
@@ -76,7 +78,23 @@ enum class CasePriority { LOW, NORMAL, HIGH, URGENT }
  *  see [Property.expiresAt]/[Property.isExpired]. */
 enum class RequestValidityType { NO_EXPIRATION, DAYS_7, DAYS_15, DAYS_30, DAYS_60, DAYS_90, CUSTOM }
 
-@Entity(tableName = "properties")
+/**
+ * [Immutable] is load-bearing for scroll performance, not decoration. Every field is a `val` and the
+ * three [List] fields are only ever produced by the type converters and replaced wholesale via
+ * `copy(...)` — never mutated in place — so the promise is accurate. Without it, Compose infers the
+ * whole class as unstable (a `List` is an interface, so it can't prove otherwise), which means no
+ * composable taking a Property can ever skip recomposition and no lambda capturing one can be
+ * memoized. That turns every list row into a full re-layout whenever anything above it recomposes.
+ */
+@Immutable
+@Entity(
+    tableName = "properties",
+    indices = [
+        Index(value = ["dateAdded"]),
+        Index(value = ["isFavorite"]),
+        Index(value = ["lastViewedAt"])
+    ]
+)
 data class Property(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val title: String,
@@ -145,9 +163,25 @@ data class Property(
     val maxMonthlyRent: Long? = null
 )
 
-/** Derived, human-readable identifier - never stored, always computed from [Property.id]. */
+/**
+ * Derived, human-readable identifier - never stored, always computed from [Property.id].
+ *
+ * Deliberately not `"PR-%04d".format(id)`: [String.format] resolves against the default locale, so
+ * on a fa-IR device — i.e. this app's entire audience — it emits Persian digits ("PR-۰۰۱۲"). That
+ * silently breaks search-by-code, since the query the agent types is compared against a string that
+ * no longer contains ASCII digits. The manual padding below is locale-independent, and also avoids
+ * a Formatter allocation per property per keystroke in the search filter.
+ */
 val Property.code: String
-    get() = "PR-%04d".format(id)
+    get() {
+        val digits = id.toString()
+        return when (digits.length) {
+            1 -> "PR-000$digits"
+            2 -> "PR-00$digits"
+            3 -> "PR-0$digits"
+            else -> "PR-$digits"
+        }
+    }
 
 /** Absolute expiry timestamp, or null if the Case has no expiration. */
 fun Property.expiresAt(): Long? = when (expiryType) {
