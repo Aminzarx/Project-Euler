@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: referral
+      POSTGRES_PASSWORD: referral
+      POSTGRES_DB: referral_economy
+    ports:
+      - "5432:5432"
+    volumes:
+      - referral_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U referral"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://referral:referral@postgres:5432/referral_economy?schema=public"
+      PORT: "4000"
+      ADMIN_API_KEY: "${ADMIN_API_KEY:-change-me}"
+    ports:
+      - "4000:4000"
+
+volumes:
+  referral_postgres_data:
