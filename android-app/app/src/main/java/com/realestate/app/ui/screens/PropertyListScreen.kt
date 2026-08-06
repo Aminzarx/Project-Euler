@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.data.DealType
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
+import com.realestate.app.data.matchesPriceRange
 import com.realestate.app.ui.components.SwipeablePropertyRow
 import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.ui.components.label
@@ -332,8 +333,7 @@ private fun FilterSheetContent(
             (selectedCity == null || property.city == selectedCity) &&
                 (selectedType == null || property.propertyType == selectedType) &&
                 (selectedStatus == null || property.status == selectedStatus) &&
-                (min == null || property.price >= min) &&
-                (max == null || property.price <= max)
+                property.matchesPriceRange(min, max)
         }
     }
 
