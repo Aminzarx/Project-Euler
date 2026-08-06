@@ -3,21 +3,22 @@ package com.realestate.app.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // ============================================================================
-// Brand palette — user-supplied 5-color set, applied app-wide:
-//   Yale Blue #053C5E, Teal #1F7A8C, Ruby Red #A31621, Primary Scarlet #DB222A,
-//   Pale Sky #BFDBF7.
-// Role mapping: Yale Blue -> primary (main brand/trust color), Teal ->
-// secondary (also reused for "info", a natural fit), Ruby Red -> tertiary AND
-// danger/error (tertiary has no other call site in this app, so sharing it
-// with the semantic "error" role costs nothing visually), Primary Scarlet ->
-// the accent/CTA color used on every primary action button (kept visually
-// distinct from Ruby Red's danger role so "confirm" and "delete" don't read
-// as the same red), Pale Sky -> the light container tint paired with primary.
-// Success/warning/reserved have no equivalent in the 5 given colors, so they
-// stay the same conventional, already-verified hues as before (green/amber/
-// violet) rather than inventing something off-brief. Every text-on-color
-// pairing below was checked against WCAG AA (>=4.5:1 text, >=3:1 outlines)
-// with a contrast script, not picked by eye.
+// Brand palette — navy-led, per explicit user request: every red/near-red brand
+// color (the old Primary Scarlet accent and Ruby Red tertiary) has been replaced
+// with a navy-family tone so the app reads as consistently navy-themed rather
+// than red-and-navy. Semantic danger/error stays red — that one is deliberately
+// left alone, since "negative/delete/error" reading as red is a near-universal
+// convention (e.g. banking apps with blue branding still show red for a negative
+// balance or a failed transaction), and this app's financial calculators lean on
+// exactly that red/green/amber vocabulary throughout.
+// Role mapping: Yale Blue #053C5E -> primary (main brand/trust color), Teal
+// #1F7A8C -> secondary (also reused for "info"), a new Sapphire accent ->
+// tertiary AND the CTA color used on every primary action button (both navy,
+// but visually distinct from primary so buttons still pop), Pale Sky #BFDBF7
+// -> the light container tint paired with primary. Success/warning/danger/
+// reserved are unchanged from the prior palette (conventional green/amber/red/
+// violet). Every text-on-color pairing below was checked against WCAG AA
+// (>=4.5:1 text, >=3:1 outlines) with a contrast script, not picked by eye.
 // ============================================================================
 
 val BrandLight = Color(0xFF053C5E) // Yale Blue
@@ -30,13 +31,13 @@ val OnSecondaryLight = Color(0xFFFFFFFF)
 val SecondaryContainerLight = Color(0xFFD7EEF1)
 val OnSecondaryContainerLight = Color(0xFF145560)
 
-val TertiaryLight = Color(0xFFA31621) // Ruby Red
+val TertiaryLight = Color(0xFF1D3F6E) // Indigo Navy — distinct from primary/secondary/accent
 val OnTertiaryLight = Color(0xFFFFFFFF)
-val TertiaryContainerLight = Color(0xFFF5D9DC)
-val OnTertiaryContainerLight = Color(0xFFA31621)
+val TertiaryContainerLight = Color(0xFFD7E4F2)
+val OnTertiaryContainerLight = Color(0xFF15304F)
 
 // The one deliberately vivid, "act now" note in the palette — every primary call-to-action button.
-val AccentLight = Color(0xFFDB222A) // Primary Scarlet
+val AccentLight = Color(0xFF0B5D8C) // Sapphire — navy family, brighter than Yale Blue for CTA pop
 val OnAccentLight = Color(0xFFFFFFFF)
 
 val InkLight = Color(0xFF14181F)
@@ -88,13 +89,13 @@ val OnSecondaryDark = Color(0xFF062A2F)
 val SecondaryContainerDark = Color(0xFF123A40)
 val OnSecondaryContainerDark = Color(0xFFC9E9EC)
 
-val TertiaryDark = Color(0xFFE8828C)
-val OnTertiaryDark = Color(0xFF3D0A0F)
-val TertiaryContainerDark = Color(0xFF4A1015)
-val OnTertiaryContainerDark = Color(0xFFF5D4D7)
+val TertiaryDark = Color(0xFF8FC5E8)
+val OnTertiaryDark = Color(0xFF07293D)
+val TertiaryContainerDark = Color(0xFF163449)
+val OnTertiaryContainerDark = Color(0xFFCFE6F5)
 
-val AccentDark = Color(0xFFF2818A)
-val OnAccentDark = Color(0xFF3D0A0F)
+val AccentDark = Color(0xFF5FB0E0)
+val OnAccentDark = Color(0xFF06263A)
 
 val InkDark = Color(0xFFEDEFF3)
 val BackgroundDark = Color(0xFF0F131A)

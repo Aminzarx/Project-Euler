@@ -35,20 +35,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.realestate.app.data.formatAppDate
 import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.CircleIconButton
 import com.realestate.app.ui.theme.Spacing
+import com.realestate.app.viewmodel.AppLockViewModel
 import com.realestate.app.viewmodel.DealAssistantViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuickNotesScreen(viewModel: DealAssistantViewModel, onBack: () -> Unit) {
+fun QuickNotesScreen(viewModel: DealAssistantViewModel, appLockViewModel: AppLockViewModel, onBack: () -> Unit) {
     val notes by viewModel.quickNotes.collectAsStateWithLifecycle()
     var input by remember { mutableStateOf("") }
-    val formatter = remember { SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()) }
+    val securitySettings by appLockViewModel.settings.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -105,7 +104,7 @@ fun QuickNotesScreen(viewModel: DealAssistantViewModel, onBack: () -> Unit) {
                                     Text(note.content, style = MaterialTheme.typography.bodyMedium)
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        formatter.format(Date(note.createdAt)),
+                                        formatAppDate(note.createdAt, securitySettings.calendarJalali),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

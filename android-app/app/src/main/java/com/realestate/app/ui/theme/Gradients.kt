@@ -37,13 +37,13 @@ fun imageScrimGradient(): Brush = Brush.verticalGradient(
     )
 )
 
-/** Scarlet-to-deep-scarlet gradient for the primary call-to-action — a richer alternative to
+/** Navy-to-deep-navy gradient for the primary call-to-action — a richer alternative to
  *  the flat accent color for the highest-emphasis buttons/banners in the app. */
 @Composable
 fun ctaGradient(): Brush {
     val accent = MaterialTheme.extendedColors.accent
     return Brush.linearGradient(
-        colorStops = arrayOf(0f to accent, 1f to Color(0xFF8C0F16))
+        colorStops = arrayOf(0f to accent, 1f to Color(0xFF021F31))
     )
 }
 

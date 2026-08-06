@@ -11,6 +11,8 @@ import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
 import com.realestate.app.data.code
 import com.realestate.app.data.datastore.SearchHistoryRepository
+import com.realestate.app.data.datastore.SecurityPreferencesRepository
+import com.realestate.app.data.formatAppDate
 import com.realestate.app.data.property.Note
 import com.realestate.app.data.property.PropertyExtrasRepository
 import com.realestate.app.data.property.TimelineEvent
@@ -27,8 +29,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 data class PropertyFilter(
@@ -65,6 +65,7 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
         AppDatabase.getInstance(application).timelineDao()
     )
     private val searchHistoryRepository = SearchHistoryRepository(application)
+    private val securityPreferencesRepository = SecurityPreferencesRepository(application)
 
     private val _filter = MutableStateFlow(PropertyFilter())
     val filter: StateFlow<PropertyFilter> = _filter
@@ -301,7 +302,8 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     fun setFollowUp(property: Property, timestamp: Long?) = viewModelScope.launch {
         repository.update(property.copy(followUpAt = timestamp))
         if (timestamp != null) {
-            val formatted = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(Date(timestamp))
+            val jalali = securityPreferencesRepository.settings.first().calendarJalali
+            val formatted = formatAppDate(timestamp, jalali)
             extrasRepository.logEvent(property.id, TimelineEventType.FOLLOW_UP_SET, "پیگیری برای $formatted تنظیم شد")
         }
     }

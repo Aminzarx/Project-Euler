@@ -57,8 +57,8 @@ enum class StoryAspectRatio(val ratio: Float, val label: String) {
 
 /** Optional configurable marketing badge shown as a ribbon on the card. Colors reuse the app's brand palette. */
 enum class StoryBadge(val label: String, val color: Color) {
-    HOT_PROPERTY("پیشنهاد داغ", Color(0xFFDB222A)),
-    URGENT_SALE("فروش فوری", Color(0xFFA31621)),
+    HOT_PROPERTY("پیشنهاد داغ", Color(0xFF0B5D8C)),
+    URGENT_SALE("فروش فوری", Color(0xFF1D3F6E)),
     INVESTMENT_OPPORTUNITY("فرصت سرمایه‌گذاری", Color(0xFF1F7A8C)),
     BELOW_MARKET("زیر قیمت بازار", Color(0xFF053C5E)),
     EXCLUSIVE_LISTING("فایل اختصاصی", Color(0xFF6B4EFF)),

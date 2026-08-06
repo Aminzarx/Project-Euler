@@ -84,13 +84,19 @@ fun RootApp(
         }
     }
 
-    // Re-lock every time the app leaves the foreground — an app lock that stayed unlocked across
-    // backgrounding would defeat its own purpose (someone else picking up the phone).
+    // Re-lock when the app leaves the foreground for at least as long as the user's configured
+    // auto-lock duration (Settings → "مدت قفل خودکار") — "بلافاصله" locks right away, same as
+    // before; anything longer waits until the app actually returns to decide, so a quick
+    // app-switch or notification check doesn't force a PIN re-entry every single time.
     val lifecycleOwner = LocalLifecycleOwner.current
     val currentAppLockViewModel by rememberUpdatedState(appLockViewModel)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) currentAppLockViewModel.lock()
+            when (event) {
+                Lifecycle.Event.ON_STOP -> currentAppLockViewModel.onAppBackgrounded()
+                Lifecycle.Event.ON_START -> currentAppLockViewModel.onAppForegrounded()
+                else -> Unit
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }

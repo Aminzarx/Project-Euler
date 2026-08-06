@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.biometric.BiometricManager
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +33,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -185,6 +187,25 @@ fun SettingsScreen(
                         if (enable) showPinSetup = true else showPinRemoveConfirm = true
                     }
                 )
+                if (securitySettings.hasPin) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        "مدت قفل خودکار",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "بعد از بستن برنامه، تا این مدت نیازی به وارد کردن دوباره پین نیست.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    AutoLockSelector(
+                        minutes = securitySettings.autoLockMinutes,
+                        onSelect = { appLockViewModel.setAutoLockMinutes(it) }
+                    )
+                }
                 Spacer(modifier = Modifier.height(10.dp))
                 ToggleRow(
                     icon = Icons.Rounded.Fingerprint,
@@ -607,6 +628,20 @@ private fun CalendarSelector(jalali: Boolean, onSelect: (Boolean) -> Unit) {
             ) {
                 Text(label)
             }
+        }
+    }
+}
+
+private val autoLockOptions = listOf(0 to "بلافاصله", 1 to "۱ دقیقه", 5 to "۵ دقیقه", 15 to "۱۵ دقیقه", 30 to "۳۰ دقیقه")
+
+@Composable
+private fun AutoLockSelector(minutes: Int, onSelect: (Int) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        autoLockOptions.forEach { (value, label) ->
+            FilterChip(selected = minutes == value, onClick = { onSelect(value) }, label = { Text(label) })
         }
     }
 }

@@ -65,6 +65,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.MainActivity
 import com.realestate.app.R
+import com.realestate.app.data.formatAppDate
 import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.AppTextButton
 import com.realestate.app.ui.components.icon
@@ -157,7 +158,8 @@ fun HomeScreen(
                             onSearchClick()
                         },
                         recentSearches = if (filter.query.isBlank()) recentSearches else emptyList(),
-                        onRecentSearchClick = { recent -> viewModel.updateFilter(filter.copy(query = recent)) }
+                        onRecentSearchClick = { recent -> viewModel.updateFilter(filter.copy(query = recent)) },
+                        jalali = securitySettings.calendarJalali
                     )
                     Spacer(modifier = Modifier.height(Spacing.md))
                     QuickActionsRow(
@@ -226,7 +228,7 @@ fun HomeScreen(
                             AppListRow(
                                 icon = Icons.Rounded.EventAvailable,
                                 title = property.title,
-                                subtitle = "${property.city} · ${formatActivityTime(property.followUpAt ?: 0L)}",
+                                subtitle = "${property.city} · ${formatActivityTime(property.followUpAt ?: 0L, securitySettings.calendarJalali)}",
                                 onClick = { onPropertyClick(property.id) },
                                 trailing = {
                                     StatusPillBadge(
@@ -303,7 +305,7 @@ fun HomeScreen(
                                 AppListRow(
                                     icon = activity.event.type.icon(),
                                     title = activity.event.description,
-                                    subtitle = "${activity.propertyTitle} · ${formatActivityTime(activity.event.createdAt)}",
+                                    subtitle = "${activity.propertyTitle} · ${formatActivityTime(activity.event.createdAt, securitySettings.calendarJalali)}",
                                     onClick = { onPropertyClick(activity.propertyId) }
                                 )
                                 Spacer(modifier = Modifier.height(Spacing.sm))
@@ -339,10 +341,11 @@ private fun HomeHeader(
     onQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit,
     recentSearches: List<String>,
-    onRecentSearchClick: (String) -> Unit
+    onRecentSearchClick: (String) -> Unit,
+    jalali: Boolean
 ) {
     val greeting = remember { greetingForCurrentTime() }
-    val dayLabel = remember { todayLabel() }
+    val dayLabel = remember(jalali) { todayLabel(jalali) }
 
     Text(text = greeting, style = MaterialTheme.typography.headlineSmall)
     Text(
@@ -534,15 +537,15 @@ private val PERSIAN_WEEKDAYS = mapOf(
     Calendar.FRIDAY to "جمعه"
 )
 
-private fun todayLabel(): String {
+private fun todayLabel(jalali: Boolean): String {
     val calendar = Calendar.getInstance()
     val weekday = PERSIAN_WEEKDAYS[calendar.get(Calendar.DAY_OF_WEEK)] ?: ""
-    val numeric = SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(calendar.time)
+    val numeric = formatAppDate(calendar.timeInMillis, jalali, includeTime = false)
     return "امروز $weekday، $numeric"
 }
 
-private fun formatActivityTime(timestamp: Long): String =
-    SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(Date(timestamp))
+private fun formatActivityTime(timestamp: Long, jalali: Boolean): String =
+    formatAppDate(timestamp, jalali, includeTime = true)
 
 @Composable
 private fun EmptyHomeState(onAddClick: () -> Unit, modifier: Modifier = Modifier) {

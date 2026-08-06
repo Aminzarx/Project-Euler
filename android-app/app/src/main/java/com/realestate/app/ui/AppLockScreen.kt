@@ -1,8 +1,11 @@
 package com.realestate.app.ui
 
 import androidx.biometric.BiometricPrompt
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,8 +24,10 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -31,12 +36,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.ui.components.SecondaryButton
+import com.realestate.app.ui.theme.Elevation
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.ui.theme.extendedColors
 import com.realestate.app.viewmodel.AppLockViewModel
@@ -89,13 +98,21 @@ fun AppLockScreen(viewModel: AppLockViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(
-                Icons.Rounded.Lock,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(48.dp)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+            Box(
+                modifier = Modifier
+                    .size(88.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Rounded.Lock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(20.dp))
             Text("برنامه قفل است", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
@@ -154,6 +171,11 @@ fun AppLockScreen(viewModel: AppLockViewModel) {
     }
 }
 
+/**
+ * Numeric keys always read left-to-right (1-2-3 on top, 0 bottom-center), matching a phone
+ * dialer/calculator convention — so this is deliberately pinned to LTR even inside the app's
+ * global RTL layout, which would otherwise mirror the Row and reverse the digit order.
+ */
 @Composable
 internal fun PinKeypad(onDigit: (String) -> Unit, onBackspace: () -> Unit) {
     val rows = listOf(
@@ -162,35 +184,58 @@ internal fun PinKeypad(onDigit: (String) -> Unit, onBackspace: () -> Unit) {
         listOf("7", "8", "9"),
         listOf("", "0", "⌫")
     )
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        rows.forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                row.forEach { key ->
-                    when {
-                        key.isEmpty() -> Box(modifier = Modifier.size(64.dp))
-                        key == "⌫" -> Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(CircleShape)
-                                .clickable(onClick = onBackspace),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Rounded.Backspace, contentDescription = "حذف رقم")
-                        }
-                        else -> Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
-                                .clickable { onDigit(key) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(key, style = MaterialTheme.typography.headlineSmall)
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            rows.forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+                    row.forEach { key ->
+                        when {
+                            key.isEmpty() -> Box(modifier = Modifier.size(68.dp))
+                            key == "⌫" -> PinKey(onClick = onBackspace) {
+                                Icon(
+                                    Icons.Rounded.Backspace,
+                                    contentDescription = "حذف رقم",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            else -> PinKey(onClick = { onDigit(key) }) {
+                                Text(
+                                    key,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(16.dp))
             }
-            Spacer(modifier = Modifier.height(14.dp))
+        }
+    }
+}
+
+/** A single circular keypad button with a soft elevation and a subtle press animation. */
+@Composable
+private fun PinKey(onClick: () -> Unit, content: @Composable () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.92f else 1f,
+        animationSpec = tween(120),
+        label = "pin-key-scale"
+    )
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = Elevation.control,
+        interactionSource = interactionSource,
+        modifier = Modifier
+            .size(68.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+    ) {
+        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+            content()
         }
     }
 }

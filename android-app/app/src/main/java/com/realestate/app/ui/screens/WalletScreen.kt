@@ -42,6 +42,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.realestate.app.data.formatAppDate
 import com.realestate.app.data.wallet.TransactionStatus
 import com.realestate.app.data.wallet.TransactionType
 import com.realestate.app.data.wallet.WalletTransaction
@@ -51,21 +52,21 @@ import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.ui.theme.extendedColors
 import com.realestate.app.ui.theme.heroGradient
+import com.realestate.app.viewmodel.AppLockViewModel
 import com.realestate.app.viewmodel.RechargeStatus
 import com.realestate.app.viewmodel.WalletViewModel
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 private val quickAmounts = listOf(50_000L, 100_000L, 200_000L, 500_000L)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WalletScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
+fun WalletScreen(viewModel: WalletViewModel, appLockViewModel: AppLockViewModel, onBack: () -> Unit) {
     val balance by viewModel.balance.collectAsStateWithLifecycle()
     val transactions by viewModel.transactions.collectAsStateWithLifecycle()
     val rechargeStatus by viewModel.rechargeStatus.collectAsStateWithLifecycle()
+    val securitySettings by appLockViewModel.settings.collectAsStateWithLifecycle()
     var showRechargeSheet by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -129,7 +130,7 @@ fun WalletScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(Spacing.md)
                 ) {
                     items(transactions, key = { it.id }) { tx ->
-                        TransactionRow(tx)
+                        TransactionRow(tx, jalali = securitySettings.calendarJalali)
                     }
                 }
             }
@@ -149,7 +150,7 @@ fun WalletScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
 }
 
 @Composable
-private fun TransactionRow(tx: WalletTransaction) {
+private fun TransactionRow(tx: WalletTransaction, jalali: Boolean) {
     AppCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(14.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -165,7 +166,7 @@ private fun TransactionRow(tx: WalletTransaction) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(tx.description, style = MaterialTheme.typography.titleSmall)
                 Text(
-                    SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(Date(tx.createdAt)),
+                    formatAppDate(tx.createdAt, jalali),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

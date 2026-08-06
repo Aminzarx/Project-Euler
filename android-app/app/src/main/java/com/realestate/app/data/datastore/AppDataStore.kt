@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -41,6 +42,7 @@ private object Keys {
     val SCREEN_SECURITY_ENABLED = booleanPreferencesKey("screen_security_enabled")
     val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
     val CALENDAR_JALALI = booleanPreferencesKey("calendar_jalali")
+    val AUTO_LOCK_MINUTES = intPreferencesKey("auto_lock_minutes")
     val LAST_FOLLOWUP_NOTIFY_DATE = stringPreferencesKey("last_followup_notify_date")
 }
 
@@ -256,7 +258,9 @@ data class SecuritySettings(
     val biometricEnabled: Boolean = false,
     val screenSecurityEnabled: Boolean = false,
     val notificationsEnabled: Boolean = false,
-    val calendarJalali: Boolean = false
+    val calendarJalali: Boolean = false,
+    /** Minutes the app may stay backgrounded before it re-locks; 0 means "immediately". */
+    val autoLockMinutes: Int = 0
 )
 
 /**
@@ -274,7 +278,8 @@ class SecurityPreferencesRepository(private val context: Context) {
             biometricEnabled = prefs[Keys.BIOMETRIC_UNLOCK_ENABLED] ?: false,
             screenSecurityEnabled = prefs[Keys.SCREEN_SECURITY_ENABLED] ?: false,
             notificationsEnabled = prefs[Keys.NOTIFICATIONS_ENABLED] ?: false,
-            calendarJalali = prefs[Keys.CALENDAR_JALALI] ?: false
+            calendarJalali = prefs[Keys.CALENDAR_JALALI] ?: false,
+            autoLockMinutes = prefs[Keys.AUTO_LOCK_MINUTES] ?: 0
         )
     }
 
@@ -308,6 +313,10 @@ class SecurityPreferencesRepository(private val context: Context) {
 
     suspend fun setCalendarJalali(enabled: Boolean) {
         context.appDataStore.edit { it[Keys.CALENDAR_JALALI] = enabled }
+    }
+
+    suspend fun setAutoLockMinutes(minutes: Int) {
+        context.appDataStore.edit { it[Keys.AUTO_LOCK_MINUTES] = minutes }
     }
 
     suspend fun getLastFollowUpNotifyDate(): String? =

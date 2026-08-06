@@ -259,6 +259,7 @@ fun RealEstateApp(
             composable(Screen.Wallet.route) {
                 WalletScreen(
                     viewModel = walletViewModel,
+                    appLockViewModel = appLockViewModel,
                     onBack = { navController.popBackStack() }
                 )
             }
@@ -374,7 +375,11 @@ fun RealEstateApp(
                 }
             }
             composable(Screen.QuickNotes.route) {
-                QuickNotesScreen(viewModel = dealAssistantViewModel, onBack = { navController.popBackStack() })
+                QuickNotesScreen(
+                    viewModel = dealAssistantViewModel,
+                    appLockViewModel = appLockViewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable(
                 route = Screen.AdTextGenerator.route,
