@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -189,6 +190,27 @@ fun SwipeablePropertyRow(
                             Icons.Rounded.Home,
                             contentDescription = null,
                             modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+                    // Owner listing vs. client request is the one distinction that isn't already
+                    // visible elsewhere on this row (status is the colored dot, favorite/pin are
+                    // their own icons) — a corner badge on the thumbnail keeps it scannable in a
+                    // mixed list without touching the title/subtitle layout.
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(2.dp)
+                            .size(18.dp)
+                            .clip(CircleShape)
+                            .background(property.caseType.color())
+                            .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            property.caseType.icon(),
+                            contentDescription = property.caseType.label(),
+                            tint = Color.White,
+                            modifier = Modifier.size(11.dp)
                         )
                     }
                 }

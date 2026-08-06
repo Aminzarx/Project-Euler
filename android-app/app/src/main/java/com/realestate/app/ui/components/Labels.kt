@@ -91,6 +91,14 @@ fun CaseType.icon(): ImageVector = when (this) {
     CaseType.CLIENT_REQUEST -> Icons.Rounded.PersonSearch
 }
 
+/** Distinct from every [PropertyStatus]/[CasePriority] tone already in use, so a case-type badge
+ *  never gets mistaken for a status or priority signal sitting next to it on the same row. */
+@Composable
+fun CaseType.color(): Color = when (this) {
+    CaseType.OWNER -> MaterialTheme.colorScheme.primary
+    CaseType.CLIENT_REQUEST -> MaterialTheme.extendedColors.accent
+}
+
 fun CaseTransactionType.label(): String = when (this) {
     CaseTransactionType.SALE -> "فروش"
     CaseTransactionType.PURCHASE -> "خرید"

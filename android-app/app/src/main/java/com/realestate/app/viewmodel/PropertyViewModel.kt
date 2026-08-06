@@ -44,7 +44,9 @@ data class PropertyFilter(
     val status: PropertyStatus? = null,
     val tag: String? = null,
     val minPrice: Long? = null,
-    val maxPrice: Long? = null
+    val maxPrice: Long? = null,
+    // null = both owner listings and client requests together; set to scope the list to just one.
+    val caseType: CaseType? = null
 )
 
 data class RecentActivity(
@@ -101,8 +103,9 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
             val matchesStatus = filter.status == null || property.status == filter.status
             val matchesTag = filter.tag == null || property.tags.contains(filter.tag)
             val matchesPrice = property.matchesPriceRange(filter.minPrice, filter.maxPrice)
+            val matchesCaseType = filter.caseType == null || property.caseType == filter.caseType
             matchesQuery && matchesCity && matchesDealType && matchesPropertyType &&
-                matchesStatus && matchesTag && matchesPrice
+                matchesStatus && matchesTag && matchesPrice && matchesCaseType
         }.sortedByDescending { it.isPinned }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

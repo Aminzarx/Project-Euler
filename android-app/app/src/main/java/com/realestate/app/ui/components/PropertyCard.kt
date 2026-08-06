@@ -1,6 +1,7 @@
 package com.realestate.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -197,6 +198,26 @@ fun PropertyMiniCard(
                             .align(Alignment.BottomStart)
                             .padding(6.dp)
                             .size(14.dp)
+                    )
+                }
+                // Same corner-badge treatment as SwipeablePropertyRow — this card mixes owner
+                // listings and client requests in Home's "recently viewed"/"frequent" rails with
+                // nothing else distinguishing them, so the badge carries that signal on its own.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(6.dp)
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(property.caseType.color())
+                        .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        property.caseType.icon(),
+                        contentDescription = property.caseType.label(),
+                        tint = androidx.compose.ui.graphics.Color.White,
+                        modifier = Modifier.size(12.dp)
                     )
                 }
             }

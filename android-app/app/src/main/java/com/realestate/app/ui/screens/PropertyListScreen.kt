@@ -61,6 +61,8 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -84,6 +86,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.realestate.app.data.CaseType
 import com.realestate.app.data.DealType
 import com.realestate.app.data.MIN_PASSWORD_LENGTH
 import com.realestate.app.data.PasswordStrengthLevel
@@ -259,7 +262,15 @@ fun PropertyListScreen(
                     )
                 } else {
                     TopAppBar(
-                        title = { Text("املاک") },
+                        title = {
+                            Text(
+                                when (filter.caseType) {
+                                    null -> "همه پرونده‌ها"
+                                    CaseType.OWNER -> "املاک"
+                                    CaseType.CLIENT_REQUEST -> "درخواست‌های مشتریان"
+                                }
+                            )
+                        },
                         actions = {
                             IconButton(onClick = { importPicker.launch("*/*") }) {
                                 Icon(Icons.Rounded.FileOpen, contentDescription = "وارد کردن بسته رمزنگاری‌شده")
@@ -281,6 +292,29 @@ fun PropertyListScreen(
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            // A tab, not another filter chip: owner listings and client requests are different
+            // kinds of records (a thing you're selling vs. a thing a client wants), so they get
+            // their own independent section instead of blending into one undifferentiated list.
+            val caseTypeTabs = remember { listOf(null, CaseType.OWNER, CaseType.CLIENT_REQUEST) }
+            val selectedTabIndex = caseTypeTabs.indexOf(filter.caseType).coerceAtLeast(0)
+            TabRow(selectedTabIndex = selectedTabIndex) {
+                caseTypeTabs.forEachIndexed { index, caseType ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { viewModel.updateFilter(filter.copy(caseType = caseType)) },
+                        text = {
+                            Text(
+                                when (caseType) {
+                                    null -> "همه"
+                                    CaseType.OWNER -> "املاک"
+                                    CaseType.CLIENT_REQUEST -> "درخواست‌ها"
+                                }
+                            )
+                        }
+                    )
+                }
+            }
+
             OutlinedTextField(
                 value = filter.query,
                 onValueChange = { viewModel.updateFilter(filter.copy(query = it)) },
@@ -352,6 +386,13 @@ fun PropertyListScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             if (properties.isEmpty()) {
+                // Distinguishes "nothing of this case type exists yet" (a tab-specific, honest
+                // empty state) from "your search/filters are just too narrow" (the existing
+                // generic one) — otherwise picking the درخواست‌ها tab before adding any client
+                // requests would misleadingly suggest the filters, not the tab, are the problem.
+                val casesInSelectedTab = remember(allProperties, filter.caseType) {
+                    allProperties.filter { filter.caseType == null || it.caseType == filter.caseType }
+                }
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     if (allProperties.isEmpty()) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -363,6 +404,21 @@ fun PropertyListScreen(
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
                                 "با دکمه + پایین صفحه اولین ملک رو اضافه کن",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 32.dp)
+                            )
+                        }
+                    } else if (casesInSelectedTab.isEmpty()) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                if (filter.caseType == CaseType.CLIENT_REQUEST) "هنوز درخواست مشتری ثبت نکردی" else "هنوز پرونده مالکی ثبت نکردی",
+                                style = MaterialTheme.typography.titleMedium,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                "با دکمه + پایین صفحه اولین مورد رو اضافه کن",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.padding(horizontal = 32.dp)
@@ -385,7 +441,7 @@ fun PropertyListScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                             com.realestate.app.ui.components.SecondaryButton(
                                 text = "حذف جستجو و فیلترها",
-                                onClick = { viewModel.updateFilter(PropertyFilter()) }
+                                onClick = { viewModel.updateFilter(PropertyFilter(caseType = filter.caseType)) }
                             )
                         }
                     }
