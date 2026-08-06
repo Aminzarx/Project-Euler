@@ -49,6 +49,43 @@ class Converters {
     @TypeConverter
     fun toTransactionStatus(value: String): TransactionStatus = TransactionStatus.valueOf(value)
 
+    @TypeConverter
+    fun fromCaseType(value: CaseType): String = value.name
+
+    @TypeConverter
+    fun toCaseType(value: String): CaseType = CaseType.valueOf(value)
+
+    @TypeConverter
+    fun fromCaseTransactionType(value: CaseTransactionType?): String? = value?.name
+
+    @TypeConverter
+    fun toCaseTransactionType(value: String?): CaseTransactionType? = value?.let { CaseTransactionType.valueOf(it) }
+
+    @TypeConverter
+    fun fromCaseFlagList(flags: List<CaseFlag>): String = flags.joinToString(TAG_DELIMITER) { it.name }
+
+    @TypeConverter
+    fun toCaseFlagList(value: String): List<CaseFlag> =
+        if (value.isBlank()) emptyList() else value.split(TAG_DELIMITER).map { CaseFlag.valueOf(it) }
+
+    @TypeConverter
+    fun fromMortgageStatus(value: MortgageStatus): String = value.name
+
+    @TypeConverter
+    fun toMortgageStatus(value: String): MortgageStatus = MortgageStatus.valueOf(value)
+
+    @TypeConverter
+    fun fromCasePriority(value: CasePriority): String = value.name
+
+    @TypeConverter
+    fun toCasePriority(value: String): CasePriority = CasePriority.valueOf(value)
+
+    @TypeConverter
+    fun fromRequestValidityType(value: RequestValidityType): String = value.name
+
+    @TypeConverter
+    fun toRequestValidityType(value: String): RequestValidityType = RequestValidityType.valueOf(value)
+
     companion object {
         private const val TAG_DELIMITER = "|||"
     }

@@ -77,6 +77,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.realestate.app.data.CaseType
 import com.realestate.app.data.DealType
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
@@ -94,7 +95,7 @@ import com.realestate.app.ui.components.ConfirmationDialog
 import com.realestate.app.ui.components.StatusPillBadge
 import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.ui.components.color
-import com.realestate.app.ui.components.formatPrice
+import com.realestate.app.ui.components.formatCasePriceLine
 import com.realestate.app.ui.components.icon
 import com.realestate.app.ui.components.label
 import com.realestate.app.ui.theme.Spacing
@@ -195,11 +196,13 @@ fun PropertyDetailScreen(
                                 Icon(Icons.Rounded.MoreVert, contentDescription = "بیشتر")
                             }
                             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                                DropdownMenuItem(
-                                    text = { Text("کارت استوری") },
-                                    leadingIcon = Icons.Rounded.Share,
-                                    onClick = { showMenu = false; onStoryCard(p.id) }
-                                )
+                                if (p.caseType == CaseType.OWNER) {
+                                    DropdownMenuItem(
+                                        text = { Text("کارت استوری") },
+                                        leadingIcon = Icons.Rounded.Share,
+                                        onClick = { showMenu = false; onStoryCard(p.id) }
+                                    )
+                                }
                                 DropdownMenuItem(
                                     text = { Text("ویرایش") },
                                     leadingIcon = Icons.Rounded.Edit,
@@ -347,7 +350,7 @@ fun PropertyDetailScreen(
                             }
                         ) {
                             Text(
-                                text = "${current.propertyType.label()} · ${current.dealType.label()} · ${current.code}",
+                                text = "${current.propertyType.label()} · ${current.transactionType?.label() ?: current.dealType.label()} · ${current.code}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(alpha = 0.85f)
                             )
@@ -361,7 +364,7 @@ fun PropertyDetailScreen(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = formatPrice(current.price, current.dealType),
+                            text = formatCasePriceLine(current),
                             style = MaterialTheme.typography.titleLarge,
                             color = Color.White
                         )
@@ -421,18 +424,44 @@ fun PropertyDetailScreen(
                     }
                     Spacer(modifier = Modifier.height(Spacing.cardGap))
                 }
-                DealAssistantSection(current = current, allProperties = allProperties, onOpenDealTool = onOpenDealTool)
-                Spacer(modifier = Modifier.height(Spacing.cardGap))
-                CollapsibleSection(title = "اطلاعات ملک", initiallyExpanded = true) {
-                    DetailRow(label = "شهر", value = current.city)
-                    DetailRow(label = "آدرس", value = current.address)
-                    DetailRow(label = "متراژ", value = "${current.area} متر مربع")
-                    DetailRow(label = "تعداد اتاق", value = current.rooms.toString())
-                    if (current.ownerName.isNotBlank()) {
-                        DetailRow(label = "مالک", value = current.ownerName)
+                if (current.caseType == CaseType.OWNER) {
+                    DealAssistantSection(current = current, allProperties = allProperties, onOpenDealTool = onOpenDealTool)
+                    Spacer(modifier = Modifier.height(Spacing.cardGap))
+                    CollapsibleSection(title = "اطلاعات ملک", initiallyExpanded = true) {
+                        DetailRow(label = "شهر", value = current.city)
+                        DetailRow(label = "آدرس", value = current.address)
+                        DetailRow(label = "متراژ", value = "${current.area} متر مربع")
+                        DetailRow(label = "تعداد اتاق", value = current.rooms.toString())
+                        if (current.ownerName.isNotBlank()) {
+                            DetailRow(label = "مالک", value = current.ownerName)
+                        }
+                        if (current.ownerPhone.isNotBlank()) {
+                            DetailRow(label = "شماره تماس", value = current.ownerPhone)
+                        }
                     }
-                    if (current.ownerPhone.isNotBlank()) {
-                        DetailRow(label = "شماره تماس", value = current.ownerPhone)
+                } else {
+                    CollapsibleSection(title = "اطلاعات درخواست", initiallyExpanded = true) {
+                        if (current.ownerName.isNotBlank()) {
+                            DetailRow(label = "مشتری", value = current.ownerName)
+                        }
+                        if (current.ownerPhone.isNotBlank()) {
+                            DetailRow(label = "شماره تماس", value = current.ownerPhone)
+                        }
+                        DetailRow(label = "شهر", value = current.city)
+                        if (current.desiredMinArea != null || current.desiredMaxArea != null) {
+                            val min = current.desiredMinArea
+                            val max = current.desiredMaxArea
+                            val areaText = when {
+                                min != null && max != null -> "${min.toInt()} تا ${max.toInt()} متر"
+                                max != null -> "تا ${max.toInt()} متر"
+                                else -> "از ${min?.toInt()} متر"
+                            }
+                            DetailRow(label = "متراژ مورد نظر", value = areaText)
+                        }
+                        current.desiredBedrooms?.let { DetailRow(label = "تعداد اتاق مورد نیاز", value = it.toString()) }
+                        if (current.preferredAreas.isNotEmpty()) {
+                            DetailRow(label = "مناطق مورد نظر", value = current.preferredAreas.joinToString("، "))
+                        }
                     }
                 }
 

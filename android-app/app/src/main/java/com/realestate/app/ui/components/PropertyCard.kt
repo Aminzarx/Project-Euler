@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.realestate.app.data.CaseType
 import com.realestate.app.data.DealType
 import com.realestate.app.data.Property
 import com.realestate.app.ui.theme.extendedColors
@@ -98,6 +99,15 @@ fun PropertyCard(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
+                    if (property.caseType == CaseType.CLIENT_REQUEST) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            CaseType.CLIENT_REQUEST.icon(),
+                            contentDescription = "درخواست مشتری",
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 Text(
                     text = "${property.city} · ${property.address}",
@@ -106,7 +116,7 @@ fun PropertyCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = formatPrice(property.price, property.dealType),
+                    text = formatCasePriceLine(property),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -199,7 +209,7 @@ fun PropertyMiniCard(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = formatPrice(property.price, property.dealType),
+                    text = formatCasePriceLine(property),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
@@ -223,4 +233,28 @@ fun PropertyMiniCard(
 fun formatPrice(price: Long, dealType: DealType): String {
     val formatted = NumberFormat.getNumberInstance(Locale.US).format(price)
     return if (dealType == DealType.RENT) "$formatted تومان (اجاره)" else "$formatted تومان"
+}
+
+/** [formatPrice] only makes sense for an OWNER case that actually has a price. A CLIENT_REQUEST
+ *  case has no price of its own — cards and rows show its budget range instead, so a priceless
+ *  request never renders as a misleading "۰ تومان". */
+fun formatCasePriceLine(property: Property): String {
+    if (property.caseType != CaseType.CLIENT_REQUEST) return formatPrice(property.price, property.dealType)
+    val numberFormat = NumberFormat.getNumberInstance(Locale.US)
+    return when {
+        property.budgetMin != null && property.budgetMax != null ->
+            "بودجه: ${numberFormat.format(property.budgetMin)} تا ${numberFormat.format(property.budgetMax)} تومان"
+        property.budgetMax != null -> "بودجه: تا ${numberFormat.format(property.budgetMax)} تومان"
+        property.budgetMin != null -> "بودجه: از ${numberFormat.format(property.budgetMin)} تومان"
+        else -> "بودجه مشخص نشده"
+    }
+}
+
+/** The one-line summary used in list rows — bakes in area+price for an OWNER case (its metraj is
+ *  a defining fact), but skips the area segment for a CLIENT_REQUEST case, whose "area" is a
+ *  desired range rather than a settled fact, in favor of [formatCasePriceLine]'s budget line. */
+fun formatCaseRowSubtitle(property: Property): String = if (property.caseType == CaseType.CLIENT_REQUEST) {
+    "${property.city} · ${formatCasePriceLine(property)}"
+} else {
+    "${property.city} · ${"%.0f".format(property.area)} متر · ${formatCasePriceLine(property)}"
 }

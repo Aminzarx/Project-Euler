@@ -4,10 +4,16 @@ import android.content.Context
 import android.net.Uri
 import androidx.room.withTransaction
 import com.realestate.app.data.AppDatabase
+import com.realestate.app.data.CaseFlag
+import com.realestate.app.data.CasePriority
+import com.realestate.app.data.CaseTransactionType
+import com.realestate.app.data.CaseType
 import com.realestate.app.data.DealType
+import com.realestate.app.data.MortgageStatus
 import com.realestate.app.data.Property
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
+import com.realestate.app.data.RequestValidityType
 import com.realestate.app.data.property.Note
 import com.realestate.app.data.property.TimelineEvent
 import com.realestate.app.data.property.TimelineEventType
@@ -20,7 +26,11 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-private const val BACKUP_FORMAT_VERSION = 1
+// Bumped for the Case redesign (data/Property.kt) — restoreBackup still reads version-1 files
+// fine (every new field is read with a has()/isNull() guard, defaulting exactly the way the
+// Room migration does for existing rows: caseType OWNER, everything else null/empty/its own
+// enum default).
+private const val BACKUP_FORMAT_VERSION = 2
 
 data class BackupResult(
     val propertyCount: Int,
@@ -153,6 +163,38 @@ private fun Property.toJson(): JSONObject = JSONObject().apply {
     put("lastSharedAt", lastSharedAt ?: JSONObject.NULL)
     put("viewCount", viewCount)
     put("followUpAt", followUpAt ?: JSONObject.NULL)
+
+    // ---- Case redesign fields ----
+    put("caseType", caseType.name)
+    put("transactionType", transactionType?.name ?: JSONObject.NULL)
+    put("caseFlags", JSONArray(caseFlags.map { it.name }))
+    put("priority", priority.name)
+    put("expiryType", expiryType.name)
+    put("customExpiryAt", customExpiryAt ?: JSONObject.NULL)
+    put("mortgageStatus", mortgageStatus.name)
+    put("titleDeedReady", titleDeedReady ?: JSONObject.NULL)
+    put("reasonForSelling", reasonForSelling ?: JSONObject.NULL)
+    put("viewingHours", viewingHours ?: JSONObject.NULL)
+    put("keyHolder", keyHolder ?: JSONObject.NULL)
+    put("paymentConditions", paymentConditions ?: JSONObject.NULL)
+    put("constructionAge", constructionAge ?: JSONObject.NULL)
+    put("legalStatus", legalStatus ?: JSONObject.NULL)
+    put("hiddenNotes", hiddenNotes ?: JSONObject.NULL)
+    put("floor", floor ?: JSONObject.NULL)
+    put("totalFloors", totalFloors ?: JSONObject.NULL)
+    put("landZoning", landZoning ?: JSONObject.NULL)
+    put("hasBusinessLicense", hasBusinessLicense ?: JSONObject.NULL)
+    put("budgetMin", budgetMin ?: JSONObject.NULL)
+    put("budgetMax", budgetMax ?: JSONObject.NULL)
+    put("desiredMinArea", desiredMinArea ?: JSONObject.NULL)
+    put("desiredMaxArea", desiredMaxArea ?: JSONObject.NULL)
+    put("desiredBedrooms", desiredBedrooms ?: JSONObject.NULL)
+    put("preferredAreas", JSONArray(preferredAreas))
+    put("floorPreference", floorPreference ?: JSONObject.NULL)
+    put("viewPreference", viewPreference ?: JSONObject.NULL)
+    put("cashAvailable", cashAvailable ?: JSONObject.NULL)
+    put("maxDeposit", maxDeposit ?: JSONObject.NULL)
+    put("maxMonthlyRent", maxMonthlyRent ?: JSONObject.NULL)
 }
 
 private fun JSONObject.toProperty(): Property = Property(
@@ -179,8 +221,51 @@ private fun JSONObject.toProperty(): Property = Property(
     lastViewedAt = if (isNull("lastViewedAt")) null else getLong("lastViewedAt"),
     lastSharedAt = if (isNull("lastSharedAt")) null else getLong("lastSharedAt"),
     viewCount = optInt("viewCount", 0),
-    followUpAt = if (has("followUpAt") && !isNull("followUpAt")) getLong("followUpAt") else null
+    followUpAt = if (has("followUpAt") && !isNull("followUpAt")) getLong("followUpAt") else null,
+
+    // ---- Case redesign fields — every one defaults exactly like MIGRATION_6_7 does, so a
+    // version-1 backup (no such keys at all) restores as a well-formed OWNER case. ----
+    caseType = if (has("caseType")) CaseType.valueOf(getString("caseType")) else CaseType.OWNER,
+    transactionType = optEnumOrNull("transactionType", CaseTransactionType::valueOf),
+    caseFlags = optJSONArray("caseFlags")?.let { arr -> (0 until arr.length()).map { CaseFlag.valueOf(arr.getString(it)) } } ?: emptyList(),
+    priority = if (has("priority")) CasePriority.valueOf(getString("priority")) else CasePriority.NORMAL,
+    expiryType = if (has("expiryType")) RequestValidityType.valueOf(getString("expiryType")) else RequestValidityType.NO_EXPIRATION,
+    customExpiryAt = optLongOrNull("customExpiryAt"),
+    mortgageStatus = if (has("mortgageStatus")) MortgageStatus.valueOf(getString("mortgageStatus")) else MortgageStatus.NONE,
+    titleDeedReady = optBooleanOrNull("titleDeedReady"),
+    reasonForSelling = optStringOrNull("reasonForSelling"),
+    viewingHours = optStringOrNull("viewingHours"),
+    keyHolder = optStringOrNull("keyHolder"),
+    paymentConditions = optStringOrNull("paymentConditions"),
+    constructionAge = optIntOrNull("constructionAge"),
+    legalStatus = optStringOrNull("legalStatus"),
+    hiddenNotes = optStringOrNull("hiddenNotes"),
+    floor = optIntOrNull("floor"),
+    totalFloors = optIntOrNull("totalFloors"),
+    landZoning = optStringOrNull("landZoning"),
+    hasBusinessLicense = optBooleanOrNull("hasBusinessLicense"),
+    budgetMin = optLongOrNull("budgetMin"),
+    budgetMax = optLongOrNull("budgetMax"),
+    desiredMinArea = optDoubleOrNull("desiredMinArea"),
+    desiredMaxArea = optDoubleOrNull("desiredMaxArea"),
+    desiredBedrooms = optIntOrNull("desiredBedrooms"),
+    preferredAreas = optJSONArray("preferredAreas")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } } ?: emptyList(),
+    floorPreference = optStringOrNull("floorPreference"),
+    viewPreference = optStringOrNull("viewPreference"),
+    cashAvailable = optLongOrNull("cashAvailable"),
+    maxDeposit = optLongOrNull("maxDeposit"),
+    maxMonthlyRent = optLongOrNull("maxMonthlyRent")
 )
+
+// ---- Small nullable-read helpers so every optional field above reads the same way whether the
+// key is entirely absent (an old backup) or present-but-JSON-null (a new backup, field unset). ----
+private fun JSONObject.optStringOrNull(key: String): String? = if (has(key) && !isNull(key)) getString(key) else null
+private fun JSONObject.optIntOrNull(key: String): Int? = if (has(key) && !isNull(key)) getInt(key) else null
+private fun JSONObject.optLongOrNull(key: String): Long? = if (has(key) && !isNull(key)) getLong(key) else null
+private fun JSONObject.optDoubleOrNull(key: String): Double? = if (has(key) && !isNull(key)) getDouble(key) else null
+private fun JSONObject.optBooleanOrNull(key: String): Boolean? = if (has(key) && !isNull(key)) getBoolean(key) else null
+private fun <T> JSONObject.optEnumOrNull(key: String, valueOf: (String) -> T): T? =
+    if (has(key) && !isNull(key)) valueOf(getString(key)) else null
 
 private fun Note.toJson(): JSONObject = JSONObject().apply {
     put("id", id)

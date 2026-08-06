@@ -41,7 +41,7 @@ import com.realestate.app.ui.components.RouteErrorState
 import com.realestate.app.ui.navigation.Screen
 import com.realestate.app.ui.screens.AboutScreen
 import com.realestate.app.ui.screens.ActivityHistoryScreen
-import com.realestate.app.ui.screens.AddEditPropertyScreen
+import com.realestate.app.ui.screens.createcase.CreateCaseWizardScreen
 import com.realestate.app.ui.screens.EditProfileScreen
 import com.realestate.app.ui.screens.FavoritesScreen
 import com.realestate.app.ui.screens.HelpCenterScreen
@@ -304,7 +304,7 @@ fun RealEstateApp(
                 )
             ) { entry ->
                 val propertyId = entry.arguments?.getLong(Screen.AddEdit.ARG_PROPERTY_ID) ?: -1L
-                AddEditPropertyScreen(
+                CreateCaseWizardScreen(
                     propertyId = if (propertyId == -1L) null else propertyId,
                     viewModel = viewModel,
                     onDone = { navController.popBackStack() }

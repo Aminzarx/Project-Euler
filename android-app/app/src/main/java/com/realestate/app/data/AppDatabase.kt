@@ -18,7 +18,7 @@ import com.realestate.app.data.wallet.WalletTransaction
 
 @Database(
     entities = [Property::class, WalletTransaction::class, Note::class, TimelineEvent::class, QuickNote::class],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -108,6 +108,45 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Adds every field the Case redesign needs (see data/Property.kt). Every existing row
+        // becomes a well-formed OWNER case: caseType defaults to 'OWNER', every other new column
+        // is either nullable or defaults to its "nothing set yet" value, so nothing existing is
+        // reinterpreted or lost.
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE properties ADD COLUMN caseType TEXT NOT NULL DEFAULT 'OWNER'")
+                db.execSQL("ALTER TABLE properties ADD COLUMN transactionType TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN caseFlags TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE properties ADD COLUMN priority TEXT NOT NULL DEFAULT 'NORMAL'")
+                db.execSQL("ALTER TABLE properties ADD COLUMN expiryType TEXT NOT NULL DEFAULT 'NO_EXPIRATION'")
+                db.execSQL("ALTER TABLE properties ADD COLUMN customExpiryAt INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN mortgageStatus TEXT NOT NULL DEFAULT 'NONE'")
+                db.execSQL("ALTER TABLE properties ADD COLUMN titleDeedReady INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN reasonForSelling TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN viewingHours TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN keyHolder TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN paymentConditions TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN constructionAge INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN legalStatus TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN hiddenNotes TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN floor INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN totalFloors INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN landZoning TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN hasBusinessLicense INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN budgetMin INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN budgetMax INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN desiredMinArea REAL")
+                db.execSQL("ALTER TABLE properties ADD COLUMN desiredMaxArea REAL")
+                db.execSQL("ALTER TABLE properties ADD COLUMN desiredBedrooms INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN preferredAreas TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE properties ADD COLUMN floorPreference TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN viewPreference TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN cashAvailable INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN maxDeposit INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN maxMonthlyRent INTEGER")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -117,7 +156,7 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "real_estate.db"
-                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build().also { INSTANCE = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build().also { INSTANCE = it }
             }
         }
     }

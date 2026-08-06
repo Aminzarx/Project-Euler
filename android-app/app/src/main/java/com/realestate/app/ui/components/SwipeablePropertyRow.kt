@@ -191,7 +191,7 @@ fun SwipeablePropertyRow(
                         }
                     }
                     Text(
-                        text = "${property.city} · ${"%.0f".format(property.area)} متر · ${formatPrice(property.price, property.dealType)}",
+                        text = formatCaseRowSubtitle(property),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
