@@ -61,6 +61,7 @@ import com.realestate.app.data.datastore.missingFieldSuggestions
 import com.realestate.app.ui.STORE_URL
 import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.AppListRow
+import com.realestate.app.ui.components.AppTextButton
 import com.realestate.app.ui.components.CircleIconButton
 import com.realestate.app.ui.components.ConfirmationDialog
 import com.realestate.app.ui.components.DropdownMenu
@@ -87,6 +88,7 @@ fun ProfileScreen(
     onOpenSettings: () -> Unit,
     onOpenHelp: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenActivityHistory: () -> Unit,
     onPropertyClick: (Long) -> Unit
 ) {
     val profile by profileViewModel.profile.collectAsStateWithLifecycle()
@@ -108,7 +110,7 @@ fun ProfileScreen(
     val upcomingFollowUps = remember(allProperties) {
         allProperties.filter { it.followUpAt != null }.sortedBy { it.followUpAt }.take(3)
     }
-    val recentActivityPreview = remember(recentActivities) { recentActivities.take(5) }
+    val recentActivityPreview = remember(recentActivities) { recentActivities.take(7) }
     val completionPercent = remember(profile) { profile.completionPercent() }
     val missingFields = remember(profile) { profile.missingFieldSuggestions(2) }
 
@@ -332,6 +334,14 @@ fun ProfileScreen(
                                 }
                             }
                         }
+                    }
+                    if (recentActivities.size > recentActivityPreview.size) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        AppTextButton(
+                            text = "مشاهده همه فعالیت‌ها",
+                            onClick = onOpenActivityHistory,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
 

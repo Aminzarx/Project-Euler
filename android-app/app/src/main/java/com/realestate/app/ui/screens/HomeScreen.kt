@@ -1,5 +1,9 @@
 package com.realestate.app.ui.screens
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -27,7 +31,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.EventAvailable
-import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LocalFlorist
@@ -45,26 +48,34 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.realestate.app.MainActivity
+import com.realestate.app.R
 import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.AppTextButton
 import com.realestate.app.ui.components.icon
 import com.realestate.app.ui.components.AppListRow
-import com.realestate.app.ui.components.CircleIconButton
 import com.realestate.app.ui.components.PillShape
 import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.components.PropertyMiniCard
 import com.realestate.app.ui.components.StatusPillBadge
 import com.realestate.app.ui.theme.Spacing
 import com.realestate.app.ui.theme.extendedColors
+import com.realestate.app.viewmodel.AppLockViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -79,10 +90,12 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     viewModel: PropertyViewModel,
+    appLockViewModel: AppLockViewModel,
     onPropertyClick: (Long) -> Unit,
     onAddClick: () -> Unit,
     onSearchClick: () -> Unit,
-    onOpenQuickNotes: () -> Unit = {}
+    onOpenQuickNotes: () -> Unit = {},
+    onOpenActivityHistory: () -> Unit = {}
 ) {
     val allProperties by viewModel.allProperties.collectAsStateWithLifecycle()
     val recentlyViewed by viewModel.recentlyViewedProperties.collectAsStateWithLifecycle()
@@ -92,6 +105,17 @@ fun HomeScreen(
     val recentActivities by viewModel.recentActivities.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val recentSearches by viewModel.recentSearches.collectAsStateWithLifecycle()
+    val securitySettings by appLockViewModel.settings.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(todayFollowUps, securitySettings.notificationsEnabled) {
+        if (!securitySettings.notificationsEnabled || todayFollowUps.isEmpty()) return@LaunchedEffect
+        val todayKey = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        if (appLockViewModel.shouldNotifyFollowUpsToday(todayKey)) {
+            notifyFollowUpsDue(context, todayFollowUps.size)
+            appLockViewModel.markFollowUpsNotified(todayKey)
+        }
+    }
 
     Scaffold { padding ->
         if (allProperties.isEmpty()) {
@@ -107,7 +131,8 @@ fun HomeScreen(
                 ?.takeIf { now - it.lastModifiedAt > STALE_THRESHOLD_MILLIS }
         }
         val visible = remember { androidx.compose.animation.core.MutableTransitionState(false).apply { targetState = true } }
-        val groupedActivities = remember(recentActivities) { groupActivitiesByRecency(recentActivities) }
+        val homeActivityPreview = remember(recentActivities) { recentActivities.take(3) }
+        val groupedActivities = remember(homeActivityPreview) { groupActivitiesByRecency(homeActivityPreview) }
 
         AnimatedVisibility(
             visibleState = visible,
@@ -125,7 +150,6 @@ fun HomeScreen(
             ) {
                 item(key = "header") {
                     HomeHeader(
-                        onFilterClick = onSearchClick,
                         query = filter.query,
                         onQueryChange = { viewModel.updateFilter(filter.copy(query = it)) },
                         onSearchSubmit = {
@@ -286,6 +310,15 @@ fun HomeScreen(
                             }
                         }
                     }
+                    if (recentActivities.size > homeActivityPreview.size) {
+                        item(key = "activity-view-all") {
+                            AppTextButton(
+                                text = "مشاهده همه فعالیت‌ها",
+                                onClick = onOpenActivityHistory,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
                 }
 
                 item(key = "bottom-spacer") {
@@ -302,7 +335,6 @@ private const val STALE_THRESHOLD_MILLIS = 14 * DAY_MILLIS
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeHeader(
-    onFilterClick: () -> Unit,
     query: String,
     onQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit,
@@ -320,30 +352,21 @@ private fun HomeHeader(
     )
     Spacer(modifier = Modifier.height(Spacing.md))
 
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        CircleIconButton(
-            icon = Icons.Rounded.FilterList,
-            onClick = onFilterClick,
-            contentDescription = "فیلترها",
-            size = 52.dp
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            modifier = Modifier.weight(1f),
-            shape = PillShape,
-            placeholder = { Text("جستجوی سریع ملک...") },
-            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-            singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
-                focusedBorderColor = MaterialTheme.colorScheme.primary
-            ),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() })
-        )
-    }
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = Modifier.fillMaxWidth(),
+        shape = PillShape,
+        placeholder = { Text("جستجوی سریع ملک...") },
+        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant,
+            focusedBorderColor = MaterialTheme.colorScheme.primary
+        ),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { onSearchSubmit() })
+    )
 
     if (recentSearches.isNotEmpty()) {
         Spacer(modifier = Modifier.height(10.dp))
@@ -609,3 +632,21 @@ private fun EmptyHomeState(onAddClick: () -> Unit, modifier: Modifier = Modifier
         }
     }
 }
+
+/** At most one of these per day (see [AppLockViewModel.shouldNotifyFollowUpsToday]) — never a per-open spam. */
+private fun notifyFollowUpsDue(context: Context, count: Int) {
+    val hasPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    if (!hasPermission) return
+
+    val notification = NotificationCompat.Builder(context, MainActivity.FOLLOW_UP_NOTIFICATION_CHANNEL_ID)
+        .setSmallIcon(R.drawable.ic_launcher)
+        .setContentTitle("پیگیری امروز")
+        .setContentText("$count ملک نیاز به پیگیری امروز دارند")
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .setAutoCancel(true)
+        .build()
+    NotificationManagerCompat.from(context).notify(FOLLOW_UP_NOTIFICATION_ID, notification)
+}
+
+private const val FOLLOW_UP_NOTIFICATION_ID = 1001

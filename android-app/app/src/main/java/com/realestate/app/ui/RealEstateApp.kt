@@ -40,6 +40,7 @@ import com.realestate.app.ui.components.FloatingBottomNav
 import com.realestate.app.ui.components.RouteErrorState
 import com.realestate.app.ui.navigation.Screen
 import com.realestate.app.ui.screens.AboutScreen
+import com.realestate.app.ui.screens.ActivityHistoryScreen
 import com.realestate.app.ui.screens.AddEditPropertyScreen
 import com.realestate.app.ui.screens.EditProfileScreen
 import com.realestate.app.ui.screens.FavoritesScreen
@@ -51,6 +52,7 @@ import com.realestate.app.ui.screens.PropertyListScreen
 import com.realestate.app.ui.screens.SettingsScreen
 import com.realestate.app.ui.screens.StoryCardScreen
 import com.realestate.app.ui.screens.WalletScreen
+import com.realestate.app.viewmodel.AppLockViewModel
 import com.realestate.app.viewmodel.AuthViewModel
 import com.realestate.app.viewmodel.BackupViewModel
 import com.realestate.app.viewmodel.ProfileViewModel
@@ -78,7 +80,8 @@ fun RealEstateApp(
     profileViewModel: ProfileViewModel,
     authViewModel: AuthViewModel,
     backupViewModel: BackupViewModel,
-    dealAssistantViewModel: DealAssistantViewModel
+    dealAssistantViewModel: DealAssistantViewModel,
+    appLockViewModel: AppLockViewModel
 ) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -181,6 +184,7 @@ fun RealEstateApp(
             composable(Screen.Home.route) {
                 HomeScreen(
                     viewModel = viewModel,
+                    appLockViewModel = appLockViewModel,
                     onPropertyClick = { id -> navController.navigate(Screen.Detail.createRoute(id)) },
                     onAddClick = { navController.navigate(Screen.AddEdit.createRoute()) },
                     onSearchClick = {
@@ -190,7 +194,8 @@ fun RealEstateApp(
                             restoreState = true
                         }
                     },
-                    onOpenQuickNotes = { navController.navigate(Screen.QuickNotes.route) }
+                    onOpenQuickNotes = { navController.navigate(Screen.QuickNotes.route) },
+                    onOpenActivityHistory = { navController.navigate(Screen.ActivityHistory.route) }
                 )
             }
             composable(Screen.List.route) {
@@ -219,6 +224,14 @@ fun RealEstateApp(
                     onOpenSettings = { navController.navigate(Screen.Settings.route) },
                     onOpenHelp = { navController.navigate(Screen.HelpCenter.route) },
                     onOpenAbout = { navController.navigate(Screen.About.route) },
+                    onOpenActivityHistory = { navController.navigate(Screen.ActivityHistory.route) },
+                    onPropertyClick = { id -> navController.navigate(Screen.Detail.createRoute(id)) }
+                )
+            }
+            composable(Screen.ActivityHistory.route) {
+                ActivityHistoryScreen(
+                    viewModel = viewModel,
+                    onBack = { navController.popBackStack() },
                     onPropertyClick = { id -> navController.navigate(Screen.Detail.createRoute(id)) }
                 )
             }
@@ -239,6 +252,7 @@ fun RealEstateApp(
                     profileViewModel = profileViewModel,
                     propertyViewModel = viewModel,
                     backupViewModel = backupViewModel,
+                    appLockViewModel = appLockViewModel,
                     onBack = { navController.popBackStack() }
                 )
             }
@@ -257,6 +271,7 @@ fun RealEstateApp(
                     propertyId = propertyId,
                     viewModel = viewModel,
                     profileViewModel = profileViewModel,
+                    appLockViewModel = appLockViewModel,
                     onBack = { navController.popBackStack() },
                     onEdit = { id -> navController.navigate(Screen.AddEdit.createRoute(id)) },
                     onDeleted = { navController.popBackStack() },

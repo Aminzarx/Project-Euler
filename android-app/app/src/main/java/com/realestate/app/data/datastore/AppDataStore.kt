@@ -35,6 +35,13 @@ private object Keys {
     val RECENT_SEARCHES = stringPreferencesKey("recent_searches")
     val BACKUP_HISTORY = stringPreferencesKey("backup_history")
     val RECENT_DEAL_TOOLS = stringPreferencesKey("recent_deal_tools")
+
+    val APP_LOCK_PIN_HASH = stringPreferencesKey("app_lock_pin_hash")
+    val BIOMETRIC_UNLOCK_ENABLED = booleanPreferencesKey("biometric_unlock_enabled")
+    val SCREEN_SECURITY_ENABLED = booleanPreferencesKey("screen_security_enabled")
+    val NOTIFICATIONS_ENABLED = booleanPreferencesKey("notifications_enabled")
+    val CALENDAR_JALALI = booleanPreferencesKey("calendar_jalali")
+    val LAST_FOLLOWUP_NOTIFY_DATE = stringPreferencesKey("last_followup_notify_date")
 }
 
 /**
@@ -241,5 +248,78 @@ class BackupHistoryRepository(private val context: Context) {
             )
         }
         context.appDataStore.edit { prefs -> prefs[Keys.BACKUP_HISTORY] = array.toString() }
+    }
+}
+
+data class SecuritySettings(
+    val hasPin: Boolean = false,
+    val biometricEnabled: Boolean = false,
+    val screenSecurityEnabled: Boolean = false,
+    val notificationsEnabled: Boolean = false,
+    val calendarJalali: Boolean = false
+)
+
+/**
+ * App-lock PIN, biometric unlock, screen security (block screenshots/recents thumbnail),
+ * notification preference, and calendar display format. All local-only (DataStore), same as
+ * every other preference in this app. The PIN is stored as a SHA-256 hash, not plaintext — the
+ * threat model here is a casual, single-device lock screen (someone picking up the phone), not a
+ * cryptographic secret, so a plain salted hash is proportionate; nothing in this app depends on
+ * the PIN for encryption.
+ */
+class SecurityPreferencesRepository(private val context: Context) {
+    val settings: Flow<SecuritySettings> = context.appDataStore.data.map { prefs ->
+        SecuritySettings(
+            hasPin = !prefs[Keys.APP_LOCK_PIN_HASH].isNullOrBlank(),
+            biometricEnabled = prefs[Keys.BIOMETRIC_UNLOCK_ENABLED] ?: false,
+            screenSecurityEnabled = prefs[Keys.SCREEN_SECURITY_ENABLED] ?: false,
+            notificationsEnabled = prefs[Keys.NOTIFICATIONS_ENABLED] ?: false,
+            calendarJalali = prefs[Keys.CALENDAR_JALALI] ?: false
+        )
+    }
+
+    suspend fun setPin(pin: String) {
+        context.appDataStore.edit { it[Keys.APP_LOCK_PIN_HASH] = hashPin(pin) }
+    }
+
+    suspend fun clearPin() {
+        context.appDataStore.edit {
+            it[Keys.APP_LOCK_PIN_HASH] = ""
+            it[Keys.BIOMETRIC_UNLOCK_ENABLED] = false
+        }
+    }
+
+    suspend fun verifyPin(pin: String): Boolean {
+        val stored = context.appDataStore.data.first()[Keys.APP_LOCK_PIN_HASH]
+        return !stored.isNullOrBlank() && stored == hashPin(pin)
+    }
+
+    suspend fun setBiometricEnabled(enabled: Boolean) {
+        context.appDataStore.edit { it[Keys.BIOMETRIC_UNLOCK_ENABLED] = enabled }
+    }
+
+    suspend fun setScreenSecurityEnabled(enabled: Boolean) {
+        context.appDataStore.edit { it[Keys.SCREEN_SECURITY_ENABLED] = enabled }
+    }
+
+    suspend fun setNotificationsEnabled(enabled: Boolean) {
+        context.appDataStore.edit { it[Keys.NOTIFICATIONS_ENABLED] = enabled }
+    }
+
+    suspend fun setCalendarJalali(enabled: Boolean) {
+        context.appDataStore.edit { it[Keys.CALENDAR_JALALI] = enabled }
+    }
+
+    suspend fun getLastFollowUpNotifyDate(): String? =
+        context.appDataStore.data.first()[Keys.LAST_FOLLOWUP_NOTIFY_DATE]
+
+    suspend fun setLastFollowUpNotifyDate(date: String) {
+        context.appDataStore.edit { it[Keys.LAST_FOLLOWUP_NOTIFY_DATE] = date }
+    }
+
+    private fun hashPin(pin: String): String {
+        val bytes = java.security.MessageDigest.getInstance("SHA-256")
+            .digest(("real-estate-app-lock:$pin").toByteArray(Charsets.UTF_8))
+        return bytes.joinToString("") { "%02x".format(it) }
     }
 }

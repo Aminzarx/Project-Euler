@@ -73,17 +73,6 @@ fun AboutScreen(onBack: () -> Unit) {
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
-
-            Spacer(modifier = Modifier.height(Spacing.xl))
-            Text("کتابخانه‌های متن‌باز مورد استفاده", style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.height(Spacing.sm))
-            AppCard(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    "Jetpack Compose · Room · Coil · ZXing · Kotlin Coroutines\n" +
-                        "هرکدام تحت مجوز متن‌باز خودشان (عمدتاً Apache License 2.0) منتشر شده‌اند.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
             Spacer(modifier = Modifier.height(Spacing.xl))
         }
     }

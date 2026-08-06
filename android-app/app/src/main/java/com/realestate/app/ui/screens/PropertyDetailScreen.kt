@@ -103,8 +103,6 @@ import com.realestate.app.ui.theme.heroGradient
 import com.realestate.app.ui.theme.imageScrimGradient
 import com.realestate.app.viewmodel.PropertyViewModel
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 private const val STALE_PROPERTY_DAYS = 14L
@@ -115,6 +113,7 @@ fun PropertyDetailScreen(
     propertyId: Long,
     viewModel: PropertyViewModel,
     profileViewModel: com.realestate.app.viewmodel.ProfileViewModel,
+    appLockViewModel: com.realestate.app.viewmodel.AppLockViewModel,
     onBack: () -> Unit,
     onEdit: (Long) -> Unit,
     onDeleted: () -> Unit,
@@ -123,6 +122,7 @@ fun PropertyDetailScreen(
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+    val securitySettings by appLockViewModel.settings.collectAsStateWithLifecycle()
     val agentPhone = profileViewModel.profile.collectAsStateWithLifecycle().value.mobileNumber
     val property by viewModel.getPropertyById(propertyId).collectAsStateWithLifecycle(initialValue = null)
     val allProperties by viewModel.allProperties.collectAsStateWithLifecycle()
@@ -493,7 +493,7 @@ fun PropertyDetailScreen(
                                         Text(note.content, style = MaterialTheme.typography.bodyMedium)
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            formatDateTime(note.createdAt),
+                                            formatDateTime(note.createdAt, securitySettings.calendarJalali),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -543,7 +543,7 @@ fun PropertyDetailScreen(
                                     Column {
                                         Text(event.description, style = MaterialTheme.typography.bodyMedium)
                                         Text(
-                                            formatDateTime(event.createdAt),
+                                            formatDateTime(event.createdAt, securitySettings.calendarJalali),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -991,8 +991,8 @@ private fun FollowUpDialog(
     )
 }
 
-private fun formatDateTime(timestamp: Long): String =
-    SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(Date(timestamp))
+private fun formatDateTime(timestamp: Long, jalali: Boolean): String =
+    com.realestate.app.data.formatAppDate(timestamp, jalali)
 
 private fun TimelineEventType.icon(): androidx.compose.ui.graphics.vector.ImageVector = when (this) {
     TimelineEventType.CREATED -> Icons.Rounded.Add

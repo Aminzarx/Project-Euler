@@ -134,13 +134,22 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
 
     val recentActivities: StateFlow<List<RecentActivity>> = combine(
         extrasRepository.getRecentEvents(8), allProperties
-    ) { events, properties ->
+    ) { events, properties -> events.toRecentActivities(properties) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Same feed as [recentActivities] but with a much larger window, for the "مشاهده همه" full-history screen. */
+    val allRecentActivities: StateFlow<List<RecentActivity>> = combine(
+        extrasRepository.getRecentEvents(200), allProperties
+    ) { events, properties -> events.toRecentActivities(properties) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private fun List<TimelineEvent>.toRecentActivities(properties: List<Property>): List<RecentActivity> {
         val titleById = properties.associateBy({ it.id }, { it.title })
-        events.mapNotNull { event ->
+        return mapNotNull { event ->
             val title = titleById[event.propertyId] ?: return@mapNotNull null
             RecentActivity(event, event.propertyId, title)
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }
 
     /** Prefills for the add-property form, based on the most recently added property. */
     val smartDefaults: StateFlow<SmartDefaults> = allProperties

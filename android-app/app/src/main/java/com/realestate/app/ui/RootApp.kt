@@ -1,5 +1,7 @@
 package com.realestate.app.ui
 
+import android.app.Activity
+import android.view.WindowManager
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -18,23 +20,30 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.R
 import com.realestate.app.data.datastore.ThemePreference
 import com.realestate.app.ui.auth.AuthFlow
 import com.realestate.app.ui.theme.RealEstateAppTheme
+import com.realestate.app.viewmodel.AppLockViewModel
 import com.realestate.app.viewmodel.AuthViewModel
 import com.realestate.app.viewmodel.BackupViewModel
 import com.realestate.app.viewmodel.DealAssistantViewModel
@@ -49,7 +58,8 @@ fun RootApp(
     walletViewModel: WalletViewModel,
     profileViewModel: ProfileViewModel,
     backupViewModel: BackupViewModel,
-    dealAssistantViewModel: DealAssistantViewModel
+    dealAssistantViewModel: DealAssistantViewModel,
+    appLockViewModel: AppLockViewModel
 ) {
     val profile by profileViewModel.profile.collectAsStateWithLifecycle()
     val systemDark = isSystemInDarkTheme()
@@ -57,6 +67,33 @@ fun RootApp(
         ThemePreference.SYSTEM -> systemDark
         ThemePreference.LIGHT -> false
         ThemePreference.DARK -> true
+    }
+
+    val securitySettings by appLockViewModel.settings.collectAsStateWithLifecycle()
+    val isUnlocked by appLockViewModel.isUnlocked.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // Screen security: block screenshots and hide app content from the recents thumbnail while enabled.
+    LaunchedEffect(securitySettings.screenSecurityEnabled) {
+        (context as? Activity)?.window?.let { window ->
+            if (securitySettings.screenSecurityEnabled) {
+                window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+            } else {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            }
+        }
+    }
+
+    // Re-lock every time the app leaves the foreground — an app lock that stayed unlocked across
+    // backgrounding would defeat its own purpose (someone else picking up the phone).
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentAppLockViewModel by rememberUpdatedState(appLockViewModel)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) currentAppLockViewModel.lock()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     RealEstateAppTheme(darkTheme = useDarkTheme) {
@@ -69,14 +106,19 @@ fun RootApp(
 
                 false -> AuthFlow(viewModel = authViewModel)
 
-                true -> RealEstateApp(
-                    viewModel = propertyViewModel,
-                    walletViewModel = walletViewModel,
-                    profileViewModel = profileViewModel,
-                    authViewModel = authViewModel,
-                    backupViewModel = backupViewModel,
-                    dealAssistantViewModel = dealAssistantViewModel
-                )
+                true -> if (securitySettings.hasPin && !isUnlocked) {
+                    AppLockScreen(viewModel = appLockViewModel)
+                } else {
+                    RealEstateApp(
+                        viewModel = propertyViewModel,
+                        walletViewModel = walletViewModel,
+                        profileViewModel = profileViewModel,
+                        authViewModel = authViewModel,
+                        backupViewModel = backupViewModel,
+                        dealAssistantViewModel = dealAssistantViewModel,
+                        appLockViewModel = appLockViewModel
+                    )
+                }
             }
         }
     }
