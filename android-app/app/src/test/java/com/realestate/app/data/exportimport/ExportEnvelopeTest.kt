@@ -10,11 +10,14 @@ import org.junit.Test
 class ExportEnvelopeTest {
 
     @Test
-    fun `round trip through JSON preserves everything`() {
+    fun `round trip through JSON preserves everything, including metadata`() {
         val original = ExportEnvelope(
             schemaVersion = EXPORT_SCHEMA_VERSION,
             exportedAt = 1_700_000_000_000L,
             appVersion = "1.0",
+            deviceModel = "Pixel 8",
+            androidVersion = "14",
+            exporterName = "املاک آریا",
             properties = listOf(testProperty(title = "ملک الف"), testProperty(title = "ملک ب"))
         )
 
@@ -23,8 +26,35 @@ class ExportEnvelopeTest {
         assertEquals(original.schemaVersion, parsed.schemaVersion)
         assertEquals(original.exportedAt, parsed.exportedAt)
         assertEquals(original.appVersion, parsed.appVersion)
+        assertEquals(original.deviceModel, parsed.deviceModel)
+        assertEquals(original.androidVersion, parsed.androidVersion)
+        assertEquals(original.exporterName, parsed.exporterName)
         assertEquals(original.properties.map { it.uid }.toSet(), parsed.properties.map { it.uid }.toSet())
         assertEquals(original.properties.map { it.title }.toSet(), parsed.properties.map { it.title }.toSet())
+    }
+
+    @Test
+    fun `a bundle from before metadata existed still imports, with empty metadata defaults`() {
+        val legacyBundle = JSONObject().apply {
+            put("schemaVersion", EXPORT_SCHEMA_VERSION)
+            put("exportedAt", 1_700_000_000_000L)
+            put("appVersion", "0.9")
+            // no deviceModel/androidVersion/exporterName keys at all — this is exactly the shape
+            // every bundle produced before this round had.
+            put(
+                "data",
+                JSONObject().apply {
+                    put("properties", org.json.JSONArray().apply { put(testProperty().toJson()) })
+                }
+            )
+        }
+
+        val parsed = parseExportEnvelope(legacyBundle.toString().toByteArray(Charsets.UTF_8))
+
+        assertEquals("", parsed.deviceModel)
+        assertEquals("", parsed.androidVersion)
+        assertEquals("", parsed.exporterName)
+        assertEquals(1, parsed.properties.size)
     }
 
     @Test

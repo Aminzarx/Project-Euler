@@ -46,4 +46,11 @@ interface PropertyDao {
 
     @Query("DELETE FROM properties")
     suspend fun deleteAll()
+
+    /** Undo for a just-applied import's inserted records. Deletes by [Property.uid] rather than
+     *  [Property.id]: the rows now have local ids Room assigned on insert, which the undo caller
+     *  never captured (insertAll() returns nothing per-row) — uid is the identity that survived
+     *  the round trip. */
+    @Query("DELETE FROM properties WHERE uid IN (:uids)")
+    suspend fun deleteByUids(uids: List<String>)
 }

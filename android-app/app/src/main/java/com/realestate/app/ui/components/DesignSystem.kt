@@ -84,6 +84,9 @@ fun AppCard(
     onClick: (() -> Unit)? = null,
     shape: androidx.compose.ui.graphics.Shape = CardShape,
     contentPadding: PaddingValues = PaddingValues(20.dp),
+    // Defaults to the previous hardcoded value, so every existing call site is unaffected —
+    // only callers that want a tinted state (e.g. a selected row) need to pass this.
+    containerColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
     content: @Composable () -> Unit
 ) {
     val cardModifier = modifier.softShadow(shape, Elevation.card)
@@ -91,7 +94,7 @@ fun AppCard(
         Surface(
             onClick = onClick,
             shape = shape,
-            color = MaterialTheme.colorScheme.surface,
+            color = containerColor,
             shadowElevation = 0.dp,
             modifier = cardModifier
         ) {
@@ -102,7 +105,7 @@ fun AppCard(
     } else {
         Surface(
             shape = shape,
-            color = MaterialTheme.colorScheme.surface,
+            color = containerColor,
             shadowElevation = 0.dp,
             modifier = cardModifier
         ) {

@@ -2,10 +2,12 @@ package com.realestate.app.ui.screens
 
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,21 +36,31 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material.icons.rounded.Warning
 import com.realestate.app.ui.components.DropdownMenu
 import com.realestate.app.ui.components.DropdownMenuItem
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -56,30 +69,47 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.data.DealType
+import com.realestate.app.data.MIN_PASSWORD_LENGTH
+import com.realestate.app.data.PasswordStrengthLevel
+import com.realestate.app.data.Property
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
+import com.realestate.app.data.evaluatePasswordStrength
 import com.realestate.app.data.matchesPriceRange
+import com.realestate.app.data.passwordStrengthHelperText
+import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.SwipeablePropertyRow
 import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.ui.components.label
 import com.realestate.app.viewmodel.CaseTransferViewModel
 import com.realestate.app.viewmodel.ImportApplyState
 import com.realestate.app.viewmodel.ImportPreviewState
+import com.realestate.app.viewmodel.ImportReadStage
+import com.realestate.app.viewmodel.ExportStage
 import com.realestate.app.viewmodel.PropertyFilter
 import com.realestate.app.viewmodel.PropertyViewModel
 import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.ShareBundleState
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,7 +121,12 @@ fun PropertyListScreen(
     onAddClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val agentPhone = profileViewModel.profile.collectAsStateWithLifecycle().value.mobileNumber
+    val profile by profileViewModel.profile.collectAsStateWithLifecycle()
+    val agentPhone = profile.mobileNumber
+    // What ends up in the encrypted bundle's metadata as "who made this" — agency name first
+    // since that's what a colleague receiving the file would recognize, falling back to the
+    // agent's own name, and finally blank (never a raw phone number or device identifier).
+    val exporterName = profile.agencyName.ifBlank { profile.fullName }
     val properties by viewModel.filteredProperties.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val cities by viewModel.availableCities.collectAsStateWithLifecycle()
@@ -105,6 +140,19 @@ fun PropertyListScreen(
     // Leaving selection mode (X button or system back) always clears the selection — there's no
     // "exit but keep it for later" concept here, so the two must stay in lockstep.
     BackHandler(enabled = selectionMode) { viewModel.clearSelection() }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    fun showSnackbar(message: String, actionLabel: String? = null, onAction: (() -> Unit)? = null) {
+        coroutineScope.launch {
+            val result = snackbarHostState.showSnackbar(
+                message = message,
+                actionLabel = actionLabel,
+                duration = if (actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short
+            )
+            if (result == SnackbarResult.ActionPerformed) onAction?.invoke()
+        }
+    }
 
     var showSharePasswordDialog by remember { mutableStateOf(false) }
     val shareState by caseTransferViewModel.shareState.collectAsStateWithLifecycle()
@@ -134,7 +182,10 @@ fun PropertyListScreen(
             viewModel.clearSelection()
             caseTransferViewModel.resetShareState()
         } else if (state is ShareBundleState.Failed) {
-            Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+            showSnackbar(state.message, actionLabel = "تلاش دوباره") { showSharePasswordDialog = true }
+            caseTransferViewModel.resetShareState()
+        } else if (state is ShareBundleState.Cancelled) {
+            showSnackbar("اشتراک‌گذاری لغو شد")
             caseTransferViewModel.resetShareState()
         }
     }
@@ -149,48 +200,75 @@ fun PropertyListScreen(
                 state.updatedCount > 0 -> "${state.updatedCount} پرونده به‌روزرسانی شد"
                 else -> "چیزی برای اعمال وجود نداشت"
             }
-            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            if (state.canUndo) {
+                showSnackbar(message, actionLabel = "بازگردانی") { caseTransferViewModel.undoLastImport() }
+            } else {
+                showSnackbar(message)
+            }
             caseTransferViewModel.resetImportApplyState()
         } else if (state is ImportApplyState.Failed) {
-            Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+            showSnackbar(state.message, actionLabel = "تلاش دوباره") {
+                pendingImportUri?.let { uri -> showImportPasswordDialog = true }
+            }
+            caseTransferViewModel.resetImportApplyState()
+        } else if (state is ImportApplyState.Undone) {
+            showSnackbar("تغییرات بازگردانده شد")
             caseTransferViewModel.resetImportApplyState()
         }
     }
 
+    LaunchedEffect(importPreview) {
+        val state = importPreview
+        if (state is ImportPreviewState.Failed) {
+            showSnackbar(state.message, actionLabel = "تلاش دوباره") {
+                pendingImportUri?.let { showImportPasswordDialog = true }
+            }
+            caseTransferViewModel.dismissImportPreview()
+        } else if (state is ImportPreviewState.Cancelled) {
+            showSnackbar("ورود اطلاعات لغو شد")
+            caseTransferViewModel.dismissImportPreview()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            if (selectionMode) {
-                TopAppBar(
-                    title = { Text("${selectedIds.size} انتخاب شده") },
-                    navigationIcon = {
-                        IconButton(onClick = { viewModel.clearSelection() }) {
-                            Icon(Icons.Rounded.Close, contentDescription = "لغو انتخاب")
+            // A plain if/else swap between two TopAppBars would pop instantly; Crossfade makes
+            // entering/leaving selection mode read as one continuous transition instead of a jump.
+            Crossfade(targetState = selectionMode, animationSpec = tween(200), label = "topbar-mode") { inSelectionMode ->
+                if (inSelectionMode) {
+                    TopAppBar(
+                        title = { Text("${selectedIds.size} انتخاب شده") },
+                        navigationIcon = {
+                            IconButton(onClick = { viewModel.clearSelection() }) {
+                                Icon(Icons.Rounded.Close, contentDescription = "لغو انتخاب")
+                            }
+                        },
+                        actions = {
+                            IconButton(onClick = { viewModel.selectAll(properties.map { it.id }) }) {
+                                Icon(Icons.Rounded.CheckCircle, contentDescription = "انتخاب همه")
+                            }
+                            IconButton(onClick = { showSharePasswordDialog = true }) {
+                                Icon(Icons.Rounded.Share, contentDescription = "اشتراک‌گذاری رمزنگاری‌شده")
+                            }
+                            IconButton(onClick = { showDeleteConfirm = true }) {
+                                Icon(Icons.Rounded.Delete, contentDescription = "حذف موارد انتخاب‌شده")
+                            }
                         }
-                    },
-                    actions = {
-                        IconButton(onClick = { viewModel.selectAll(properties.map { it.id }) }) {
-                            Icon(Icons.Rounded.CheckCircle, contentDescription = "انتخاب همه")
+                    )
+                } else {
+                    TopAppBar(
+                        title = { Text("املاک") },
+                        actions = {
+                            IconButton(onClick = { importPicker.launch("*/*") }) {
+                                Icon(Icons.Rounded.Download, contentDescription = "وارد کردن بسته رمزنگاری‌شده")
+                            }
+                            IconButton(onClick = { showFilterSheet = true }) {
+                                Icon(Icons.Rounded.FilterList, contentDescription = "فیلترها")
+                            }
                         }
-                        IconButton(onClick = { showSharePasswordDialog = true }) {
-                            Icon(Icons.Rounded.Share, contentDescription = "اشتراک‌گذاری رمزنگاری‌شده")
-                        }
-                        IconButton(onClick = { showDeleteConfirm = true }) {
-                            Icon(Icons.Rounded.Delete, contentDescription = "حذف موارد انتخاب‌شده")
-                        }
-                    }
-                )
-            } else {
-                TopAppBar(
-                    title = { Text("املاک") },
-                    actions = {
-                        IconButton(onClick = { importPicker.launch("*/*") }) {
-                            Icon(Icons.Rounded.Download, contentDescription = "وارد کردن بسته رمزنگاری‌شده")
-                        }
-                        IconButton(onClick = { showFilterSheet = true }) {
-                            Icon(Icons.Rounded.FilterList, contentDescription = "فیلترها")
-                        }
-                    }
-                )
+                    )
+                }
             }
         },
         floatingActionButton = {
@@ -391,16 +469,14 @@ fun PropertyListScreen(
             title = "رمز عبور بسته اشتراکی",
             description = "این رمز عبور برای رمزگشایی روی گوشی مقصد لازم است — آن را جدا (نه در همان پیام) به گیرنده بدهید.",
             confirmLabel = "اشتراک‌گذاری",
+            isNewPassword = true,
             onConfirm = { password ->
                 showSharePasswordDialog = false
                 val selected = allProperties.filter { selectedIds.contains(it.id) }
-                caseTransferViewModel.shareSelected(selected, password.toCharArray())
+                caseTransferViewModel.shareSelected(selected, password.toCharArray(), exporterName)
             },
             onDismiss = { showSharePasswordDialog = false }
         )
-    }
-    if (shareState is ShareBundleState.Working) {
-        WorkingDialog(text = "در حال آماده‌سازی و رمزنگاری بسته…")
     }
 
     if (showImportPasswordDialog) {
@@ -408,6 +484,7 @@ fun PropertyListScreen(
             title = "رمز عبور بسته",
             description = "رمز عبوری که هنگام اشتراک‌گذاری این فایل تعیین شده را وارد کنید.",
             confirmLabel = "ادامه",
+            isNewPassword = false,
             onConfirm = { password ->
                 showImportPasswordDialog = false
                 pendingImportUri?.let { uri -> caseTransferViewModel.peekImport(uri, password.toCharArray()) }
@@ -418,59 +495,91 @@ fun PropertyListScreen(
             }
         )
     }
-    if (importPreview is ImportPreviewState.Loading) {
-        WorkingDialog(text = "در حال خواندن و رمزگشایی فایل…")
-    }
-    if (importApply is ImportApplyState.Working) {
-        WorkingDialog(text = "در حال اعمال تغییرات…")
+
+    val shareStateNow = shareState
+    if (shareStateNow is ShareBundleState.Working) {
+        WorkingDialog(stageLabel = shareStateNow.stage.label, onCancel = { caseTransferViewModel.cancelShare() })
     }
 
-    val preview = importPreview
-    if (preview is ImportPreviewState.Ready) {
+    val previewState = importPreview
+    if (previewState is ImportPreviewState.Loading) {
+        WorkingDialog(stageLabel = previewState.stage.label, onCancel = { caseTransferViewModel.cancelImportPeek() })
+    } else if (previewState is ImportPreviewState.Ready) {
         ImportPreviewDialog(
-            preview = preview,
-            onConfirm = { caseTransferViewModel.confirmImport() },
+            preview = previewState,
+            onConfirm = { selectedUids -> caseTransferViewModel.confirmImport(selectedUids) },
             onDismiss = { caseTransferViewModel.dismissImportPreview() }
         )
     }
-    LaunchedEffect(importPreview) {
-        val state = importPreview
-        if (state is ImportPreviewState.Failed) {
-            Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
-            caseTransferViewModel.dismissImportPreview()
-        }
+
+    // confirmImport() itself isn't cancellable (see CaseTransferViewModel doc comment — it's a
+    // single fast batched write, and undo is the safety net instead), so this dialog never gets
+    // a cancel button; it's only ever on screen for the brief moment that write takes.
+    if (importApply is ImportApplyState.Working) {
+        WorkingDialog(stageLabel = "در حال اعمال تغییرات…")
     }
 }
 
 @Composable
-private fun WorkingDialog(text: String) {
+private fun WorkingDialog(stageLabel: String, onCancel: (() -> Unit)? = null) {
     AlertDialog(
         onDismissRequest = {},
         properties = androidx.compose.ui.window.DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
-        confirmButton = {},
+        confirmButton = {
+            if (onCancel != null) {
+                TextButton(onClick = onCancel) { Text("لغو") }
+            }
+        },
         text = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(text)
+                Text(stageLabel)
             }
         }
     )
 }
 
+private fun strengthColor(level: PasswordStrengthLevel): Color = when (level) {
+    PasswordStrengthLevel.WEAK -> Color(0xFFE53935)
+    PasswordStrengthLevel.MEDIUM -> Color(0xFFFB8C00)
+    PasswordStrengthLevel.STRONG -> Color(0xFF43A047)
+    PasswordStrengthLevel.VERY_STRONG -> Color(0xFF2E7D32)
+}
+
+/**
+ * Reused for both directions of the flow, which need different rules: [isNewPassword] = true
+ * (export) enforces [MIN_PASSWORD_LENGTH], shows the live strength meter, and requires a matching
+ * confirmation field; [isNewPassword] = false (import) is just "type the password this file was
+ * already encrypted with" — no minimum beyond non-empty, no confirmation field, since an older
+ * bundle may have used a shorter password from before this minimum existed, and we must not lock
+ * agents out of their own previously-exported files.
+ */
 @Composable
 private fun PasswordPromptDialog(
     title: String,
     description: String,
     confirmLabel: String,
+    isNewPassword: Boolean,
     onConfirm: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     var password by remember { mutableStateOf("") }
-    // A short PIN is fine — PBKDF2's 210,000 iterations are what actually make brute-forcing it
-    // expensive, not the character count — but under 4 digits is trivial to shoulder-surf and
-    // easy to mistype without noticing, so a minimum is worth enforcing at the door.
-    val isValid = password.length >= 4
+    var confirmPassword by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    val strength = remember(password) { evaluatePasswordStrength(password) }
+    val confirmMismatch = isNewPassword && confirmPassword.isNotEmpty() && confirmPassword != password
+    val isValid = if (isNewPassword) strength.meetsMinimum && confirmPassword == password else password.isNotEmpty()
+    val visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation()
+    val visibilityToggle: @Composable () -> Unit = {
+        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+            Icon(
+                if (passwordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                contentDescription = if (passwordVisible) "پنهان کردن رمز عبور" else "نمایش رمز عبور"
+            )
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -483,10 +592,58 @@ private fun PasswordPromptDialog(
                     onValueChange = { password = it },
                     label = { Text("رمز عبور") },
                     singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    visualTransformation = visualTransformation,
+                    trailingIcon = visibilityToggle,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = if (isNewPassword) ImeAction.Next else ImeAction.Done
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                if (isNewPassword) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = { strength.score / 100f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp)
+                            .semantics { contentDescription = "قدرت رمز عبور: ${strength.level.label}" },
+                        color = strengthColor(strength.level)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(
+                            passwordStrengthHelperText(strength, password),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (password.isNotEmpty()) {
+                            Text(strength.level.label, style = MaterialTheme.typography.labelSmall, color = strengthColor(strength.level))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("تکرار رمز عبور") },
+                        singleLine = true,
+                        isError = confirmMismatch,
+                        visualTransformation = visualTransformation,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (confirmMismatch) {
+                        Text(
+                            "رمز عبور و تکرار آن یکسان نیستند",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
@@ -498,40 +655,152 @@ private fun PasswordPromptDialog(
     )
 }
 
+private val importPreviewDateFormat by lazy { SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.US) }
+
 @Composable
 private fun ImportPreviewDialog(
     preview: ImportPreviewState.Ready,
-    onConfirm: () -> Unit,
+    onConfirm: (Set<String>) -> Unit,
     onDismiss: () -> Unit
 ) {
     val plan = preview.plan
+    val actionableUids = remember(plan) {
+        (plan.toInsert.map { it.uid } + plan.toUpdate.map { it.updated.uid }).toSet()
+    }
+    var selectedUids by remember(plan) { mutableStateOf(actionableUids) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("پیش‌نمایش ورود اطلاعات") },
         text = {
-            Column {
-                Text(
-                    "این بسته ${plan.totalIncoming} پرونده دارد" +
-                        if (preview.appVersion.isNotBlank()) " — ساخته‌شده با نسخه ${preview.appVersion} اپ" else "",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                ImportCountRow(label = "پرونده جدید", count = plan.toInsert.size)
-                ImportCountRow(label = "به‌روزرسانی می‌شود", count = plan.toUpdate.size)
-                ImportCountRow(label = "بدون تغییر (نسخه محلی جدیدتر یا هم‌زمان است)", count = plan.unchanged.size)
-                if (plan.toUpdate.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        "پرونده‌های «به‌روزرسانی می‌شود» نسخه محلی‌شان با نسخه داخل این بسته جایگزین خواهد شد.",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            Column(modifier = Modifier.heightIn(max = 440.dp)) {
+                AppCard(contentPadding = PaddingValues(12.dp)) {
+                    Column {
+                        if (preview.exportedAt > 0) {
+                            MetadataRow("تاریخ ساخت بسته", importPreviewDateFormat.format(Date(preview.exportedAt)))
+                        }
+                        if (preview.exporterName.isNotBlank()) MetadataRow("ارسال‌کننده", preview.exporterName)
+                        if (preview.appVersion.isNotBlank()) MetadataRow("نسخه اپ مبدا", preview.appVersion)
+                        if (preview.deviceModel.isNotBlank()) MetadataRow("دستگاه مبدا", preview.deviceModel)
+                        if (preview.androidVersion.isNotBlank()) MetadataRow("نسخه اندروید مبدا", "Android ${preview.androidVersion}")
+                        MetadataRow("تعداد کل پرونده‌ها", "${plan.totalIncoming}")
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (actionableUids.isEmpty()) {
+                    // Empty state: nothing this bundle has is newer than what's already here.
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp)
+                    ) {
+                        Icon(
+                            Icons.Rounded.CheckCircle,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "همه ${plan.unchanged.size} پرونده این بسته از قبل به‌روز هستند",
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            "چیزی برای وارد کردن وجود ندارد",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else {
+                    if (plan.toUpdate.isNotEmpty()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Rounded.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                "موارد «به‌روزرسانی می‌شود» نسخه محلی‌شان جایگزین خواهد شد",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "${selectedUids.size} از ${actionableUids.size} مورد انتخاب شده",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Row {
+                            TextButton(onClick = { selectedUids = actionableUids }) { Text("انتخاب همه") }
+                            TextButton(onClick = { selectedUids = emptySet() }) { Text("پاک کردن") }
+                        }
+                    }
+                    if (selectedUids.isEmpty()) {
+                        Text(
+                            "هیچ موردی انتخاب نشده — دکمه اعمال غیرفعال است",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
+
+                    LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
+                        if (plan.toInsert.isNotEmpty()) {
+                            item { ImportSectionLabel("پرونده‌های جدید (${plan.toInsert.size})") }
+                            items(plan.toInsert, key = { it.uid }) { property ->
+                                SelectableImportRow(
+                                    title = property.title,
+                                    subtitle = property.city,
+                                    checked = property.uid in selectedUids,
+                                    onCheckedChange = { checked ->
+                                        selectedUids = if (checked) selectedUids + property.uid else selectedUids - property.uid
+                                    }
+                                )
+                            }
+                        }
+                        if (plan.toUpdate.isNotEmpty()) {
+                            item { ImportSectionLabel("به‌روزرسانی می‌شود (${plan.toUpdate.size})") }
+                            items(plan.toUpdate, key = { it.updated.uid }) { update ->
+                                SelectableImportRow(
+                                    title = update.updated.title,
+                                    subtitle = update.updated.city,
+                                    checked = update.updated.uid in selectedUids,
+                                    onCheckedChange = { checked ->
+                                        val uid = update.updated.uid
+                                        selectedUids = if (checked) selectedUids + uid else selectedUids - uid
+                                    }
+                                )
+                            }
+                        }
+                        if (plan.unchanged.isNotEmpty()) {
+                            item {
+                                Text(
+                                    "${plan.unchanged.size} مورد بدون تغییر (نسخه محلی جدیدتر یا هم‌زمان است)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm, enabled = plan.toInsert.isNotEmpty() || plan.toUpdate.isNotEmpty()) {
-                Text("اعمال")
+            TextButton(onClick = { onConfirm(selectedUids) }, enabled = selectedUids.isNotEmpty()) {
+                Text(if (selectedUids.isEmpty()) "اعمال" else "اعمال (${selectedUids.size})")
             }
         },
         dismissButton = {
@@ -541,10 +810,45 @@ private fun ImportPreviewDialog(
 }
 
 @Composable
-private fun ImportCountRow(label: String, count: Int) {
+private fun MetadataRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("$count", style = MaterialTheme.typography.bodySmall)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.labelSmall)
+    }
+    Spacer(modifier = Modifier.height(4.dp))
+}
+
+@Composable
+private fun ImportSectionLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+    )
+}
+
+@Composable
+private fun SelectableImportRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val displayTitle = title.ifBlank { "بدون عنوان" }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 4.dp)
+            .semantics(mergeDescendants = true) {
+                contentDescription = "$displayTitle، $subtitle، ${if (checked) "انتخاب شده" else "انتخاب نشده"}"
+            }
+    ) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Spacer(modifier = Modifier.width(4.dp))
+        Column {
+            Text(displayTitle, style = MaterialTheme.typography.bodyMedium)
+            if (subtitle.isNotBlank()) {
+                Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
     }
 }
 

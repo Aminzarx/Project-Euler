@@ -20,4 +20,6 @@ class PropertyRepository(private val dao: PropertyDao) {
     suspend fun delete(property: Property) = dao.delete(property)
 
     suspend fun deleteProperties(properties: List<Property>) = dao.deleteProperties(properties)
+
+    suspend fun deleteByUids(uids: List<String>) = dao.deleteByUids(uids)
 }

@@ -1,6 +1,7 @@
 package com.realestate.app.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
@@ -127,15 +128,27 @@ fun SwipeablePropertyRow(
             }
         }
     ) {
+        // A subtle tint (not a loud fill) so a whole screen of selected rows still reads as a
+        // list, not a wall of color — paired with the existing checkmark icon, which stays the
+        // primary "this is selected" signal.
+        val containerColor by animateColorAsState(
+            targetValue = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface,
+            animationSpec = tween(200),
+            label = "selection-tint"
+        )
         AppCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(
-                    onClick = onClick,
+                    onClick = {
+                        if (selectionMode) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onClick()
+                    },
                     onLongClick = onLongPress,
                     onDoubleClick = onToggleFavorite
                 ),
-            contentPadding = PaddingValues(10.dp)
+            contentPadding = PaddingValues(10.dp),
+            containerColor = containerColor
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Entering selection mode is a state every row transitions into at once (one

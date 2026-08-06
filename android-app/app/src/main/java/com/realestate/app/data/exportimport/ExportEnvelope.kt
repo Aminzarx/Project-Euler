@@ -19,13 +19,23 @@ const val EXPORT_SCHEMA_VERSION = 1
 private const val MAX_SUPPORTED_SCHEMA_VERSION = EXPORT_SCHEMA_VERSION
 
 /** A standalone export bundle of specific Cases (as opposed to the full-database
- *  data/backup/BackupManager.kt, which always covers every table). [exportedAt] and [appVersion]
- *  are informational only — surfaced in the import preview so the receiving agent can see when and
- *  from what the file came, never used to gate whether import is allowed. */
+ *  data/backup/BackupManager.kt, which always covers every table). Every field except
+ *  [schemaVersion] and [properties] is informational only — surfaced in the import preview so the
+ *  receiving agent can see when, from what, and (optionally) whom the file came from, never used
+ *  to gate whether import is allowed. [deviceModel]/[androidVersion]/[exporterName] are read with
+ *  empty-string defaults (see [parseExportEnvelope]) so a bundle made before these fields existed
+ *  still imports fine — nothing about this is a breaking schema change.
+ *
+ *  Deliberately *not* included: anything about the device or agent that isn't already visible
+ *  elsewhere in the app (no device ID, no phone number, no location) — this metadata answers
+ *  "what/when/who made this", not "identify this device". */
 data class ExportEnvelope(
     val schemaVersion: Int,
     val exportedAt: Long,
     val appVersion: String,
+    val deviceModel: String = "",
+    val androidVersion: String = "",
+    val exporterName: String = "",
     val properties: List<Property>
 )
 
@@ -43,6 +53,9 @@ fun ExportEnvelope.toJson(): JSONObject = JSONObject().apply {
     put("schemaVersion", schemaVersion)
     put("exportedAt", exportedAt)
     put("appVersion", appVersion)
+    put("deviceModel", deviceModel)
+    put("androidVersion", androidVersion)
+    put("exporterName", exporterName)
     put(
         "data",
         JSONObject().apply {
@@ -95,6 +108,9 @@ fun parseExportEnvelope(plaintext: ByteArray): ExportEnvelope {
         schemaVersion = schemaVersion,
         exportedAt = json.optLong("exportedAt", 0L),
         appVersion = json.optString("appVersion", ""),
+        deviceModel = json.optString("deviceModel", ""),
+        androidVersion = json.optString("androidVersion", ""),
+        exporterName = json.optString("exporterName", ""),
         properties = properties
     )
 }
