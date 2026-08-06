@@ -57,6 +57,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.realestate.app.data.CaseType
 import com.realestate.app.data.Property
 import com.realestate.app.ui.components.PrimaryButton
 import com.realestate.app.ui.components.StoryAspectRatio
@@ -137,7 +138,7 @@ fun StoryCardScreen(
                     }
                 },
                 actions = {
-                    if (property != null) {
+                    if (property?.caseType == CaseType.OWNER) {
                         IconButton(onClick = { showCustomizeSheet = true }) {
                             Icon(Icons.Rounded.FilterList, contentDescription = "شخصی‌سازی کارت")
                         }
@@ -147,12 +148,16 @@ fun StoryCardScreen(
         }
     ) { padding ->
         val current = property
-        if (current == null) {
+        if (current == null || current.caseType == CaseType.CLIENT_REQUEST) {
             Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
-                if (hasLoadedOnce) {
-                    Text("ملک یافت نشد")
-                } else {
-                    CircularProgressIndicator()
+                when {
+                    current != null -> Text(
+                        "کارت استوری فقط برای پرونده‌های مالک در دسترس است.",
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    hasLoadedOnce -> Text("ملک یافت نشد")
+                    else -> CircularProgressIndicator()
                 }
             }
         } else {

@@ -165,4 +165,30 @@ fun Property.isExpired(now: Long = System.currentTimeMillis()): Boolean {
     return now >= expiry
 }
 
+/** A single comparable price for sorting mixed OWNER/CLIENT_REQUEST lists — the listing price for
+ *  an OWNER case, the midpoint of the budget range for a CLIENT_REQUEST (falling back to whichever
+ *  bound is set), or 0 when neither is known. */
+fun Property.sortablePrice(): Long = when (caseType) {
+    CaseType.OWNER -> price
+    CaseType.CLIENT_REQUEST -> when {
+        budgetMin != null && budgetMax != null -> (budgetMin + budgetMax) / 2
+        budgetMax != null -> budgetMax
+        budgetMin != null -> budgetMin
+        else -> 0L
+    }
+}
+
+/** Price-range filter match that works for both case types: an OWNER case matches on its actual
+ *  price, a CLIENT_REQUEST matches when its budget range overlaps the filter range (so a request
+ *  willing to pay up to 2B still shows up under a 1.5B-2.5B filter instead of being hidden behind
+ *  its always-zero [Property.price]). */
+fun Property.matchesPriceRange(min: Long?, max: Long?): Boolean = when (caseType) {
+    CaseType.OWNER -> (min == null || price >= min) && (max == null || price <= max)
+    CaseType.CLIENT_REQUEST -> {
+        val lower = budgetMin ?: 0L
+        val upper = budgetMax ?: Long.MAX_VALUE
+        (min == null || upper >= min) && (max == null || lower <= max)
+    }
+}
+
 private const val DAY_MILLIS = 24L * 60 * 60 * 1000

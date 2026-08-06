@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.realestate.app.data.CaseType
 import com.realestate.app.data.Property
 import com.realestate.app.data.dealassistant.DealCategory
 import com.realestate.app.data.dealassistant.DealToolId
@@ -142,8 +143,11 @@ fun DealAssistantScreen(
 
     val target = pickerTarget
     if (target != null) {
+        // Story Card, Ad Text, and Market Value all assume an owner listing (price, address, a
+        // selling pitch) — a Client Request case has none of those, so it never belongs in this
+        // picker.
         PropertyPickerDialog(
-            properties = allProperties,
+            properties = allProperties.filter { it.caseType == CaseType.OWNER },
             onDismiss = { pickerTarget = null },
             onPick = { property ->
                 pickerTarget = null
@@ -215,7 +219,7 @@ private fun PropertyPickerDialog(properties: List<Property>, onDismiss: () -> Un
         title = { Text("انتخاب ملک") },
         text = {
             if (properties.isEmpty()) {
-                Text("هنوز ملکی ثبت نشده است.")
+                Text("هنوز پرونده مالکی ثبت نشده است. این ابزار فقط برای پرونده‌های مالک در دسترس است.")
             } else {
                 LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
                     items(properties, key = { it.id }) { property ->

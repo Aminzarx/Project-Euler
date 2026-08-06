@@ -10,6 +10,7 @@ import com.realestate.app.data.PropertyRepository
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
 import com.realestate.app.data.code
+import com.realestate.app.data.matchesPriceRange
 import com.realestate.app.data.datastore.SearchHistoryRepository
 import com.realestate.app.data.datastore.SecurityPreferencesRepository
 import com.realestate.app.data.formatAppDate
@@ -87,10 +88,9 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
             val matchesPropertyType = filter.propertyType == null || property.propertyType == filter.propertyType
             val matchesStatus = filter.status == null || property.status == filter.status
             val matchesTag = filter.tag == null || property.tags.contains(filter.tag)
-            val matchesMinPrice = filter.minPrice == null || property.price >= filter.minPrice
-            val matchesMaxPrice = filter.maxPrice == null || property.price <= filter.maxPrice
+            val matchesPrice = property.matchesPriceRange(filter.minPrice, filter.maxPrice)
             matchesQuery && matchesCity && matchesDealType && matchesPropertyType &&
-                matchesStatus && matchesTag && matchesMinPrice && matchesMaxPrice
+                matchesStatus && matchesTag && matchesPrice
         }.sortedByDescending { it.isPinned }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

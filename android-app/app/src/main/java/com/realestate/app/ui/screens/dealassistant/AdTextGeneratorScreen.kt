@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.realestate.app.data.CaseType
 import com.realestate.app.data.DealType
 import com.realestate.app.data.Property
 import com.realestate.app.ui.components.AppCard
@@ -98,8 +99,16 @@ fun AdTextGeneratorScreen(propertyId: Long, viewModel: PropertyViewModel, onBack
         }
     ) { padding ->
         val current = property
-        if (current == null) {
-            Box(modifier = Modifier.padding(padding).fillMaxSize())
+        if (current == null || current.caseType == CaseType.CLIENT_REQUEST) {
+            Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
+                if (current != null) {
+                    Text(
+                        "متن آگهی فقط برای پرونده‌های مالک در دسترس است.",
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
         } else {
             val text = generateAdText(current, style)
             Column(modifier = Modifier.padding(padding).fillMaxSize().padding(Spacing.screen)) {

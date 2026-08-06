@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.data.Property
+import com.realestate.app.data.sortablePrice
 import com.realestate.app.ui.components.SwipeablePropertyRow
 import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.viewmodel.ProfileViewModel
@@ -48,8 +49,8 @@ private enum class FavoriteSort(val label: String) {
 
 private fun List<Property>.sortedFor(sort: FavoriteSort): List<Property> = when (sort) {
     FavoriteSort.RECENT -> sortedByDescending { it.dateAdded }
-    FavoriteSort.PRICE_LOW -> sortedBy { it.price }
-    FavoriteSort.PRICE_HIGH -> sortedByDescending { it.price }
+    FavoriteSort.PRICE_LOW -> sortedBy { it.sortablePrice() }
+    FavoriteSort.PRICE_HIGH -> sortedByDescending { it.sortablePrice() }
     FavoriteSort.TITLE -> sortedBy { it.title }
 }
 

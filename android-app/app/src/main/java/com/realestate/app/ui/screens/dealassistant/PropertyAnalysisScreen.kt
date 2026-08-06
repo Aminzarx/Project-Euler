@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.realestate.app.data.CaseType
 import com.realestate.app.data.Property
 import com.realestate.app.data.dealassistant.DealToolId
 import com.realestate.app.data.dealassistant.RankingMetric
@@ -62,6 +63,11 @@ fun PropertyAnalysisScreen(
     onBack: () -> Unit
 ) {
     val allProperties by propertyViewModel.allProperties.collectAsStateWithLifecycle()
+    // Every analysis here (average price, market value, neighborhood stats, ranking, comparison)
+    // reasons about real price + area facts, which a Client Request case doesn't have — its price
+    // is always 0 and its area is a desired range, not a fact. Keeping only Owner cases in the
+    // pool avoids skewed averages and nonsensical rankings.
+    val ownerProperties = allProperties.filter { it.caseType == CaseType.OWNER }
     LaunchedEffect(toolId) { viewModel.recordToolUsage(toolId) }
 
     Scaffold(
@@ -78,11 +84,11 @@ fun PropertyAnalysisScreen(
     ) { padding ->
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (toolId) {
-                DealToolId.AVERAGE_PRICE -> AveragePriceAnalysis(allProperties)
-                DealToolId.MARKET_VALUE -> MarketValueAnalysis(allProperties, propertyId)
-                DealToolId.NEIGHBORHOOD -> NeighborhoodAnalysis(allProperties)
-                DealToolId.RANKING -> RankingAnalysis(allProperties)
-                DealToolId.COMPARISON -> ComparisonAnalysis(allProperties)
+                DealToolId.AVERAGE_PRICE -> AveragePriceAnalysis(ownerProperties)
+                DealToolId.MARKET_VALUE -> MarketValueAnalysis(ownerProperties, propertyId)
+                DealToolId.NEIGHBORHOOD -> NeighborhoodAnalysis(ownerProperties)
+                DealToolId.RANKING -> RankingAnalysis(ownerProperties)
+                DealToolId.COMPARISON -> ComparisonAnalysis(ownerProperties)
                 else -> Text("این ابزار در دسترس نیست.", modifier = Modifier.padding(Spacing.screen))
             }
         }
