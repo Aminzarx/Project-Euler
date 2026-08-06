@@ -1,0 +1,70 @@
+name: Deploy Backend to VPS
+
+# Runs from GitHub's own runners (which have normal internet access) rather than any sandboxed
+# agent session — this is the actual network hop that reaches the VPS. Auto-deploys on every push
+# to main that touches backend/, and can always be re-run by hand from the Actions tab.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          ADMIN_API_KEY_SECRET: ${{ secrets.ADMIN_API_KEY }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          envs: ADMIN_API_KEY_SECRET
+          script_stop: true
+          script: |
+            set -e
+            APP_DIR="${VPS_APP_DIR:-/opt/referral-backend}"
+            REPO_URL="https://github.com/${{ github.repository }}.git"
+            BRANCH="main"
+
+            mkdir -p "$APP_DIR"
+            cd "$APP_DIR"
+
+            if [ ! -d .git ]; then
+              git clone --branch "$BRANCH" --depth 1 "$REPO_URL" .
+            else
+              git fetch --depth 1 origin "$BRANCH"
+              git reset --hard "origin/$BRANCH"
+            fi
+
+            cd backend
+
+            if [ ! -f .env ]; then
+              cp .env.example .env
+            fi
+
+            # Only ever writes ADMIN_API_KEY if the workflow was actually given one via the
+            # ADMIN_API_KEY GitHub secret — never blanks out a value set by hand on the server.
+            if [ -n "$ADMIN_API_KEY_SECRET" ]; then
+              if grep -q '^ADMIN_API_KEY=' .env; then
+                sed -i "s|^ADMIN_API_KEY=.*|ADMIN_API_KEY=${ADMIN_API_KEY_SECRET}|" .env
+              else
+                echo "ADMIN_API_KEY=${ADMIN_API_KEY_SECRET}" >> .env
+              fi
+            fi
+
+            docker compose up -d --build
+            docker compose ps
+
+      - name: Health check
+        if: always()
+        continue-on-error: true
+        run: |
+          sleep 5
+          curl -fsS "http://${{ secrets.VPS_HOST }}:${{ vars.BACKEND_PORT || 4000 }}/health" || \
+            echo "Health check failed or port not publicly reachable — check the deploy step's logs above and confirm the port/firewall on the VPS."

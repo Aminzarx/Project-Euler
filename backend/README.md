@@ -57,12 +57,30 @@ common, low-friction options:
 `DATABASE_URL`, `PORT`, and `ADMIN_API_KEY` set as environment variables. Point it at any reachable
 PostgreSQL 14+ instance.
 
-> This backend was designed and built in an environment with no hosting credentials or deploy
-> connector available, so it has been verified to install, type-check, build, and pass its full
-> test suite here — but it has **not** been deployed to a live, internet-reachable server as part
-> of this work. If you'd like it actually pushed live, either share API access to a host you
-> control (e.g. a Railway or Render API token) so it can be deployed directly, or follow the steps
-> above yourself — either way takes about five minutes from here.
+**Your own VPS, via GitHub Actions (`.github/workflows/deploy-backend.yml`):** the workflow SSHes
+into your server (from GitHub's runners, not from any sandboxed agent session — that's the whole
+reason this path exists) and runs `docker compose up -d --build` there on every push to `main` that
+touches `backend/`, or on demand from the Actions tab. It expects:
+
+| Secret/Variable | Where | Purpose |
+| --- | --- | --- |
+| `VPS_HOST` | Secret | The server's IP or hostname |
+| `VPS_PORT` | Secret | SSH port (defaults to 22 if unset) |
+| `VPS_USER` | Secret | The SSH user to deploy as |
+| `VPS_SSH_PRIVATE_KEY` | Secret | Private half of a key pair whose public half is in that user's `~/.ssh/authorized_keys` — **use a dedicated deploy key, not your personal one** |
+| `ADMIN_API_KEY` | Secret, optional | If set, the workflow writes it into the server's `backend/.env` on every deploy; if unset, whatever's already in `.env` on the server is left alone |
+| `BACKEND_PORT` | Variable, optional | Used only for the post-deploy health-check curl; defaults to `4000` |
+
+The server needs Docker and the Docker Compose plugin installed and a user with permission to run
+`docker compose`; everything else (cloning the repo, writing `.env`, building the image, running
+migrations) the workflow handles.
+
+> This backend was designed and built in an environment with no hosting credentials, deploy
+> connector, or raw network egress available (only an allowlisted HTTPS proxy — no SSH, no
+> arbitrary TCP), so it has been verified to install, type-check, build, and pass its full test
+> suite here, and the workflow above has been written to actually deploy it — but as of this
+> commit it has **not yet run against a live server**, since that requires secrets only the
+> repository owner can add.
 
 ## API surface
 
