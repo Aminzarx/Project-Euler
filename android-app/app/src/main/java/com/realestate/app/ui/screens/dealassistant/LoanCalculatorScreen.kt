@@ -26,6 +26,7 @@ import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.CollapsibleSection
 import com.realestate.app.ui.components.MoneyField
 import com.realestate.app.ui.theme.Spacing
+import com.realestate.app.ui.theme.extendedColors
 
 @Composable
 internal fun LoanCalculatorFull(prefillPrincipal: Long?) {
@@ -50,8 +51,18 @@ internal fun LoanCalculatorFull(prefillPrincipal: Long?) {
     NumberField("دوره تنفس (اختیاری)", gracePeriod, { gracePeriod = it }, "ماه")
 
     val principalValue = principal.toAmount()
-    val monthsValue = months.toAmount().toInt().coerceAtLeast(1)
+    val monthsRaw = months.toAmount().toInt()
+    val monthsValue = monthsRaw.coerceAtLeast(1)
     val graceValue = gracePeriod.toAmount().toInt().coerceIn(0, monthsValue - 1)
+
+    if (monthsRaw <= 0) {
+        Text(
+            "مدت بازپرداخت وارد نشده یا نامعتبر بود؛ برای محاسبه مقدار ۱ ماه در نظر گرفته شد.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.extendedColors.warning
+        )
+        Spacer(modifier = Modifier.height(Spacing.sm))
+    }
     val schedule = calculateLoanSchedule(principalValue, annualRate.toAmount(), monthsValue, graceValue, method)
 
     ResultsCard(

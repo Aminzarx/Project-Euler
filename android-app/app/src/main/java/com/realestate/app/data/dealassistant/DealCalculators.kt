@@ -121,6 +121,44 @@ fun constructionFeasibilityVerdict(result: ConstructionFeasibilityResult): Strin
     else -> "بر اساس اعداد وارد‌شده، این پروژه با قیمت فروش فعلی زیان‌ده است."
 }
 
+enum class RiskLevel(val label: String) {
+    LOW("پایین"),
+    MEDIUM("متوسط"),
+    HIGH("بالا")
+}
+
+/** A rough, transparent risk read based on profitability and how thin the contingency buffer is. */
+fun constructionRiskLevel(inputs: ConstructionFeasibilityInputs, result: ConstructionFeasibilityResult): RiskLevel = when {
+    result.profitMarginPercent < 0 || inputs.unexpectedPercent < 3.0 -> RiskLevel.HIGH
+    result.profitMarginPercent < 10 -> RiskLevel.MEDIUM
+    else -> RiskLevel.LOW
+}
+
+/**
+ * A transparent 0-100 ranking aid, not a financial guarantee: up to 60 points from profit margin
+ * (capped at a 30% margin) and up to 40 points from ROI (capped at a 40% ROI).
+ */
+fun constructionInvestmentScore(result: ConstructionFeasibilityResult): Int {
+    val marginScore = (result.profitMarginPercent / 30.0 * 60.0).coerceIn(0.0, 60.0)
+    val roiScore = (result.roiPercent / 40.0 * 40.0).coerceIn(0.0, 40.0)
+    return (marginScore + roiScore).toInt().coerceIn(0, 100)
+}
+
+/** Flags input combinations that are internally consistent but economically implausible. */
+fun constructionFeasibilityWarnings(inputs: ConstructionFeasibilityInputs): List<String> {
+    val warnings = mutableListOf<String>()
+    if (inputs.sellingPricePerMeter > 0 && inputs.costPerMeter > 0 && inputs.sellingPricePerMeter < inputs.costPerMeter) {
+        warnings += "قیمت فروش هر متر از هزینه ساخت هر متر کمتر است؛ این پروژه با فرضیات فعلی احتمالاً زیان‌ده خواهد بود."
+    }
+    if (inputs.costPerMeter > 0 && inputs.unexpectedPercent in 0.0..1.99) {
+        warnings += "درصد پیش‌بینی‌نشده بسیار پایین است (کمتر از ۲٪)؛ پروژه‌های ساختمانی معمولاً حداقل ۵٪ در نظر می‌گیرند."
+    }
+    if (inputs.efficiencyPercent > 95.0) {
+        warnings += "بازده ساخت واردشده غیرمعمول بالاست؛ بیشتر پروژه‌ها به‌دلیل مشاعات، بازدهی بین ۷۰ تا ۹۰ درصد دارند."
+    }
+    return warnings
+}
+
 data class RentalConversionResult(val monthlyRent: Double, val remainingDeposit: Double)
 
 /** Converts part of a full mortgage deposit (رهن کامل) into monthly rent at a given monthly rate. */
@@ -216,6 +254,32 @@ fun investmentVerdicts(result: InvestmentAnalysisResult, inputs: InvestmentAnaly
         }
     }
     return messages
+}
+
+/**
+ * A transparent 0-100 ranking aid: up to 70 points from annualized ROI (capped at 25%) and up to
+ * 30 points from how far that ROI clears the inflation rate (capped at a 10-point edge).
+ */
+fun investmentScore(result: InvestmentAnalysisResult, inputs: InvestmentAnalysisInputs): Int {
+    val roiScore = (result.annualizedRoiPercent / 25.0 * 70.0).coerceIn(0.0, 70.0)
+    val inflationEdge = result.annualizedRoiPercent - inputs.annualInflationPercent
+    val inflationScore = (inflationEdge / 10.0 * 30.0).coerceIn(0.0, 30.0)
+    return (roiScore + inflationScore).toInt().coerceIn(0, 100)
+}
+
+/** Flags input combinations that are internally consistent but economically implausible. */
+fun investmentAnalysisWarnings(inputs: InvestmentAnalysisInputs): List<String> {
+    val warnings = mutableListOf<String>()
+    if (inputs.annualAppreciationPercent > 40.0) {
+        warnings += "رشد سالانه واردشده (بیش از ۴۰٪) نسبت به میانگین بلندمدت بازار مسکن غیرمعمول بالا به‌نظر می‌رسد."
+    }
+    if (inputs.opportunityCostPercent != null && inputs.opportunityCostPercent > 60.0) {
+        warnings += "بازده گزینه جایگزین واردشده بسیار بالاست؛ لطفاً از صحت این عدد مطمئن شوید."
+    }
+    if (inputs.annualInflationPercent <= 0.0) {
+        warnings += "نرخ تورم صفر یا خالی در نظر گرفته شده؛ در این حالت «سود واقعی» با «سود اسمی» برابر خواهد بود."
+    }
+    return warnings
 }
 
 enum class RepaymentMethod(val label: String) {

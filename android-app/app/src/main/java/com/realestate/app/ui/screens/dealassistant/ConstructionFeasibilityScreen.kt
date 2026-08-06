@@ -18,6 +18,9 @@ import androidx.compose.ui.unit.dp
 import com.realestate.app.data.dealassistant.ConstructionFeasibilityInputs
 import com.realestate.app.data.dealassistant.calculateConstructionFeasibility
 import com.realestate.app.data.dealassistant.constructionFeasibilityVerdict
+import com.realestate.app.data.dealassistant.constructionFeasibilityWarnings
+import com.realestate.app.data.dealassistant.constructionInvestmentScore
+import com.realestate.app.data.dealassistant.constructionRiskLevel
 import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.CollapsibleSection
 import com.realestate.app.ui.components.MoneyField
@@ -101,22 +104,30 @@ internal fun ConstructionFeasibilityCalculator(prefillLandPrice: Long?, prefillL
         modifier = Modifier.fillMaxWidth()
     )
 
-    val result = calculateConstructionFeasibility(
-        ConstructionFeasibilityInputs(
-            landArea = landArea.toAmount(),
-            landPrice = landPrice.toAmount().toLong(),
-            totalBuiltArea = totalBuiltArea,
-            efficiencyPercent = efficiencyPercent.toAmount(),
-            costPerMeter = costPerMeter.toAmount(),
-            permitCost = permitCost.toAmount(),
-            engineeringFeePercent = engineeringFeePercent.toAmount(),
-            municipalityCharges = municipalityCharges.toAmount(),
-            insurancePercent = insurancePercent.toAmount(),
-            unexpectedPercent = unexpectedPercent.toAmount(),
-            financingCost = financingCost.toAmount(),
-            sellingPricePerMeter = sellingPricePerMeter.toAmount()
-        )
+    val inputs = ConstructionFeasibilityInputs(
+        landArea = landArea.toAmount(),
+        landPrice = landPrice.toAmount().toLong(),
+        totalBuiltArea = totalBuiltArea,
+        efficiencyPercent = efficiencyPercent.toAmount(),
+        costPerMeter = costPerMeter.toAmount(),
+        permitCost = permitCost.toAmount(),
+        engineeringFeePercent = engineeringFeePercent.toAmount(),
+        municipalityCharges = municipalityCharges.toAmount(),
+        insurancePercent = insurancePercent.toAmount(),
+        unexpectedPercent = unexpectedPercent.toAmount(),
+        financingCost = financingCost.toAmount(),
+        sellingPricePerMeter = sellingPricePerMeter.toAmount()
     )
+    val result = calculateConstructionFeasibility(inputs)
+    val floorsValue = floors.toAmount()
+    val riskLevel = constructionRiskLevel(inputs, result)
+    val score = constructionInvestmentScore(result)
+    val warnings = constructionFeasibilityWarnings(inputs)
+    val verdictColor = when {
+        result.profitMarginPercent >= 10 -> MaterialTheme.extendedColors.success
+        result.profitMarginPercent >= 0 -> MaterialTheme.extendedColors.warning
+        else -> MaterialTheme.extendedColors.danger
+    }
 
     Spacer(modifier = Modifier.height(Spacing.lg))
     AppCard(modifier = Modifier.fillMaxWidth()) {
@@ -124,20 +135,41 @@ internal fun ConstructionFeasibilityCalculator(prefillLandPrice: Long?, prefillL
             Text(
                 constructionFeasibilityVerdict(result),
                 style = MaterialTheme.typography.titleSmall,
-                color = if (result.profitMarginPercent >= 10) {
-                    MaterialTheme.extendedColors.success
-                } else if (result.profitMarginPercent >= 0) {
-                    MaterialTheme.extendedColors.warning
-                } else {
-                    MaterialTheme.extendedColors.danger
-                }
+                color = verdictColor
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    "امتیاز سرمایه‌گذاری: $score از ۱۰۰",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "سطح ریسک: ${riskLevel.label}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = verdictColor
+                )
+            }
         }
     }
+
+    if (warnings.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(Spacing.sm))
+        AppCard(modifier = Modifier.fillMaxWidth()) {
+            Column {
+                warnings.forEachIndexed { index, message ->
+                    Text("⚠ $message", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.extendedColors.warning)
+                    if (index != warnings.lastIndex) Spacer(modifier = Modifier.height(6.dp))
+                }
+            }
+        }
+    }
+
     ResultsCard(
         listOf(
             "متراژ خالص قابل فروش" to "%.0f متر".format(result.netSaleableArea),
             "متراژ مشاعات" to "%.0f متر".format(result.commonArea),
+            "متراژ تقریبی هر طبقه" to if (floorsValue > 0) "%.0f متر".format(totalBuiltArea / floorsValue) else "—",
             "هزینه ساخت (Hard Cost)" to "${money(result.hardCost)} تومان",
             "هزینه‌های جانبی (Soft Cost)" to "${money(result.softCosts)} تومان",
             "سرمایه‌گذاری کل" to "${money(result.totalInvestment)} تومان",
@@ -146,15 +178,43 @@ internal fun ConstructionFeasibilityCalculator(prefillLandPrice: Long?, prefillL
             "سود ناخالص" to "${money(result.grossProfit)} تومان",
             "سود خالص" to "${money(result.netProfit)} تومان",
             "حاشیه سود" to percent(result.profitMarginPercent),
-            "بازده سرمایه (ROI)" to percent(result.roiPercent)
+            "بازده سرمایه (ROI)" to percent(result.roiPercent),
+            "سهم زمین از سرمایه‌گذاری کل" to percent(if (result.totalInvestment > 0) inputs.landPrice / result.totalInvestment * 100.0 else 0.0)
         )
     )
+
+    Spacer(modifier = Modifier.height(Spacing.md))
+    CollapsibleSection(title = "تحلیل حساسیت (چه می‌شود اگر...)", subtitle = "تأثیر تغییر فرضیات کلیدی بر سود پروژه") {
+        val scenarios = listOf(
+            "افزایش ۱۰٪ هزینه ساخت" to inputs.copy(costPerMeter = inputs.costPerMeter * 1.1),
+            "کاهش ۱۰٪ قیمت فروش" to inputs.copy(sellingPricePerMeter = inputs.sellingPricePerMeter * 0.9),
+            "هر دو هم‌زمان (بدبینانه)" to inputs.copy(
+                costPerMeter = inputs.costPerMeter * 1.1,
+                sellingPricePerMeter = inputs.sellingPricePerMeter * 0.9
+            )
+        )
+        scenarios.forEachIndexed { index, (label, scenarioInputs) ->
+            val scenarioResult = calculateConstructionFeasibility(scenarioInputs)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(label, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "سود خالص: ${money(scenarioResult.netProfit)} تومان (${percent(scenarioResult.profitMarginPercent)})",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (scenarioResult.netProfit >= 0) MaterialTheme.extendedColors.success else MaterialTheme.extendedColors.danger
+                )
+            }
+            if (index != scenarios.lastIndex) Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
 
     MethodologyNote(
         "متراژ خالص قابل فروش = متراژ کل ساخت × درصد کارایی. هزینه ساخت (Hard Cost) = متراژ کل ساخت × هزینه ساخت هر متر. " +
             "هزینه‌های جانبی (Soft Cost) = هزینه پروانه + حق‌الزحمه مهندسی (درصدی از هزینه ساخت) + عوارض شهرداری + بیمه (درصدی از هزینه ساخت) + هزینه تأمین مالی + هزینه پیش‌بینی‌نشده (درصدی از مجموع هزینه ساخت و بقیه هزینه‌های جانبی). " +
             "سرمایه‌گذاری کل = قیمت زمین + هزینه ساخت + هزینه‌های جانبی. درآمد فروش تخمینی = متراژ خالص قابل فروش × قیمت فروش هر متر. " +
             "سود ناخالص = درآمد فروش − (قیمت زمین + هزینه ساخت). سود خالص = درآمد فروش − سرمایه‌گذاری کل. " +
-            "حاشیه سود = سود خالص ÷ درآمد فروش × ۱۰۰. بازده سرمایه (ROI) = سود خالص ÷ سرمایه‌گذاری کل × ۱۰۰."
+            "حاشیه سود = سود خالص ÷ درآمد فروش × ۱۰۰. بازده سرمایه (ROI) = سود خالص ÷ سرمایه‌گذاری کل × ۱۰۰. " +
+            "متراژ تقریبی هر طبقه = متراژ کل بنا ÷ تعداد طبقات (صرفاً اطلاعاتی؛ در محاسبات مالی دخالتی ندارد). " +
+            "امتیاز سرمایه‌گذاری از ۱۰۰: حداکثر ۶۰ امتیاز از حاشیه سود (سقف در ۳۰٪) و حداکثر ۴۰ امتیاز از ROI (سقف در ۴۰٪) — یک معیار مقایسه‌ای شفاف است، نه تضمین مالی. " +
+            "سطح ریسک بر اساس حاشیه سود و کفایت درصد پیش‌بینی‌نشده تعیین می‌شود."
     )
 }
