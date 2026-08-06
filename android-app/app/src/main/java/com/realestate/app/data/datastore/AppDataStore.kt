@@ -37,6 +37,10 @@ private object Keys {
     val BACKUP_HISTORY = stringPreferencesKey("backup_history")
     val RECENT_DEAL_TOOLS = stringPreferencesKey("recent_deal_tools")
 
+    val LAST_CASE_TYPE = stringPreferencesKey("last_case_type")
+    val LAST_OWNER_TRANSACTION_TYPE = stringPreferencesKey("last_owner_transaction_type")
+    val LAST_CLIENT_TRANSACTION_TYPE = stringPreferencesKey("last_client_transaction_type")
+
     val APP_LOCK_PIN_HASH = stringPreferencesKey("app_lock_pin_hash")
     val BIOMETRIC_UNLOCK_ENABLED = booleanPreferencesKey("biometric_unlock_enabled")
     val SCREEN_SECURITY_ENABLED = booleanPreferencesKey("screen_security_enabled")
@@ -201,6 +205,38 @@ class RecentToolsRepository(private val context: Context) {
 
     private companion object {
         const val TOOL_DELIMITER = "|||"
+    }
+}
+
+data class CaseWizardDefaults(
+    val lastCaseType: String? = null,
+    val lastOwnerTransactionType: String? = null,
+    val lastClientTransactionType: String? = null
+)
+
+/** Remembers the agent's last Case-type and Transaction-type choices so a new Create Case starts
+ *  with that same choice pre-highlighted (never auto-submitted — the agent still has to tap
+ *  through), instead of every new case starting from a blank slate agents overwhelmingly fill in
+ *  the same way session after session. */
+class CaseWizardPreferencesRepository(private val context: Context) {
+    val defaults: Flow<CaseWizardDefaults> = context.appDataStore.data.map { prefs ->
+        CaseWizardDefaults(
+            lastCaseType = prefs[Keys.LAST_CASE_TYPE],
+            lastOwnerTransactionType = prefs[Keys.LAST_OWNER_TRANSACTION_TYPE],
+            lastClientTransactionType = prefs[Keys.LAST_CLIENT_TRANSACTION_TYPE]
+        )
+    }
+
+    suspend fun recordCaseType(name: String) {
+        context.appDataStore.edit { it[Keys.LAST_CASE_TYPE] = name }
+    }
+
+    suspend fun recordOwnerTransactionType(name: String) {
+        context.appDataStore.edit { it[Keys.LAST_OWNER_TRANSACTION_TYPE] = name }
+    }
+
+    suspend fun recordClientTransactionType(name: String) {
+        context.appDataStore.edit { it[Keys.LAST_CLIENT_TRANSACTION_TYPE] = name }
     }
 }
 

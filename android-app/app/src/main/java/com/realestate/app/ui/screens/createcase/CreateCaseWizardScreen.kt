@@ -14,6 +14,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,6 +45,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -66,6 +68,7 @@ import com.realestate.app.data.PropertyType
 import com.realestate.app.data.clientRequestTransactionTypes
 import com.realestate.app.data.ownerTransactionTypes
 import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.CardShape
 import com.realestate.app.ui.components.ConfirmationDialog
 import com.realestate.app.ui.components.icon
 import com.realestate.app.ui.components.label
@@ -103,13 +106,39 @@ fun CreateCaseWizardScreen(
     }
 
     var step by rememberSaveable { mutableStateOf(if (isEditMode) 4 else 1) }
-    var caseType by rememberSaveable { mutableStateOf<CaseType?>(if (isEditMode) null else null) }
+    var caseType by rememberSaveable { mutableStateOf<CaseType?>(null) }
     var transactionType by rememberSaveable { mutableStateOf<CaseTransactionType?>(null) }
     var propertyType by rememberSaveable { mutableStateOf<PropertyType?>(null) }
     val formState = remember { CaseFormState() }
     var loadedIntoForm by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
     var showExitConfirm by remember { mutableStateOf(false) }
+    // Whether the agent has actually tapped a Case-type card yet, vs. it only being highlighted as
+    // a suggestion below — the suggestion must never look identical to a real, made choice.
+    var caseTypeConfirmed by rememberSaveable { mutableStateOf(isEditMode) }
+    var transactionTypeConfirmed by rememberSaveable { mutableStateOf(isEditMode) }
+
+    // Smart defaults: a brand-new case starts with the agent's last choices pre-highlighted (never
+    // auto-advanced past) instead of a blank slate, since most agents overwhelmingly create the
+    // same kind of case over and over in one session.
+    val wizardDefaults by viewModel.caseWizardDefaults.collectAsStateWithLifecycle()
+    LaunchedEffect(wizardDefaults) {
+        if (isEditMode || caseTypeConfirmed) return@LaunchedEffect
+        val suggestedCaseType = wizardDefaults.lastCaseType?.let { name ->
+            runCatching { CaseType.valueOf(name) }.getOrNull()
+        }
+        if (suggestedCaseType != null) {
+            caseType = suggestedCaseType
+            val suggestedTransactionName = if (suggestedCaseType == CaseType.OWNER) {
+                wizardDefaults.lastOwnerTransactionType
+            } else {
+                wizardDefaults.lastClientTransactionType
+            }
+            transactionType = suggestedTransactionName?.let { name ->
+                runCatching { CaseTransactionType.valueOf(name) }.getOrNull()
+            }
+        }
+    }
 
     LaunchedEffect(existing) {
         val p = existing
@@ -255,10 +284,7 @@ fun CreateCaseWizardScreen(
 
         Column(modifier = Modifier.padding(padding).fillMaxSize()) {
             if (!isEditMode) {
-                LinearProgressIndicator(
-                    progress = { step / 4f },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                WizardProgressHeader(step = step, stepTitle = stepTitle(step, isEditMode = false))
             }
 
             AnimatedContent(
@@ -277,7 +303,25 @@ fun CreateCaseWizardScreen(
                 when (currentStep) {
                     1 -> CaseTypeStep(
                         selected = caseType,
-                        onSelect = { caseType = it; step = 2 }
+                        confirmed = caseTypeConfirmed,
+                        onSelect = { picked ->
+                            // A real, deliberate switch away from a type already in the form loses
+                            // that type's fields — no point carrying an owner's key-holder notes
+                            // into a client request no one will ever see them on.
+                            val previous = caseType
+                            if (caseTypeConfirmed && previous != null && previous != picked) {
+                                when (previous) {
+                                    CaseType.OWNER -> formState.resetOwnerOnlyFields()
+                                    CaseType.CLIENT_REQUEST -> formState.resetClientRequestOnlyFields()
+                                }
+                                transactionType = null
+                                transactionTypeConfirmed = false
+                            }
+                            caseType = picked
+                            caseTypeConfirmed = true
+                            viewModel.recordCaseTypeUsed(picked)
+                            step = 2
+                        }
                     )
                     2 -> {
                         val type = caseType
@@ -285,7 +329,12 @@ fun CreateCaseWizardScreen(
                             TransactionTypeStep(
                                 caseType = type,
                                 selected = transactionType,
-                                onSelect = { transactionType = it; step = 3 }
+                                onSelect = {
+                                    transactionType = it
+                                    transactionTypeConfirmed = true
+                                    viewModel.recordTransactionTypeUsed(type, it)
+                                    step = 3
+                                }
                             )
                         }
                     }
@@ -328,6 +377,35 @@ fun CreateCaseWizardScreen(
     }
 }
 
+/** "گام ۲ از ۴ · نوع معامله" plus a percentage — a bare progress bar told the agent *some* progress
+ *  had been made but not where they stood or what was left; this answers both at a glance. */
+@Composable
+private fun WizardProgressHeader(step: Int, stepTitle: String) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.screen, vertical = 8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "گام $step از ۴ · $stepTitle",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                "${step * 25}٪",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        LinearProgressIndicator(
+            progress = { step / 4f },
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
 private fun stepTitle(step: Int, isEditMode: Boolean): String = when {
     isEditMode -> "ویرایش پرونده"
     step == 1 -> "چه می‌خواهید ثبت کنید؟"
@@ -349,7 +427,7 @@ private fun legacyDealTypeFor(transactionType: CaseTransactionType?): com.reales
     }
 
 @Composable
-private fun CaseTypeStep(selected: CaseType?, onSelect: (CaseType) -> Unit) {
+private fun CaseTypeStep(selected: CaseType?, confirmed: Boolean, onSelect: (CaseType) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -367,12 +445,21 @@ private fun CaseTypeStep(selected: CaseType?, onSelect: (CaseType) -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (selected != null && !confirmed) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "بر اساس آخرین پرونده‌ای که ثبت کردید پیشنهاد شده — می‌توانید تغییر دهید",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
         Spacer(modifier = Modifier.height(Spacing.lg))
         CaseTypeCard(
             icon = Icons.Rounded.Storefront,
             title = "مالک",
             subtitle = "مشتری صاحب ملکی است که می‌خواهد بفروشد، اجاره دهد یا واگذار کند.",
             selected = selected == CaseType.OWNER,
+            suggested = selected == CaseType.OWNER && !confirmed,
             onClick = { onSelect(CaseType.OWNER) }
         )
         Spacer(modifier = Modifier.height(Spacing.md))
@@ -381,6 +468,7 @@ private fun CaseTypeStep(selected: CaseType?, onSelect: (CaseType) -> Unit) {
             title = "درخواست مشتری",
             subtitle = "مشتری به دنبال ملکی برای خرید، رهن یا اجاره است.",
             selected = selected == CaseType.CLIENT_REQUEST,
+            suggested = selected == CaseType.CLIENT_REQUEST && !confirmed,
             onClick = { onSelect(CaseType.CLIENT_REQUEST) }
         )
     }
@@ -392,17 +480,26 @@ private fun CaseTypeCard(
     title: String,
     subtitle: String,
     selected: Boolean,
+    suggested: Boolean,
     onClick: () -> Unit
 ) {
     AppCard(
         onClick = onClick,
         contentPadding = PaddingValues(Spacing.lg),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (selected) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CardShape)
+                } else {
+                    Modifier
+                }
+            )
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(64.dp)
                     .clip(CircleShape)
                     .background(
                         if (selected) MaterialTheme.colorScheme.primary
@@ -413,14 +510,38 @@ private fun CaseTypeCard(
                 Icon(
                     icon,
                     contentDescription = null,
+                    modifier = Modifier.size(30.dp),
                     tint = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
                 )
             }
             Spacer(modifier = Modifier.width(Spacing.md))
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleLarge)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(title, style = MaterialTheme.typography.titleLarge)
+                    if (suggested) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            shape = MaterialTheme.shapes.extraSmall
+                        ) {
+                            Text(
+                                "پیشنهادی",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (selected) {
+                Icon(
+                    Icons.Rounded.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
@@ -433,32 +554,39 @@ private fun TransactionTypeStep(
     onSelect: (CaseTransactionType) -> Unit
 ) {
     val options = if (caseType == CaseType.OWNER) ownerTransactionTypes else clientRequestTransactionTypes
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(Spacing.screen)
-    ) {
+    Column(modifier = Modifier.fillMaxSize().padding(Spacing.screen)) {
         Text("نوع معامله مورد نظر چیست؟", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(Spacing.md))
-        options.forEach { type ->
-            AppCard(
-                onClick = { onSelect(type) },
-                contentPadding = PaddingValues(horizontal = Spacing.md, vertical = 14.dp),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+        // Same 2-column grid as the Property Type step (below) rather than a list of full-width
+        // rows — the two selection steps back to back should read as one visual language, not two.
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            items(options, key = { it.name }) { type ->
+                val isSelected = selected == type
+                AppCard(
+                    onClick = { onSelect(type) },
+                    contentPadding = PaddingValues(Spacing.md),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CardShape) else Modifier)
                 ) {
-                    Text(type.label(), style = MaterialTheme.typography.titleMedium)
-                    if (selected == type) {
-                        Icon(
-                            Icons.Rounded.Check,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(type.label(), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        if (isSelected) {
+                            Icon(
+                                Icons.Rounded.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }

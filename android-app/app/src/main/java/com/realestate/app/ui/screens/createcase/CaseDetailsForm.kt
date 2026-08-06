@@ -20,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AddAPhoto
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -55,13 +56,13 @@ import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
 import com.realestate.app.data.RequestValidityType
 import com.realestate.app.data.formShape
+import com.realestate.app.data.isValidIranianMobile
 import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.CollapsibleSection
 import com.realestate.app.ui.components.DropdownMenu
 import com.realestate.app.ui.components.DropdownMenuItem
 import com.realestate.app.ui.components.MoneyField
 import com.realestate.app.ui.components.PrimaryButton
-import com.realestate.app.ui.components.RequiredFieldLabel
 import com.realestate.app.ui.components.color
 import com.realestate.app.ui.components.icon
 import com.realestate.app.ui.components.label
@@ -97,9 +98,20 @@ internal fun CaseDetailsForm(
     onPickImage: () -> Unit,
     onSave: () -> Unit
 ) {
-    val isFormValid = when (caseType) {
+    // Each case type accepts either one of two fields — never both — so the reason a disabled
+    // Save button gives has to name both alternatives, not just one, or it reads as a lie once the
+    // agent fills the field it happened to omit.
+    val identityFilled = when (caseType) {
         CaseType.OWNER -> state.address.isNotBlank() || state.title.isNotBlank()
         CaseType.CLIENT_REQUEST -> state.contactName.isNotBlank() || state.contactPhone.isNotBlank()
+    }
+    val phoneValid = state.contactPhone.isBlank() || isValidIranianMobile(state.contactPhone)
+    val isFormValid = identityFilled && phoneValid
+    val disabledReason = when {
+        !identityFilled && caseType == CaseType.OWNER -> "عنوان پرونده یا آدرس را وارد کنید"
+        !identityFilled -> "نام مشتری یا شماره تماس را وارد کنید"
+        !phoneValid -> "شماره تماس معتبر نیست"
+        else -> null
     }
 
     Column(
@@ -140,6 +152,9 @@ internal fun CaseDetailsForm(
         }
 
         Spacer(modifier = Modifier.height(Spacing.xl))
+        if (disabledReason != null) {
+            ValidationMessage(text = disabledReason, modifier = Modifier.padding(bottom = 8.dp))
+        }
         PrimaryButton(
             text = if (isEditMode) "ذخیره تغییرات" else "ثبت پرونده",
             onClick = onSave,
@@ -158,17 +173,26 @@ private fun OwnerSections(state: CaseFormState, propertyType: PropertyType, tran
     AppCard(modifier = Modifier.fillMaxWidth()) {
         LabeledField(state::contactName, "نام مالک")
         Spacer(modifier = Modifier.height(8.dp))
-        LabeledField(state::contactPhone, "شماره تماس مالک", keyboardType = KeyboardType.Phone)
+        PhoneField(state::contactPhone, "شماره تماس مالک")
     }
 
     Spacer(modifier = Modifier.height(Spacing.cardGap))
     Text("اطلاعات ملک", style = MaterialTheme.typography.titleLarge)
     Spacer(modifier = Modifier.height(Spacing.sm))
     AppCard(modifier = Modifier.fillMaxWidth()) {
+        // Title and address are the OR-pair that satisfies this case's minimum requirement — the
+        // wording says so explicitly instead of marking just one of them with a star, which would
+        // claim a strictness neither field actually has on its own.
+        Text(
+            "برای ثبت، حداقل عنوان پرونده یا آدرس را وارد کنید",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(6.dp))
         OutlinedTextField(
             value = state.title,
             onValueChange = { state.title = it },
-            label = { RequiredFieldLabel("عنوان پرونده") },
+            label = { Text("عنوان پرونده") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -278,14 +302,20 @@ private fun ClientRequestSections(state: CaseFormState, transactionType: CaseTra
     Text("اطلاعات مشتری", style = MaterialTheme.typography.titleLarge)
     Spacer(modifier = Modifier.height(Spacing.sm))
     AppCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            "برای ثبت، حداقل نام مشتری یا شماره تماس را وارد کنید",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(6.dp))
         OutlinedTextField(
             value = state.contactName,
             onValueChange = { state.contactName = it },
-            label = { RequiredFieldLabel("نام مشتری") },
+            label = { Text("نام مشتری") },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(8.dp))
-        LabeledField(state::contactPhone, "شماره تماس", keyboardType = KeyboardType.Phone)
+        PhoneField(state::contactPhone, "شماره تماس")
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = state.description,
@@ -419,6 +449,43 @@ private fun ImagePickerBox(imageUri: String?, onPick: () -> Unit, onRemove: () -
             }
         }
     }
+}
+
+/** A short, actionable line explaining *why* the primary action is disabled — never just a greyed
+ *  out button with no explanation of what to fix. */
+@Composable
+private fun ValidationMessage(text: String, modifier: Modifier = Modifier) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            Icons.Rounded.Info,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+    }
+}
+
+/** A phone field that validates as an Iranian mobile number once something has been typed — blank
+ *  is never an error here, since the phone is only one half of an OR requirement with the name
+ *  field; only a *wrong* number, not a missing one, gets flagged inline. */
+@Composable
+private fun PhoneField(value: kotlin.reflect.KMutableProperty0<String>, label: String, modifier: Modifier = Modifier) {
+    val raw = value.get()
+    val isError = raw.isNotBlank() && !isValidIranianMobile(raw)
+    OutlinedTextField(
+        value = raw,
+        onValueChange = { value.set(normalizeDigits(it).filter { c -> c.isDigit() }.take(11)) },
+        label = { Text(label) },
+        singleLine = true,
+        isError = isError,
+        supportingText = if (isError) {
+            { Text("شماره موبایل باید ۱۱ رقم و با ۰۹ شروع شود") }
+        } else null,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+        modifier = modifier.fillMaxWidth()
+    )
 }
 
 @Composable

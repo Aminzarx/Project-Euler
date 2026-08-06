@@ -114,6 +114,43 @@ internal class CaseFormState {
         customExpiryAt = p.customExpiryAt
     }
 
+    /** Blanks every Owner-only field — called when the agent switches an in-progress case from
+     *  Owner to Client Request, so the record that gets saved never carries stale, meaningless
+     *  values (a mortgage status, a key holder) left over from the type they backed out of. */
+    fun resetOwnerOnlyFields() {
+        mortgageStatus = MortgageStatus.NONE
+        titleDeedReady = null
+        reasonForSelling = ""
+        viewingHours = ""
+        keyHolder = ""
+        paymentConditions = ""
+        constructionAge = ""
+        legalStatus = ""
+        hiddenNotes = ""
+        floor = ""
+        totalFloors = ""
+        landZoning = ""
+        hasBusinessLicense = null
+        ownerFlags = emptySet()
+    }
+
+    /** The Client-Request-only counterpart of [resetOwnerOnlyFields]. */
+    fun resetClientRequestOnlyFields() {
+        budgetMin = ""
+        budgetMax = ""
+        desiredMinArea = ""
+        desiredMaxArea = ""
+        desiredBedrooms = ""
+        preferredAreas = emptyList()
+        floorPreference = ""
+        viewPreference = ""
+        cashAvailable = ""
+        maxDeposit = ""
+        maxMonthlyRent = ""
+        requirementFlags = emptySet()
+        rentalFlags = emptySet()
+    }
+
     /**
      * Values as of the last [markClean] call — the reference point for [isDirty].
      *

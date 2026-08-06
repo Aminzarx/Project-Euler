@@ -9,8 +9,12 @@ import com.realestate.app.data.Property
 import com.realestate.app.data.PropertyRepository
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
+import com.realestate.app.data.CaseTransactionType
+import com.realestate.app.data.CaseType
 import com.realestate.app.data.code
 import com.realestate.app.data.matchesPriceRange
+import com.realestate.app.data.datastore.CaseWizardDefaults
+import com.realestate.app.data.datastore.CaseWizardPreferencesRepository
 import com.realestate.app.data.datastore.SearchHistoryRepository
 import com.realestate.app.data.datastore.SecurityPreferencesRepository
 import com.realestate.app.data.formatAppDate
@@ -67,6 +71,7 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     )
     private val searchHistoryRepository = SearchHistoryRepository(application)
     private val securityPreferencesRepository = SecurityPreferencesRepository(application)
+    private val caseWizardPreferencesRepository = CaseWizardPreferencesRepository(application)
 
     private val _filter = MutableStateFlow(PropertyFilter())
     val filter: StateFlow<PropertyFilter> = _filter
@@ -172,6 +177,21 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SmartDefaults())
+
+    val caseWizardDefaults: StateFlow<CaseWizardDefaults> = caseWizardPreferencesRepository.defaults
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), CaseWizardDefaults())
+
+    fun recordCaseTypeUsed(type: CaseType) = viewModelScope.launch {
+        caseWizardPreferencesRepository.recordCaseType(type.name)
+    }
+
+    fun recordTransactionTypeUsed(caseType: CaseType, type: CaseTransactionType) = viewModelScope.launch {
+        if (caseType == CaseType.OWNER) {
+            caseWizardPreferencesRepository.recordOwnerTransactionType(type.name)
+        } else {
+            caseWizardPreferencesRepository.recordClientTransactionType(type.name)
+        }
+    }
 
     private var lastDeletedProperty: Property? = null
     private val _deletionEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
