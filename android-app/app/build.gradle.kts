@@ -103,6 +103,12 @@ dependencies {
     implementation("com.google.zxing:core:3.5.3")
 
     testImplementation("junit:junit:4.13.2")
+    // The app's own org.json usage (Property JSON, export/import) compiles against Android's
+    // android.jar stub of org.json, whose method bodies just throw "Stub!" at runtime — real on a
+    // device, useless in a plain JVM unit test. This is the standard fix: the real reference
+    // implementation, same package name, so it's picked up transparently by any test that touches
+    // JSONObject/JSONArray without Robolectric or an emulator.
+    testImplementation("org.json:json:20231013")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.06.00"))

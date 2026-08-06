@@ -55,6 +55,7 @@ import com.realestate.app.ui.screens.WalletScreen
 import com.realestate.app.viewmodel.AppLockViewModel
 import com.realestate.app.viewmodel.AuthViewModel
 import com.realestate.app.viewmodel.BackupViewModel
+import com.realestate.app.viewmodel.CaseTransferViewModel
 import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
 import com.realestate.app.viewmodel.WalletViewModel
@@ -80,6 +81,7 @@ fun RealEstateApp(
     profileViewModel: ProfileViewModel,
     authViewModel: AuthViewModel,
     backupViewModel: BackupViewModel,
+    caseTransferViewModel: CaseTransferViewModel,
     dealAssistantViewModel: DealAssistantViewModel,
     appLockViewModel: AppLockViewModel
 ) {
@@ -208,6 +210,7 @@ fun RealEstateApp(
                 PropertyListScreen(
                     viewModel = viewModel,
                     profileViewModel = profileViewModel,
+                    caseTransferViewModel = caseTransferViewModel,
                     onPropertyClick = { id -> navController.navigate(Screen.Detail.createRoute(id)) },
                     onAddClick = { navController.navigate(Screen.AddEdit.createRoute()) }
                 )

@@ -46,6 +46,7 @@ import com.realestate.app.ui.theme.RealEstateAppTheme
 import com.realestate.app.viewmodel.AppLockViewModel
 import com.realestate.app.viewmodel.AuthViewModel
 import com.realestate.app.viewmodel.BackupViewModel
+import com.realestate.app.viewmodel.CaseTransferViewModel
 import com.realestate.app.viewmodel.DealAssistantViewModel
 import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
@@ -58,6 +59,7 @@ fun RootApp(
     walletViewModel: WalletViewModel,
     profileViewModel: ProfileViewModel,
     backupViewModel: BackupViewModel,
+    caseTransferViewModel: CaseTransferViewModel,
     dealAssistantViewModel: DealAssistantViewModel,
     appLockViewModel: AppLockViewModel
 ) {
@@ -121,6 +123,7 @@ fun RootApp(
                         profileViewModel = profileViewModel,
                         authViewModel = authViewModel,
                         backupViewModel = backupViewModel,
+                        caseTransferViewModel = caseTransferViewModel,
                         dealAssistantViewModel = dealAssistantViewModel,
                         appLockViewModel = appLockViewModel
                     )

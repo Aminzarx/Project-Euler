@@ -2,6 +2,10 @@ package com.realestate.app.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,10 +27,14 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Share
 import com.realestate.app.ui.components.DropdownMenu
 import com.realestate.app.ui.components.DropdownMenuItem
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -39,8 +47,10 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,15 +71,20 @@ import com.realestate.app.data.matchesPriceRange
 import com.realestate.app.ui.components.SwipeablePropertyRow
 import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.ui.components.label
+import com.realestate.app.viewmodel.CaseTransferViewModel
+import com.realestate.app.viewmodel.ImportApplyState
+import com.realestate.app.viewmodel.ImportPreviewState
 import com.realestate.app.viewmodel.PropertyFilter
 import com.realestate.app.viewmodel.PropertyViewModel
 import com.realestate.app.viewmodel.ProfileViewModel
+import com.realestate.app.viewmodel.ShareBundleState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PropertyListScreen(
     viewModel: PropertyViewModel,
     profileViewModel: ProfileViewModel,
+    caseTransferViewModel: CaseTransferViewModel,
     onPropertyClick: (Long) -> Unit,
     onAddClick: () -> Unit
 ) {
@@ -84,6 +100,61 @@ fun PropertyListScreen(
     val allProperties by viewModel.allProperties.collectAsStateWithLifecycle()
     val selectionMode = selectedIds.isNotEmpty()
 
+    // Leaving selection mode (X button or system back) always clears the selection — there's no
+    // "exit but keep it for later" concept here, so the two must stay in lockstep.
+    BackHandler(enabled = selectionMode) { viewModel.clearSelection() }
+
+    var showSharePasswordDialog by remember { mutableStateOf(false) }
+    val shareState by caseTransferViewModel.shareState.collectAsStateWithLifecycle()
+
+    var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
+    var showImportPasswordDialog by remember { mutableStateOf(false) }
+    val importPreview by caseTransferViewModel.importPreview.collectAsStateWithLifecycle()
+    val importApply by caseTransferViewModel.importApply.collectAsStateWithLifecycle()
+    val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) {
+            pendingImportUri = uri
+            showImportPasswordDialog = true
+        }
+    }
+
+    // The bundle file is ready — hand it to the system Share Sheet, then reset so a
+    // recomposition (e.g. rotation) doesn't re-fire the same share intent.
+    LaunchedEffect(shareState) {
+        val state = shareState
+        if (state is ShareBundleState.Ready) {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/octet-stream"
+                putExtra(Intent.EXTRA_STREAM, state.uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری بسته رمزنگاری‌شده"))
+            viewModel.clearSelection()
+            caseTransferViewModel.resetShareState()
+        } else if (state is ShareBundleState.Failed) {
+            Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+            caseTransferViewModel.resetShareState()
+        }
+    }
+
+    LaunchedEffect(importApply) {
+        val state = importApply
+        if (state is ImportApplyState.Success) {
+            val message = when {
+                state.insertedCount > 0 && state.updatedCount > 0 ->
+                    "${state.insertedCount} پرونده جدید افزوده و ${state.updatedCount} پرونده به‌روزرسانی شد"
+                state.insertedCount > 0 -> "${state.insertedCount} پرونده جدید افزوده شد"
+                state.updatedCount > 0 -> "${state.updatedCount} پرونده به‌روزرسانی شد"
+                else -> "چیزی برای اعمال وجود نداشت"
+            }
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            caseTransferViewModel.resetImportApplyState()
+        } else if (state is ImportApplyState.Failed) {
+            Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+            caseTransferViewModel.resetImportApplyState()
+        }
+    }
+
     Scaffold(
         topBar = {
             if (selectionMode) {
@@ -98,6 +169,9 @@ fun PropertyListScreen(
                         IconButton(onClick = { viewModel.selectAll(properties.map { it.id }) }) {
                             Icon(Icons.Rounded.CheckCircle, contentDescription = "انتخاب همه")
                         }
+                        IconButton(onClick = { showSharePasswordDialog = true }) {
+                            Icon(Icons.Rounded.Share, contentDescription = "اشتراک‌گذاری رمزنگاری‌شده")
+                        }
                         IconButton(onClick = { showDeleteConfirm = true }) {
                             Icon(Icons.Rounded.Delete, contentDescription = "حذف موارد انتخاب‌شده")
                         }
@@ -107,6 +181,9 @@ fun PropertyListScreen(
                 TopAppBar(
                     title = { Text("املاک") },
                     actions = {
+                        IconButton(onClick = { importPicker.launch("*/*") }) {
+                            Icon(Icons.Rounded.Download, contentDescription = "وارد کردن بسته رمزنگاری‌شده")
+                        }
                         IconButton(onClick = { showFilterSheet = true }) {
                             Icon(Icons.Rounded.FilterList, contentDescription = "فیلترها")
                         }
@@ -305,6 +382,167 @@ fun PropertyListScreen(
             onConfirm = { viewModel.deleteSelected(selected) },
             onDismiss = { showDeleteConfirm = false }
         )
+    }
+
+    if (showSharePasswordDialog) {
+        PasswordPromptDialog(
+            title = "رمز عبور بسته اشتراکی",
+            description = "این رمز عبور برای رمزگشایی روی گوشی مقصد لازم است — آن را جدا (نه در همان پیام) به گیرنده بدهید.",
+            confirmLabel = "اشتراک‌گذاری",
+            onConfirm = { password ->
+                showSharePasswordDialog = false
+                val selected = allProperties.filter { selectedIds.contains(it.id) }
+                caseTransferViewModel.shareSelected(selected, password.toCharArray())
+            },
+            onDismiss = { showSharePasswordDialog = false }
+        )
+    }
+    if (shareState is ShareBundleState.Working) {
+        WorkingDialog(text = "در حال آماده‌سازی و رمزنگاری بسته…")
+    }
+
+    if (showImportPasswordDialog) {
+        PasswordPromptDialog(
+            title = "رمز عبور بسته",
+            description = "رمز عبوری که هنگام اشتراک‌گذاری این فایل تعیین شده را وارد کنید.",
+            confirmLabel = "ادامه",
+            onConfirm = { password ->
+                showImportPasswordDialog = false
+                pendingImportUri?.let { uri -> caseTransferViewModel.peekImport(uri, password.toCharArray()) }
+            },
+            onDismiss = {
+                showImportPasswordDialog = false
+                pendingImportUri = null
+            }
+        )
+    }
+    if (importPreview is ImportPreviewState.Loading) {
+        WorkingDialog(text = "در حال خواندن و رمزگشایی فایل…")
+    }
+    if (importApply is ImportApplyState.Working) {
+        WorkingDialog(text = "در حال اعمال تغییرات…")
+    }
+
+    val preview = importPreview
+    if (preview is ImportPreviewState.Ready) {
+        ImportPreviewDialog(
+            preview = preview,
+            onConfirm = { caseTransferViewModel.confirmImport() },
+            onDismiss = { caseTransferViewModel.dismissImportPreview() }
+        )
+    }
+    LaunchedEffect(importPreview) {
+        val state = importPreview
+        if (state is ImportPreviewState.Failed) {
+            Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+            caseTransferViewModel.dismissImportPreview()
+        }
+    }
+}
+
+@Composable
+private fun WorkingDialog(text: String) {
+    AlertDialog(
+        onDismissRequest = {},
+        properties = androidx.compose.ui.window.DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+        confirmButton = {},
+        text = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(text)
+            }
+        }
+    )
+}
+
+@Composable
+private fun PasswordPromptDialog(
+    title: String,
+    description: String,
+    confirmLabel: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var password by remember { mutableStateOf("") }
+    // A short PIN is fine — PBKDF2's 210,000 iterations are what actually make brute-forcing it
+    // expensive, not the character count — but under 4 digits is trivial to shoulder-surf and
+    // easy to mistype without noticing, so a minimum is worth enforcing at the door.
+    val isValid = password.length >= 4
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("رمز عبور") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(password) }, enabled = isValid) { Text(confirmLabel) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("انصراف") }
+        }
+    )
+}
+
+@Composable
+private fun ImportPreviewDialog(
+    preview: ImportPreviewState.Ready,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val plan = preview.plan
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("پیش‌نمایش ورود اطلاعات") },
+        text = {
+            Column {
+                Text(
+                    "این بسته ${plan.totalIncoming} پرونده دارد" +
+                        if (preview.appVersion.isNotBlank()) " — ساخته‌شده با نسخه ${preview.appVersion} اپ" else "",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                ImportCountRow(label = "پرونده جدید", count = plan.toInsert.size)
+                ImportCountRow(label = "به‌روزرسانی می‌شود", count = plan.toUpdate.size)
+                ImportCountRow(label = "بدون تغییر (نسخه محلی جدیدتر یا هم‌زمان است)", count = plan.unchanged.size)
+                if (plan.toUpdate.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        "پرونده‌های «به‌روزرسانی می‌شود» نسخه محلی‌شان با نسخه داخل این بسته جایگزین خواهد شد.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = plan.toInsert.isNotEmpty() || plan.toUpdate.isNotEmpty()) {
+                Text("اعمال")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("انصراف") }
+        }
+    )
+}
+
+@Composable
+private fun ImportCountRow(label: String, count: Int) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("$count", style = MaterialTheme.typography.bodySmall)
     }
 }
 

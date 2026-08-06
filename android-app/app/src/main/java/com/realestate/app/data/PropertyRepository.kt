@@ -11,7 +11,11 @@ class PropertyRepository(private val dao: PropertyDao) {
 
     suspend fun insert(property: Property): Long = dao.insert(property)
 
+    suspend fun insertAll(properties: List<Property>) = dao.insertAll(properties)
+
     suspend fun update(property: Property) = dao.update(property)
+
+    suspend fun updateAll(properties: List<Property>) = dao.updateAll(properties)
 
     suspend fun delete(property: Property) = dao.delete(property)
 

@@ -1,7 +1,12 @@
 package com.realestate.app.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -133,14 +138,25 @@ fun SwipeablePropertyRow(
             contentPadding = PaddingValues(10.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (selectionMode) {
-                    Icon(
-                        if (isSelected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
-                        contentDescription = null,
-                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
+                // Entering selection mode is a state every row transitions into at once (one
+                // long-press selects the first card, but the mode itself applies app-wide), so
+                // the indicator on every *other* row should visibly grow in rather than pop —
+                // that's what actually reads as "you just entered a different mode" instead of a
+                // layout jump.
+                AnimatedVisibility(
+                    visible = selectionMode,
+                    enter = fadeIn(tween(200)) + expandHorizontally(tween(200)),
+                    exit = fadeOut(tween(150)) + shrinkHorizontally(tween(150))
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (isSelected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                            contentDescription = null,
+                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                    }
                 }
                 Box(
                     modifier = Modifier

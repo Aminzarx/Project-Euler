@@ -30,6 +30,11 @@ interface PropertyDao {
     @Update
     suspend fun update(property: Property)
 
+    /** One transaction for a whole import's worth of updates, same reasoning as
+     *  [deleteProperties] — otherwise an N-record import fires N separate invalidations. */
+    @Update
+    suspend fun updateAll(properties: List<Property>)
+
     @Delete
     suspend fun delete(property: Property)
 

@@ -18,7 +18,7 @@ import com.realestate.app.data.wallet.WalletTransaction
 
 @Database(
     entities = [Property::class, WalletTransaction::class, Note::class, TimelineEvent::class, QuickNote::class],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -162,6 +162,19 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Adds the portable uid Property.kt needs for cross-device export/import merging (see
+        // data/exportimport/). Every existing row gets a fresh random id here — SQLite's
+        // randomblob()/hex() are built-in, so one UPDATE backfills the whole table without a
+        // per-row Kotlin loop. The empty-string default only ever exists transiently between the
+        // ADD COLUMN and the UPDATE in the same migration; no row is ever left with it.
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE properties ADD COLUMN uid TEXT NOT NULL DEFAULT ''")
+                db.execSQL("UPDATE properties SET uid = lower(hex(randomblob(16))) WHERE uid = ''")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_properties_uid` ON `properties` (`uid`)")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -173,7 +186,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "real_estate.db"
                 ).addMigrations(
                     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
-                    MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8
+                    MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9
                 ).build().also { INSTANCE = it }
             }
         }

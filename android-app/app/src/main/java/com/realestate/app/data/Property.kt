@@ -92,11 +92,18 @@ enum class RequestValidityType { NO_EXPIRATION, DAYS_7, DAYS_15, DAYS_30, DAYS_6
     indices = [
         Index(value = ["dateAdded"]),
         Index(value = ["isFavorite"]),
-        Index(value = ["lastViewedAt"])
+        Index(value = ["lastViewedAt"]),
+        Index(value = ["uid"], unique = true)
     ]
 )
 data class Property(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /** A portable identity, independent of [id]. [id] is a per-device autoincrement counter — two
+     *  independent installs of this app both hand out id=1 to their first property, so it can
+     *  never be used to recognize "the same case" across an export/import between two phones. This
+     *  is generated once, here, and never changes for the life of the record; export/import (see
+     *  data/exportimport/) uses it as the merge key instead of [id]. */
+    val uid: String = java.util.UUID.randomUUID().toString(),
     val title: String,
     val description: String,
     val price: Long,
