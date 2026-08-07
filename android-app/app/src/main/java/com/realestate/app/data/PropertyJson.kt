@@ -68,6 +68,29 @@ fun Property.toJson(): JSONObject = JSONObject().apply {
     put("cashAvailable", cashAvailable ?: JSONObject.NULL)
     put("maxDeposit", maxDeposit ?: JSONObject.NULL)
     put("maxMonthlyRent", maxMonthlyRent ?: JSONObject.NULL)
+
+    // ---- Field redesign, round 2 ----
+    put("floorPreferenceOptions", JSONArray(floorPreferenceOptions.map { it.name }))
+    put("viewPreferenceOptions", JSONArray(viewPreferenceOptions.map { it.name }))
+    put("needsLoanFinancing", needsLoanFinancing)
+    put("district", district ?: JSONObject.NULL)
+    put("latitude", latitude ?: JSONObject.NULL)
+    put("longitude", longitude ?: JSONObject.NULL)
+    put("legalDocumentType", legalDocumentType?.name ?: JSONObject.NULL)
+    put("ownershipType", ownershipType?.name ?: JSONObject.NULL)
+    put("depositAmount", depositAmount ?: JSONObject.NULL)
+    put("nextViewingAt", nextViewingAt ?: JSONObject.NULL)
+    put("developerName", developerName ?: JSONObject.NULL)
+    put("expectedDeliveryDate", expectedDeliveryDate ?: JSONObject.NULL)
+    put("constructionProgressPercent", constructionProgressPercent ?: JSONObject.NULL)
+    put("waterSource", waterSource?.name ?: JSONObject.NULL)
+    put("hasWellPermit", hasWellPermit ?: JSONObject.NULL)
+    put("frontageWidth", frontageWidth ?: JSONObject.NULL)
+    put("leadSource", leadSource?.name ?: JSONObject.NULL)
+    put("responsibleAgent", responsibleAgent ?: JSONObject.NULL)
+    put("lastContactAt", lastContactAt ?: JSONObject.NULL)
+    put("visitStatus", visitStatus?.name ?: JSONObject.NULL)
+    put("isConfidential", isConfidential)
 }
 
 fun JSONObject.toProperty(): Property = Property(
@@ -131,7 +154,33 @@ fun JSONObject.toProperty(): Property = Property(
     viewPreference = optStringOrNull("viewPreference"),
     cashAvailable = optLongOrNull("cashAvailable"),
     maxDeposit = optLongOrNull("maxDeposit"),
-    maxMonthlyRent = optLongOrNull("maxMonthlyRent")
+    maxMonthlyRent = optLongOrNull("maxMonthlyRent"),
+
+    // ---- Field redesign, round 2 — absent in any pre-existing backup/export, so every key
+    // defaults to its "nothing set yet" value exactly like the Case-redesign block above. ----
+    floorPreferenceOptions = optJSONArray("floorPreferenceOptions")
+        ?.let { arr -> (0 until arr.length()).map { FloorPreferenceOption.valueOf(arr.getString(it)) } } ?: emptyList(),
+    viewPreferenceOptions = optJSONArray("viewPreferenceOptions")
+        ?.let { arr -> (0 until arr.length()).map { ViewPreferenceOption.valueOf(arr.getString(it)) } } ?: emptyList(),
+    needsLoanFinancing = optBoolean("needsLoanFinancing", false),
+    district = optStringOrNull("district"),
+    latitude = optDoubleOrNull("latitude"),
+    longitude = optDoubleOrNull("longitude"),
+    legalDocumentType = optEnumOrNull("legalDocumentType", LegalDocumentType::valueOf),
+    ownershipType = optEnumOrNull("ownershipType", OwnershipType::valueOf),
+    depositAmount = optLongOrNull("depositAmount"),
+    nextViewingAt = optLongOrNull("nextViewingAt"),
+    developerName = optStringOrNull("developerName"),
+    expectedDeliveryDate = optLongOrNull("expectedDeliveryDate"),
+    constructionProgressPercent = optIntOrNull("constructionProgressPercent"),
+    waterSource = optEnumOrNull("waterSource", WaterSource::valueOf),
+    hasWellPermit = optBooleanOrNull("hasWellPermit"),
+    frontageWidth = optDoubleOrNull("frontageWidth"),
+    leadSource = optEnumOrNull("leadSource", LeadSource::valueOf),
+    responsibleAgent = optStringOrNull("responsibleAgent"),
+    lastContactAt = optLongOrNull("lastContactAt"),
+    visitStatus = optEnumOrNull("visitStatus", VisitStatus::valueOf),
+    isConfidential = optBoolean("isConfidential", false)
 )
 
 // ---- Small nullable-read helpers so every optional field above reads the same way whether the

@@ -61,14 +61,36 @@ val clientRequestTransactionTypes = listOf(
 
 /** Every boolean-ish status/requirement toggle a Case can carry, consolidated into one list
  *  column instead of ~17 separate boolean fields — a new flag later is an enum value, not a
- *  migration. The first four are Owner-only in practice, the rest Client-Request-only, but
- *  nothing enforces that split at the type level (a UI concern, not a data one). */
+ *  migration. The first four are Owner-only in practice, the middle block Client-Request-only
+ *  ("this is what I need"), the `_AVAILABLE` block is the Owner-only mirror of that same middle
+ *  block ("this is what my listing has") — see [amenityPairs] for how the two sides line up for a
+ *  future matching engine. Nothing enforces the split at the type level (a UI concern, not a data
+ *  one), same as before this pass. */
 enum class CaseFlag {
     VACANT, NEGOTIABLE, IMMEDIATE_SALE, EXCHANGE_ACCEPTED,
     PARKING_REQUIRED, ELEVATOR_REQUIRED, STORAGE_REQUIRED, BALCONY_REQUIRED, GARDEN_REQUIRED,
     LUXURY_REQUIRED, FURNISHED_REQUIRED, NEW_BUILDING_REQUIRED, ACCESSIBILITY_REQUIRED,
-    LOAN_REQUIRED, FLEXIBLE_DEPOSIT, FLEXIBLE_RENT, CONVERSION_ALLOWED
+    LOAN_REQUIRED, FLEXIBLE_DEPOSIT, FLEXIBLE_RENT, CONVERSION_ALLOWED,
+    // Owner-side mirror of the requirement flags above — added so an OWNER listing can record
+    // which amenities it actually has, closing the gap where a CLIENT_REQUEST could ask for
+    // parking but no OWNER case had anywhere to say it has parking.
+    PARKING_AVAILABLE, ELEVATOR_AVAILABLE, STORAGE_AVAILABLE, BALCONY_AVAILABLE,
+    GARDEN_YARD_AVAILABLE, LUXURY_FINISH, FURNISHED_UNIT, NEWLY_BUILT, ACCESSIBILITY_READY
 }
+
+/** Pairs each Owner "has amenity" flag with the Client-Request "needs amenity" flag it matches —
+ *  the lookup a future matching engine uses instead of the two enums sharing a type outright. */
+val amenityPairs: Map<CaseFlag, CaseFlag> = mapOf(
+    CaseFlag.PARKING_AVAILABLE to CaseFlag.PARKING_REQUIRED,
+    CaseFlag.ELEVATOR_AVAILABLE to CaseFlag.ELEVATOR_REQUIRED,
+    CaseFlag.STORAGE_AVAILABLE to CaseFlag.STORAGE_REQUIRED,
+    CaseFlag.BALCONY_AVAILABLE to CaseFlag.BALCONY_REQUIRED,
+    CaseFlag.GARDEN_YARD_AVAILABLE to CaseFlag.GARDEN_REQUIRED,
+    CaseFlag.LUXURY_FINISH to CaseFlag.LUXURY_REQUIRED,
+    CaseFlag.FURNISHED_UNIT to CaseFlag.FURNISHED_REQUIRED,
+    CaseFlag.NEWLY_BUILT to CaseFlag.NEW_BUILDING_REQUIRED,
+    CaseFlag.ACCESSIBILITY_READY to CaseFlag.ACCESSIBILITY_REQUIRED
+)
 
 enum class MortgageStatus { NONE, PARTIAL, FULL }
 
@@ -77,6 +99,36 @@ enum class CasePriority { LOW, NORMAL, HIGH, URGENT }
 /** How long a Case stays valid before the app should remind the consultant to follow up on it —
  *  see [Property.expiresAt]/[Property.isExpired]. */
 enum class RequestValidityType { NO_EXPIRATION, DAYS_7, DAYS_15, DAYS_30, DAYS_60, DAYS_90, CUSTOM }
+
+/** The legal-document category for an Owner case's title deed — replaces free-typed
+ *  `legalStatus` text with a filterable/reportable category. `legalStatus` itself is kept as a
+ *  supplementary free-text note for anything this list doesn't cover. */
+enum class LegalDocumentType {
+    SINGLE_PAGE_DEED, NOTARIZED_DEED, SALE_AGREEMENT, POWER_OF_ATTORNEY, UNDER_REGISTRATION,
+    AGRICULTURAL_DEED, OTHER
+}
+
+/** How the contact relates to the title — shared/inherited ownership (ملک مشاع) materially
+ *  changes deal complexity and was previously unrecorded anywhere. */
+enum class OwnershipType { SOLE_OWNER, SHARED_OWNERSHIP, POWER_OF_ATTORNEY_HOLDER, HEIR, OTHER }
+
+/** Irrigation source for [PropertyType.FARM]/[PropertyType.GARDEN] cases — a primary value driver
+ *  for agricultural land that had no field before this pass. */
+enum class WaterSource { WELL, QANAT, RIVER_CANAL, MUNICIPAL, NONE, UNKNOWN }
+
+/** Where a case originated — feeds future lead-quality/channel reporting. */
+enum class LeadSource { REFERRAL, PHONE_INQUIRY, SOCIAL_MEDIA, WEBSITE, WALK_IN, SIGNBOARD, OTHER }
+
+/** Lifecycle of a scheduled property visit, paired with [Property.nextViewingAt]/
+ *  [Property.visitDate]. */
+enum class VisitStatus { NOT_SCHEDULED, SCHEDULED, COMPLETED, CANCELLED, NO_SHOW }
+
+/** Coarse floor preference for a Client Request — closed vocabulary so it's filterable/matchable,
+ *  unlike the free-text `floorPreference` note it sits alongside. */
+enum class FloorPreferenceOption { GROUND, LOW, MID, HIGH, TOP_FLOOR, ANY }
+
+/** Coarse view/outlook preference for a Client Request — same reasoning as [FloorPreferenceOption]. */
+enum class ViewPreferenceOption { CITY, NATURE_OR_SEA, PARK, STREET, ANY }
 
 /**
  * [Immutable] is load-bearing for scroll performance, not decoration. Every field is a `val` and the
@@ -93,7 +145,8 @@ enum class RequestValidityType { NO_EXPIRATION, DAYS_7, DAYS_15, DAYS_30, DAYS_6
         Index(value = ["dateAdded"]),
         Index(value = ["isFavorite"]),
         Index(value = ["lastViewedAt"]),
-        Index(value = ["uid"], unique = true)
+        Index(value = ["uid"], unique = true),
+        Index(value = ["district"])
     ]
 )
 data class Property(
@@ -161,13 +214,71 @@ data class Property(
     val budgetMax: Long? = null,
     val desiredMinArea: Double? = null,
     val desiredMaxArea: Double? = null,
+    /** Treated as a minimum, not an exact count, in every screen that reads it — kept as-is at
+     *  the DB/API level to avoid a rename's blast radius (see ShareMessage.kt/PropertyDetailScreen.kt),
+     *  clarified only in the field's UI label ("حداقل تعداد اتاق"). */
     val desiredBedrooms: Int? = null,
     val preferredAreas: List<String> = emptyList(),
+    /** Free-text supplementary note. [floorPreferenceOptions] is the closed-vocabulary,
+     *  filterable field new UI should prefer; this stays for anything that doesn't fit a chip. */
     val floorPreference: String? = null,
+    /** Free-text supplementary note — see [floorPreference]. [viewPreferenceOptions] is the
+     *  closed-vocabulary counterpart. */
     val viewPreference: String? = null,
     val cashAvailable: Long? = null,
     val maxDeposit: Long? = null,
-    val maxMonthlyRent: Long? = null
+    val maxMonthlyRent: Long? = null,
+    val floorPreferenceOptions: List<FloorPreferenceOption> = emptyList(),
+    val viewPreferenceOptions: List<ViewPreferenceOption> = emptyList(),
+    /** A single yes/no financing fact, deliberately not a member of [caseFlags] — see
+     *  [CaseFlag.LOAN_REQUIRED] doc. New Client Request UI writes this instead of that flag. */
+    val needsLoanFinancing: Boolean = false,
+
+    // ---- Location (Owner: a point; Client Request: see preferredAreas for the area-based
+    // counterpart) ----
+    val district: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+
+    // ---- Owner: legal & ownership ----
+    val legalDocumentType: LegalDocumentType? = null,
+    val ownershipType: OwnershipType? = null,
+
+    // ---- Owner: pricing gap fix — a رهن و اجاره listing needs both a deposit and a monthly
+    // rent; `price` alone (see the label logic in CaseDetailsForm.kt) could only ever hold one. ----
+    val depositAmount: Long? = null,
+
+    // ---- Owner: visit scheduling, structured counterpart to the free-text viewingHours ----
+    val nextViewingAt: Long? = null,
+
+    // ---- Owner: amenities the property actually has — see [amenityPairs] for the matching-engine
+    // pairing with the Client Request's requirement flags (still stored in [caseFlags]) ----
+    // (amenity values live in caseFlags too, alongside VACANT/NEGOTIABLE/etc. — see CaseFlag doc)
+
+    // ---- Owner: Project-specific (PropertyType.PROJECT / pre-sale) ----
+    val developerName: String? = null,
+    val expectedDeliveryDate: Long? = null,
+    val constructionProgressPercent: Int? = null,
+
+    // ---- Owner: Agricultural-specific (PropertyType.FARM / GARDEN) ----
+    val waterSource: WaterSource? = null,
+    val hasWellPermit: Boolean? = null,
+
+    // ---- Owner: Commercial extras (PropertyType.SHOP / OFFICE) ----
+    val frontageWidth: Double? = null,
+
+    // ---- Shared CRM/workflow fields ----
+    val leadSource: LeadSource? = null,
+    /** Free text — no Agent/User entity exists anywhere in this app (single-user, no auth), so a
+     *  real FK would be a redundant model for a field a future Team Collaboration module should
+     *  own. Documented as that module's extension point instead of built here. */
+    val responsibleAgent: String? = null,
+    val lastContactAt: Long? = null,
+    val visitStatus: VisitStatus? = null,
+    /** When true, this case is never included in shared/exported outputs (StoryCard, ad text,
+     *  case-file share) — a stronger guarantee than [hiddenNotes], which only keeps one field
+     *  private while still allowing the rest of the case to be shared. */
+    val isConfidential: Boolean = false
 )
 
 /**

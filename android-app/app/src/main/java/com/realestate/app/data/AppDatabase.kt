@@ -18,7 +18,7 @@ import com.realestate.app.data.wallet.WalletTransaction
 
 @Database(
     entities = [Property::class, WalletTransaction::class, Note::class, TimelineEvent::class, QuickNote::class],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -175,6 +175,39 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Create Case redesign, round 2 (see data/Property.kt / the field-redesign doc it
+        // implements). Every column here is new and nullable/defaulted — none of the columns this
+        // migration touches from earlier versions (price, mortgageStatus, caseFlags, legalStatus,
+        // desiredBedrooms, floorPreference, viewPreference, ownerName/ownerPhone, imageUri) are
+        // altered or dropped, so every existing row keeps reading exactly as it did before this
+        // migration. New per-case-type fields default to their "nothing set yet" value.
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE properties ADD COLUMN district TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN latitude REAL")
+                db.execSQL("ALTER TABLE properties ADD COLUMN longitude REAL")
+                db.execSQL("ALTER TABLE properties ADD COLUMN legalDocumentType TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN ownershipType TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN depositAmount INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN nextViewingAt INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN developerName TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN expectedDeliveryDate INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN constructionProgressPercent INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN waterSource TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN hasWellPermit INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN frontageWidth REAL")
+                db.execSQL("ALTER TABLE properties ADD COLUMN leadSource TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN responsibleAgent TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN lastContactAt INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN visitStatus TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN isConfidential INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE properties ADD COLUMN floorPreferenceOptions TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE properties ADD COLUMN viewPreferenceOptions TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE properties ADD COLUMN needsLoanFinancing INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_properties_district` ON `properties` (`district`)")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -186,7 +219,7 @@ abstract class AppDatabase : RoomDatabase() {
                     "real_estate.db"
                 ).addMigrations(
                     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
-                    MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9
+                    MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10
                 ).build().also { INSTANCE = it }
             }
         }

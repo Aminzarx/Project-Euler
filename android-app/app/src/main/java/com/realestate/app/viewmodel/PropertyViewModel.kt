@@ -46,7 +46,10 @@ data class PropertyFilter(
     val minPrice: Long? = null,
     val maxPrice: Long? = null,
     // null = both owner listings and client requests together; set to scope the list to just one.
-    val caseType: CaseType? = null
+    val caseType: CaseType? = null,
+    // Matched against an OWNER case's district or a CLIENT_REQUEST's preferredAreas — see
+    // availableDistricts below, which sources suggestions from both fields together.
+    val district: String? = null
 )
 
 data class RecentActivity(
@@ -104,8 +107,10 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
             val matchesTag = filter.tag == null || property.tags.contains(filter.tag)
             val matchesPrice = property.matchesPriceRange(filter.minPrice, filter.maxPrice)
             val matchesCaseType = filter.caseType == null || property.caseType == filter.caseType
+            val matchesDistrict = filter.district == null ||
+                property.district == filter.district || filter.district in property.preferredAreas
             matchesQuery && matchesCity && matchesDealType && matchesPropertyType &&
-                matchesStatus && matchesTag && matchesPrice && matchesCaseType
+                matchesStatus && matchesTag && matchesPrice && matchesCaseType && matchesDistrict
         }.sortedByDescending { it.isPinned }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -141,6 +146,22 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
 
     val allTags: StateFlow<List<String>> = allProperties
         .map { properties -> properties.flatMapTo(sortedSetOf<String>()) { it.tags }.toList() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** One shared suggestion source for every district/neighborhood field in the app — an OWNER
+     *  case's single [Property.district] and a CLIENT_REQUEST's multi-value [Property.preferredAreas]
+     *  are the same concept from two sides (see the field-redesign doc, Part 0.6), so a district
+     *  typed once on either side suggests itself on the other instead of each side building up its
+     *  own disconnected list. */
+    val availableDistricts: StateFlow<List<String>> = allProperties
+        .map { properties ->
+            properties.flatMapTo(sortedSetOf<String>()) { p ->
+                buildList {
+                    p.district?.let { add(it) }
+                    addAll(p.preferredAreas)
+                }
+            }.toList()
+        }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val favoriteFolders: StateFlow<List<String>> = favoriteProperties

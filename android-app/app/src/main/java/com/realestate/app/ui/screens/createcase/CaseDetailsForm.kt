@@ -22,9 +22,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AddAPhoto
+import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -33,7 +35,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,11 +59,17 @@ import com.realestate.app.data.CaseFlag
 import com.realestate.app.data.CasePriority
 import com.realestate.app.data.CaseTransactionType
 import com.realestate.app.data.CaseType
-import com.realestate.app.data.MortgageStatus
+import com.realestate.app.data.FloorPreferenceOption
+import com.realestate.app.data.LeadSource
+import com.realestate.app.data.LegalDocumentType
+import com.realestate.app.data.OwnershipType
 import com.realestate.app.data.PropertyFormShape
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
 import com.realestate.app.data.RequestValidityType
+import com.realestate.app.data.ViewPreferenceOption
+import com.realestate.app.data.VisitStatus
+import com.realestate.app.data.WaterSource
 import com.realestate.app.data.formShape
 import com.realestate.app.data.isValidIranianMobile
 import com.realestate.app.ui.components.AppCard
@@ -71,6 +83,10 @@ import com.realestate.app.ui.components.icon
 import com.realestate.app.ui.components.label
 import com.realestate.app.ui.components.normalizeDigits
 import com.realestate.app.ui.theme.Spacing
+import com.realestate.app.ui.theme.extendedColors
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private val ownerStatuses = listOf(
     PropertyStatus.NEW, PropertyStatus.READY, PropertyStatus.ACTIVE, PropertyStatus.NEGOTIATING,
@@ -95,6 +111,7 @@ internal fun CaseDetailsForm(
     propertyType: PropertyType,
     isEditMode: Boolean,
     isSaving: Boolean,
+    availableDistricts: List<String>,
     onEditCaseType: () -> Unit,
     onEditTransactionType: () -> Unit,
     onEditPropertyType: () -> Unit,
@@ -115,6 +132,16 @@ internal fun CaseDetailsForm(
         !identityFilled -> "نام مشتری یا شماره تماس را وارد کنید"
         !phoneValid -> "شماره تماس معتبر نیست"
         else -> null
+    }
+
+    // Non-blocking data-quality nudges — never disable Save (an agent legitimately creating a
+    // case before every detail is settled is a normal workflow this app already supports), but
+    // surface what's missing so it doesn't silently stay missing forever.
+    val completenessHints = buildList {
+        if (state.city.isBlank()) add("شهر مشخص نشده")
+        if (state.description.isNotBlank() && state.description.trim().length < 10) {
+            add("توضیحات خیلی کوتاه است")
+        }
     }
 
     Column(
@@ -142,10 +169,13 @@ internal fun CaseDetailsForm(
         Spacer(modifier = Modifier.height(Spacing.cardGap))
 
         if (caseType == CaseType.OWNER) {
-            OwnerSections(state, propertyType, transactionType)
+            OwnerSections(state, propertyType, transactionType, availableDistricts)
         } else {
-            ClientRequestSections(state, transactionType)
+            ClientRequestSections(state, transactionType, availableDistricts)
         }
+
+        Spacer(modifier = Modifier.height(Spacing.cardGap))
+        ManagementSection(state)
 
         Spacer(modifier = Modifier.height(Spacing.cardGap))
         Text("برچسب‌ها", style = MaterialTheme.typography.titleLarge)
@@ -157,6 +187,8 @@ internal fun CaseDetailsForm(
         Spacer(modifier = Modifier.height(Spacing.xl))
         if (disabledReason != null) {
             ValidationMessage(text = disabledReason, modifier = Modifier.padding(bottom = 8.dp))
+        } else if (completenessHints.isNotEmpty()) {
+            CompletenessHintMessage(hints = completenessHints, modifier = Modifier.padding(bottom = 8.dp))
         }
         PrimaryButton(
             text = if (isEditMode) "ذخیره تغییرات" else "ثبت پرونده",
@@ -170,7 +202,13 @@ internal fun CaseDetailsForm(
 }
 
 @Composable
-private fun OwnerSections(state: CaseFormState, propertyType: PropertyType, transactionType: CaseTransactionType?) {
+private fun OwnerSections(
+    state: CaseFormState,
+    propertyType: PropertyType,
+    transactionType: CaseTransactionType?,
+    availableDistricts: List<String>
+) {
+    // ---- Identity ----
     Text("اطلاعات مالک", style = MaterialTheme.typography.titleLarge)
     Spacer(modifier = Modifier.height(Spacing.sm))
     AppCard(modifier = Modifier.fillMaxWidth()) {
@@ -180,7 +218,7 @@ private fun OwnerSections(state: CaseFormState, propertyType: PropertyType, tran
     }
 
     Spacer(modifier = Modifier.height(Spacing.cardGap))
-    Text("اطلاعات ملک", style = MaterialTheme.typography.titleLarge)
+    Text("عنوان و توضیحات", style = MaterialTheme.typography.titleLarge)
     Spacer(modifier = Modifier.height(Spacing.sm))
     AppCard(modifier = Modifier.fillMaxWidth()) {
         // Title and address are the OR-pair that satisfies this case's minimum requirement — the
@@ -206,11 +244,25 @@ private fun OwnerSections(state: CaseFormState, propertyType: PropertyType, tran
             minLines = 3,
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(8.dp))
+    }
+
+    // ---- Location ----
+    Spacer(modifier = Modifier.height(Spacing.cardGap))
+    Text("موقعیت مکانی", style = MaterialTheme.typography.titleLarge)
+    Spacer(modifier = Modifier.height(Spacing.sm))
+    AppCard(modifier = Modifier.fillMaxWidth()) {
         LabeledField(state::city, "شهر")
         Spacer(modifier = Modifier.height(8.dp))
-        LabeledField(state::address, "آدرس")
+        DistrictField(value = state.district, onValueChange = { state.district = it }, suggestions = availableDistricts)
         Spacer(modifier = Modifier.height(8.dp))
+        LabeledField(state::address, "آدرس")
+    }
+
+    // ---- Specifications ----
+    Spacer(modifier = Modifier.height(Spacing.cardGap))
+    Text("مشخصات ملک", style = MaterialTheme.typography.titleLarge)
+    Spacer(modifier = Modifier.height(Spacing.sm))
+    AppCard(modifier = Modifier.fillMaxWidth()) {
         DecimalField(state::area, "متراژ (متر مربع)")
 
         when (propertyType.formShape()) {
@@ -229,32 +281,83 @@ private fun OwnerSections(state: CaseFormState, propertyType: PropertyType, tran
             PropertyFormShape.COMMERCIAL -> {
                 Spacer(modifier = Modifier.height(8.dp))
                 TriStateRow("دارای پروانه کسب", state.hasBusinessLicense) { state.hasBusinessLicense = it }
+                if (propertyType == PropertyType.SHOP || propertyType == PropertyType.OFFICE) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    DecimalField(state::frontageWidth, "متراژ بر تجاری (متر)")
+                }
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
         IntegerField(state::constructionAge, "سن بنا (سال)")
+
+        if (propertyType.formShape() == PropertyFormShape.RESIDENTIAL) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Text("امکانات ملک", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(6.dp))
+            FlagChipGroup(
+                flags = CaseFormState.AMENITY_OWNER_FLAGS.toList(),
+                selected = state.ownerFlags,
+                onToggle = { flag, isOn -> state.ownerFlags = if (isOn) state.ownerFlags + flag else state.ownerFlags - flag }
+            )
+        }
     }
 
+    // ---- Dynamic: Project Details ----
+    if (propertyType == PropertyType.PROJECT || transactionType == CaseTransactionType.PRE_SALE) {
+        Spacer(modifier = Modifier.height(Spacing.sm))
+        CollapsibleSection(
+            title = "اطلاعات پروژه",
+            subtitle = "سازنده، تاریخ تحویل و پیشرفت ساخت",
+            initiallyExpanded = propertyType == PropertyType.PROJECT
+        ) {
+            LabeledField(state::developerName, "نام سازنده")
+            Spacer(modifier = Modifier.height(8.dp))
+            DateField(label = "تاریخ تحویل موردانتظار", valueMillis = state.expectedDeliveryDate, onValueChange = { state.expectedDeliveryDate = it })
+            Spacer(modifier = Modifier.height(8.dp))
+            IntegerField(state::constructionProgressPercent, "درصد پیشرفت ساخت")
+        }
+    }
+
+    // ---- Dynamic: Agricultural Details ----
+    if (propertyType == PropertyType.FARM || propertyType == PropertyType.GARDEN) {
+        Spacer(modifier = Modifier.height(Spacing.sm))
+        CollapsibleSection(title = "اطلاعات کشاورزی", subtitle = "منبع آب و مجوز چاه", initiallyExpanded = true) {
+            Text("منبع آب", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(6.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                WaterSource.entries.forEach { option ->
+                    FilterChip(selected = state.waterSource == option, onClick = { state.waterSource = option }, label = { Text(option.label()) })
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            TriStateRow("دارای پروانه چاه", state.hasWellPermit) { state.hasWellPermit = it }
+        }
+    }
+
+    // ---- Pricing ----
     Spacer(modifier = Modifier.height(Spacing.cardGap))
     Text("قیمت", style = MaterialTheme.typography.titleLarge)
     Spacer(modifier = Modifier.height(Spacing.sm))
     AppCard(modifier = Modifier.fillMaxWidth()) {
-        MoneyField(
-            label = if (transactionType in rentLikeTransactions) "اجاره ماهانه (تومان)" else "قیمت کل (تومان)",
-            value = state.price,
-            onValueChange = { state.price = it },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("وضعیت رهن", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(modifier = Modifier.height(6.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MortgageStatus.entries.forEach { option ->
-                FilterChip(selected = state.mortgageStatus == option, onClick = { state.mortgageStatus = option }, label = { Text(option.label()) })
+        if (transactionType == CaseTransactionType.MORTGAGE_AND_RENT) {
+            // رهن و اجاره always needs both numbers — showing them side by side keeps the pairing
+            // reading as one decision instead of two unrelated fields.
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MoneyField(label = "مبلغ رهن (تومان)", value = state.depositAmount, onValueChange = { state.depositAmount = it }, modifier = Modifier.weight(1f))
+                MoneyField(label = "اجاره ماهانه (تومان)", value = state.price, onValueChange = { state.price = it }, modifier = Modifier.weight(1f))
             }
+        } else if (transactionType == CaseTransactionType.FULL_MORTGAGE) {
+            MoneyField(label = "مبلغ رهن کامل (تومان)", value = state.depositAmount, onValueChange = { state.depositAmount = it }, modifier = Modifier.fillMaxWidth())
+        } else if (transactionType == CaseTransactionType.RENT) {
+            MoneyField(label = "اجاره ماهانه (تومان)", value = state.price, onValueChange = { state.price = it }, modifier = Modifier.fillMaxWidth())
+            Spacer(modifier = Modifier.height(8.dp))
+            MoneyField(label = "مبلغ رهن (اختیاری، تومان)", value = state.depositAmount, onValueChange = { state.depositAmount = it }, modifier = Modifier.fillMaxWidth())
+        } else {
+            MoneyField(label = "قیمت کل (تومان)", value = state.price, onValueChange = { state.price = it }, modifier = Modifier.fillMaxWidth())
         }
     }
 
+    // ---- Workflow ----
     Spacer(modifier = Modifier.height(Spacing.cardGap))
     Text("وضعیت پرونده", style = MaterialTheme.typography.titleLarge)
     Spacer(modifier = Modifier.height(Spacing.sm))
@@ -262,28 +365,56 @@ private fun OwnerSections(state: CaseFormState, propertyType: PropertyType, tran
         StatusDropdown(status = state.status, options = ownerStatuses, onSelect = { state.status = it })
         Spacer(modifier = Modifier.height(8.dp))
         PriorityRow(state.priority) { state.priority = it }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text("مدت اعتبار آگهی/قرارداد", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            RequestValidityType.entries.forEach { option ->
+                FilterChip(selected = state.expiryType == option, onClick = { state.expiryType = option }, label = { Text(option.label()) })
+            }
+        }
+        if (state.expiryType == RequestValidityType.CUSTOM) {
+            Spacer(modifier = Modifier.height(8.dp))
+            DateField(label = "تاریخ انقضا", valueMillis = state.customExpiryAt, onValueChange = { state.customExpiryAt = it })
+        }
     }
 
+    // ---- Visit & Collaboration ----
     Spacer(modifier = Modifier.height(Spacing.cardGap))
     CollapsibleSection(title = "بازدید و همکاری", subtitle = "ساعت بازدید، کلیدار و شرایط همکاری") {
-        LabeledField(state::viewingHours, "ساعات بازدید")
+        LabeledField(state::viewingHours, "ساعات بازدید (یادداشت آزاد)")
+        Spacer(modifier = Modifier.height(8.dp))
+        DateField(label = "زمان بازدید بعدی", valueMillis = state.nextViewingAt, onValueChange = { state.nextViewingAt = it })
         Spacer(modifier = Modifier.height(8.dp))
         LabeledField(state::keyHolder, "کلیدار")
         Spacer(modifier = Modifier.height(8.dp))
         LabeledField(state::paymentConditions, "شرایط پرداخت")
         Spacer(modifier = Modifier.height(10.dp))
         FlagChipGroup(
-            flags = listOf(CaseFlag.VACANT, CaseFlag.NEGOTIABLE, CaseFlag.IMMEDIATE_SALE, CaseFlag.EXCHANGE_ACCEPTED),
+            flags = CaseFormState.OWNER_STATUS_FLAGS.toList(),
             selected = state.ownerFlags,
             onToggle = { flag, isOn -> state.ownerFlags = if (isOn) state.ownerFlags + flag else state.ownerFlags - flag }
         )
     }
 
+    // ---- Legal & Ownership ----
     Spacer(modifier = Modifier.height(Spacing.sm))
-    CollapsibleSection(title = "اطلاعات حقوقی", subtitle = "وضعیت سند و مسائل قانونی") {
-        TriStateRow("سند آماده است", state.titleDeedReady) { state.titleDeedReady = it }
+    CollapsibleSection(title = "اطلاعات حقوقی و مالکیت", subtitle = "نوع سند، وضعیت مالکیت و مسائل قانونی") {
+        Text("نوع سند", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(6.dp))
+        LegalDocumentTypeDropdown(value = state.legalDocumentType, onSelect = { state.legalDocumentType = it })
         Spacer(modifier = Modifier.height(8.dp))
-        LabeledField(state::legalStatus, "وضعیت حقوقی")
+        TriStateRow("سند آماده است", state.titleDeedReady) { state.titleDeedReady = it }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text("وضعیت مالکیت", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OwnershipType.entries.forEach { option ->
+                FilterChip(selected = state.ownershipType == option, onClick = { state.ownershipType = option }, label = { Text(option.label()) })
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        LabeledField(state::legalStatus, "توضیحات حقوقی تکمیلی")
     }
 
     Spacer(modifier = Modifier.height(Spacing.sm))
@@ -301,7 +432,11 @@ private fun OwnerSections(state: CaseFormState, propertyType: PropertyType, tran
 }
 
 @Composable
-private fun ClientRequestSections(state: CaseFormState, transactionType: CaseTransactionType?) {
+private fun ClientRequestSections(
+    state: CaseFormState,
+    transactionType: CaseTransactionType?,
+    availableDistricts: List<String>
+) {
     Text("اطلاعات مشتری", style = MaterialTheme.typography.titleLarge)
     Spacer(modifier = Modifier.height(Spacing.sm))
     AppCard(modifier = Modifier.fillMaxWidth()) {
@@ -340,11 +475,14 @@ private fun ClientRequestSections(state: CaseFormState, transactionType: CaseTra
         Spacer(modifier = Modifier.height(8.dp))
         MoneyField(label = "نقدینگی در دسترس (تومان)", value = state.cashAvailable, onValueChange = { state.cashAvailable = it }, modifier = Modifier.fillMaxWidth())
         Spacer(modifier = Modifier.height(10.dp))
-        FlagChipGroup(
-            flags = listOf(CaseFlag.LOAN_REQUIRED),
-            selected = state.requirementFlags,
-            onToggle = { flag, isOn -> state.requirementFlags = if (isOn) state.requirementFlags + flag else state.requirementFlags - flag }
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("نیاز به وام دارد", style = MaterialTheme.typography.bodyMedium)
+            Switch(checked = state.needsLoanFinancing, onCheckedChange = { state.needsLoanFinancing = it })
+        }
     }
 
     Spacer(modifier = Modifier.height(Spacing.cardGap))
@@ -356,11 +494,39 @@ private fun ClientRequestSections(state: CaseFormState, transactionType: CaseTra
             DecimalField(state::desiredMaxArea, "حداکثر متراژ", modifier = Modifier.weight(1f))
         }
         Spacer(modifier = Modifier.height(8.dp))
-        IntegerField(state::desiredBedrooms, "تعداد اتاق مورد نیاز")
-        Spacer(modifier = Modifier.height(8.dp))
-        LabeledField(state::floorPreference, "طبقه ترجیحی")
-        Spacer(modifier = Modifier.height(8.dp))
-        LabeledField(state::viewPreference, "منظره ترجیحی")
+        IntegerField(state::desiredBedrooms, "حداقل تعداد اتاق")
+        Spacer(modifier = Modifier.height(10.dp))
+        Text("طبقه ترجیحی", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FloorPreferenceOption.entries.forEach { option ->
+                val isOn = option in state.floorPreferenceOptions
+                FilterChip(
+                    selected = isOn,
+                    onClick = {
+                        state.floorPreferenceOptions =
+                            if (isOn) state.floorPreferenceOptions - option else state.floorPreferenceOptions + option
+                    },
+                    label = { Text(option.label()) }
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text("منظره ترجیحی", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ViewPreferenceOption.entries.forEach { option ->
+                val isOn = option in state.viewPreferenceOptions
+                FilterChip(
+                    selected = isOn,
+                    onClick = {
+                        state.viewPreferenceOptions =
+                            if (isOn) state.viewPreferenceOptions - option else state.viewPreferenceOptions + option
+                    },
+                    label = { Text(option.label()) }
+                )
+            }
+        }
     }
 
     Spacer(modifier = Modifier.height(Spacing.cardGap))
@@ -372,14 +538,15 @@ private fun ClientRequestSections(state: CaseFormState, transactionType: CaseTra
         TagEditor(
             tags = state.preferredAreas,
             onTagsChange = { state.preferredAreas = it },
-            label = "افزودن محله/منطقه"
+            label = "افزودن محله/منطقه",
+            suggestions = availableDistricts
         )
     }
 
     Spacer(modifier = Modifier.height(Spacing.cardGap))
     CollapsibleSection(title = "ویژگی‌های مورد نیاز", subtitle = "امکاناتی که مشتری به آن‌ها نیاز دارد", initiallyExpanded = true) {
         FlagChipGroup(
-            flags = CaseFormState.REQUIREMENT_FLAGS.filter { it != CaseFlag.LOAN_REQUIRED },
+            flags = CaseFormState.AMENITY_REQUIREMENT_FLAGS.toList(),
             selected = state.requirementFlags,
             onToggle = { flag, isOn -> state.requirementFlags = if (isOn) state.requirementFlags + flag else state.requirementFlags - flag }
         )
@@ -412,6 +579,10 @@ private fun ClientRequestSections(state: CaseFormState, transactionType: CaseTra
                 FilterChip(selected = state.expiryType == option, onClick = { state.expiryType = option }, label = { Text(option.label()) })
             }
         }
+        if (state.expiryType == RequestValidityType.CUSTOM) {
+            Spacer(modifier = Modifier.height(8.dp))
+            DateField(label = "تاریخ انقضا", valueMillis = state.customExpiryAt, onValueChange = { state.customExpiryAt = it })
+        }
     }
 
     Spacer(modifier = Modifier.height(Spacing.cardGap))
@@ -419,6 +590,52 @@ private fun ClientRequestSections(state: CaseFormState, transactionType: CaseTra
     Spacer(modifier = Modifier.height(Spacing.sm))
     AppCard(modifier = Modifier.fillMaxWidth()) {
         StatusDropdown(status = state.status, options = clientRequestStatuses, onSelect = { state.status = it })
+    }
+}
+
+/** Shown for both case types — lead tracking, follow-up bookkeeping and confidentiality aren't
+ *  specific to whether the case is a listing or a request, so this sits after both branches
+ *  instead of being duplicated inside each one. */
+@Composable
+private fun ManagementSection(state: CaseFormState) {
+    Text("مدیریت پرونده", style = MaterialTheme.typography.titleLarge)
+    Spacer(modifier = Modifier.height(Spacing.sm))
+    AppCard(modifier = Modifier.fillMaxWidth()) {
+        Text("منبع ورودی", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            LeadSource.entries.forEach { option ->
+                FilterChip(selected = state.leadSource == option, onClick = { state.leadSource = option }, label = { Text(option.label()) })
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        LabeledField(state::responsibleAgent, "مشاور مسئول")
+        Spacer(modifier = Modifier.height(8.dp))
+        DateField(label = "آخرین تماس", valueMillis = state.lastContactAt, onValueChange = { state.lastContactAt = it })
+        Spacer(modifier = Modifier.height(10.dp))
+        Text("وضعیت بازدید", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            VisitStatus.entries.forEach { option ->
+                FilterChip(selected = state.visitStatus == option, onClick = { state.visitStatus = option }, label = { Text(option.label()) })
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("محرمانه", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "هرگز در خروجی‌های اشتراک‌گذاری (استوری، متن آگهی، فایل پرونده) ظاهر نمی‌شود",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(checked = state.isConfidential, onCheckedChange = { state.isConfidential = it })
+        }
     }
 }
 
@@ -467,6 +684,22 @@ private fun ValidationMessage(text: String, modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+    }
+}
+
+/** Same layout as [ValidationMessage] but a warning tone and never blocks Save — a nudge toward
+ *  more complete data (missing city, a suspiciously short description), not an error. */
+@Composable
+private fun CompletenessHintMessage(hints: List<String>, modifier: Modifier = Modifier) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            Icons.Rounded.Info,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.extendedColors.warning
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(hints.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.extendedColors.warning)
     }
 }
 
@@ -605,8 +838,111 @@ private fun StatusDropdown(status: PropertyStatus, options: List<PropertyStatus>
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TagEditor(tags: List<String>, onTagsChange: (List<String>) -> Unit, label: String = "افزودن برچسب") {
+private fun LegalDocumentTypeDropdown(value: LegalDocumentType?, onSelect: (LegalDocumentType?) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = value?.label() ?: "",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("نوع سند") },
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            LegalDocumentType.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label()) },
+                    onClick = { onSelect(option); expanded = false }
+                )
+            }
+        }
+    }
+}
+
+/** Read-only text field + calendar icon opening a [DatePickerDialog] — the one shared date input
+ *  every new date field in this form (visit scheduling, delivery date, last contact, custom
+ *  expiry) is built from, instead of four near-duplicate pickers. Displays in Gregorian (ASCII
+ *  digits); the value stored is a plain epoch millis [Long], so switching the display to the
+ *  app's Jalali preference later is a display-only change, not a data migration. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DateField(label: String, valueMillis: Long?, onValueChange: (Long?) -> Unit) {
+    var showPicker by remember { mutableStateOf(false) }
+    val formatter = remember { SimpleDateFormat("yyyy/MM/dd", Locale.US) }
+    OutlinedTextField(
+        value = valueMillis?.let { formatter.format(Date(it)) } ?: "",
+        onValueChange = {},
+        readOnly = true,
+        label = { Text(label) },
+        trailingIcon = {
+            Row {
+                if (valueMillis != null) {
+                    IconButton(onClick = { onValueChange(null) }) {
+                        Icon(Icons.Rounded.Close, contentDescription = "پاک کردن تاریخ")
+                    }
+                }
+                IconButton(onClick = { showPicker = true }) {
+                    Icon(Icons.Rounded.CalendarMonth, contentDescription = "انتخاب تاریخ")
+                }
+            }
+        },
+        modifier = Modifier.fillMaxWidth().clickable { showPicker = true }
+    )
+    if (showPicker) {
+        val pickerState = rememberDatePickerState(initialSelectedDateMillis = valueMillis)
+        DatePickerDialog(
+            onDismissRequest = { showPicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    onValueChange(pickerState.selectedDateMillis)
+                    showPicker = false
+                }) { Text("تأیید") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPicker = false }) { Text("انصراف") }
+            }
+        ) {
+            DatePicker(state = pickerState)
+        }
+    }
+}
+
+/** A single-value text field with a tappable suggestion-chip row beneath it, sourced from every
+ *  district ever typed on either side of the form (see [PropertyViewModel.availableDistricts]) —
+ *  the app's one shared district vocabulary instead of each case retyping it from scratch. */
+@Composable
+private fun DistrictField(value: String, onValueChange: (String) -> Unit, suggestions: List<String>) {
+    val matches = remember(value, suggestions) {
+        if (value.isBlank()) suggestions.take(6)
+        else suggestions.filter { it.contains(value, ignoreCase = true) && it != value }.take(6)
+    }
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text("منطقه/محله") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    if (matches.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            matches.forEach { suggestion ->
+                AssistChip(onClick = { onValueChange(suggestion) }, label = { Text(suggestion) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun TagEditor(
+    tags: List<String>,
+    onTagsChange: (List<String>) -> Unit,
+    label: String = "افزودن برچسب",
+    suggestions: List<String> = emptyList()
+) {
     var input by remember { mutableStateOf("") }
     if (tags.isNotEmpty()) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -640,5 +976,16 @@ private fun TagEditor(tags: List<String>, onTagsChange: (List<String>) -> Unit, 
             label = { Text("افزودن «${input.trim()}»") },
             leadingIcon = { Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.height(16.dp)) }
         )
+    }
+    val matchingSuggestions = remember(input, suggestions, tags) {
+        suggestions.filter { it !in tags && (input.isBlank() || it.contains(input, ignoreCase = true)) }.take(6)
+    }
+    if (matchingSuggestions.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            matchingSuggestions.forEach { suggestion ->
+                AssistChip(onClick = { onTagsChange(tags + suggestion); input = "" }, label = { Text(suggestion) })
+            }
+        }
     }
 }

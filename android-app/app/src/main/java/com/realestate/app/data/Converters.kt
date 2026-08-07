@@ -86,6 +86,52 @@ class Converters {
     @TypeConverter
     fun toRequestValidityType(value: String): RequestValidityType = RequestValidityType.valueOf(value)
 
+    @TypeConverter
+    fun fromLegalDocumentType(value: LegalDocumentType?): String? = value?.name
+
+    @TypeConverter
+    fun toLegalDocumentType(value: String?): LegalDocumentType? = value?.let { LegalDocumentType.valueOf(it) }
+
+    @TypeConverter
+    fun fromOwnershipType(value: OwnershipType?): String? = value?.name
+
+    @TypeConverter
+    fun toOwnershipType(value: String?): OwnershipType? = value?.let { OwnershipType.valueOf(it) }
+
+    @TypeConverter
+    fun fromWaterSource(value: WaterSource?): String? = value?.name
+
+    @TypeConverter
+    fun toWaterSource(value: String?): WaterSource? = value?.let { WaterSource.valueOf(it) }
+
+    @TypeConverter
+    fun fromLeadSource(value: LeadSource?): String? = value?.name
+
+    @TypeConverter
+    fun toLeadSource(value: String?): LeadSource? = value?.let { LeadSource.valueOf(it) }
+
+    @TypeConverter
+    fun fromVisitStatus(value: VisitStatus?): String? = value?.name
+
+    @TypeConverter
+    fun toVisitStatus(value: String?): VisitStatus? = value?.let { VisitStatus.valueOf(it) }
+
+    @TypeConverter
+    fun fromFloorPreferenceOptionList(value: List<FloorPreferenceOption>): String =
+        value.joinToString(TAG_DELIMITER) { it.name }
+
+    @TypeConverter
+    fun toFloorPreferenceOptionList(value: String): List<FloorPreferenceOption> =
+        if (value.isBlank()) emptyList() else value.split(TAG_DELIMITER).map { FloorPreferenceOption.valueOf(it) }
+
+    @TypeConverter
+    fun fromViewPreferenceOptionList(value: List<ViewPreferenceOption>): String =
+        value.joinToString(TAG_DELIMITER) { it.name }
+
+    @TypeConverter
+    fun toViewPreferenceOptionList(value: String): List<ViewPreferenceOption> =
+        if (value.isBlank()) emptyList() else value.split(TAG_DELIMITER).map { ViewPreferenceOption.valueOf(it) }
+
     companion object {
         private const val TAG_DELIMITER = "|||"
     }

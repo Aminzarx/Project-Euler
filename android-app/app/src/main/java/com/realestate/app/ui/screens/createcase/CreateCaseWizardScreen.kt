@@ -121,6 +121,7 @@ fun CreateCaseWizardScreen(
     // auto-advanced past) instead of a blank slate, since most agents overwhelmingly create the
     // same kind of case over and over in one session.
     val wizardDefaults by viewModel.caseWizardDefaults.collectAsStateWithLifecycle()
+    val availableDistricts by viewModel.availableDistricts.collectAsStateWithLifecycle()
     LaunchedEffect(wizardDefaults) {
         if (isEditMode || caseTypeConfirmed) return@LaunchedEffect
         val suggestedCaseType = wizardDefaults.lastCaseType?.let { name ->
@@ -244,7 +245,28 @@ fun CreateCaseWizardScreen(
             viewPreference = formState.viewPreference.trim().ifBlank { null },
             cashAvailable = formState.cashAvailable.toLongOrNull(),
             maxDeposit = formState.maxDeposit.toLongOrNull(),
-            maxMonthlyRent = formState.maxMonthlyRent.toLongOrNull()
+            maxMonthlyRent = formState.maxMonthlyRent.toLongOrNull(),
+            floorPreferenceOptions = formState.floorPreferenceOptions.toList(),
+            viewPreferenceOptions = formState.viewPreferenceOptions.toList(),
+            needsLoanFinancing = formState.needsLoanFinancing,
+            district = formState.district.trim().ifBlank { null },
+            latitude = formState.latitude,
+            longitude = formState.longitude,
+            legalDocumentType = formState.legalDocumentType,
+            ownershipType = formState.ownershipType,
+            depositAmount = formState.depositAmount.toLongOrNull(),
+            nextViewingAt = formState.nextViewingAt,
+            developerName = formState.developerName.trim().ifBlank { null },
+            expectedDeliveryDate = formState.expectedDeliveryDate,
+            constructionProgressPercent = formState.constructionProgressPercent.toIntOrNull(),
+            waterSource = formState.waterSource,
+            hasWellPermit = formState.hasWellPermit,
+            frontageWidth = formState.frontageWidth.toDoubleOrNull(),
+            leadSource = formState.leadSource,
+            responsibleAgent = formState.responsibleAgent.trim().ifBlank { null },
+            lastContactAt = formState.lastContactAt,
+            visitStatus = formState.visitStatus,
+            isConfidential = formState.isConfidential
         )
     }
 
@@ -351,6 +373,7 @@ fun CreateCaseWizardScreen(
                                 propertyType = propertyType ?: PropertyType.APARTMENT,
                                 isEditMode = isEditMode,
                                 isSaving = isSaving,
+                                availableDistricts = availableDistricts,
                                 onEditCaseType = { step = 1 },
                                 onEditTransactionType = { step = 2 },
                                 onEditPropertyType = { step = 3 },

@@ -5,10 +5,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.realestate.app.data.CaseFlag
 import com.realestate.app.data.CasePriority
+import com.realestate.app.data.FloorPreferenceOption
+import com.realestate.app.data.LeadSource
+import com.realestate.app.data.LegalDocumentType
 import com.realestate.app.data.MortgageStatus
+import com.realestate.app.data.OwnershipType
 import com.realestate.app.data.Property
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.RequestValidityType
+import com.realestate.app.data.ViewPreferenceOption
+import com.realestate.app.data.VisitStatus
+import com.realestate.app.data.WaterSource
 
 /**
  * Every field Step 4's dynamic form can collect, held in one place instead of as ~40 separate
@@ -49,6 +56,19 @@ internal class CaseFormState {
     var landZoning by mutableStateOf("")
     var hasBusinessLicense by mutableStateOf<Boolean?>(null)
     var ownerFlags by mutableStateOf<Set<CaseFlag>>(emptySet())
+    var district by mutableStateOf("")
+    var latitude by mutableStateOf<Double?>(null)
+    var longitude by mutableStateOf<Double?>(null)
+    var legalDocumentType by mutableStateOf<LegalDocumentType?>(null)
+    var ownershipType by mutableStateOf<OwnershipType?>(null)
+    var depositAmount by mutableStateOf("")
+    var nextViewingAt by mutableStateOf<Long?>(null)
+    var developerName by mutableStateOf("")
+    var expectedDeliveryDate by mutableStateOf<Long?>(null)
+    var constructionProgressPercent by mutableStateOf("")
+    var waterSource by mutableStateOf<WaterSource?>(null)
+    var hasWellPermit by mutableStateOf<Boolean?>(null)
+    var frontageWidth by mutableStateOf("")
 
     // Client-request-only
     var budgetMin by mutableStateOf("")
@@ -64,10 +84,19 @@ internal class CaseFormState {
     var maxMonthlyRent by mutableStateOf("")
     var requirementFlags by mutableStateOf<Set<CaseFlag>>(emptySet())
     var rentalFlags by mutableStateOf<Set<CaseFlag>>(emptySet())
+    var floorPreferenceOptions by mutableStateOf<Set<FloorPreferenceOption>>(emptySet())
+    var viewPreferenceOptions by mutableStateOf<Set<ViewPreferenceOption>>(emptySet())
+    var needsLoanFinancing by mutableStateOf(false)
 
-    // Shared
+    // Shared (both case types)
     var expiryType by mutableStateOf(RequestValidityType.NO_EXPIRATION)
     var customExpiryAt by mutableStateOf<Long?>(null)
+    var leadSource by mutableStateOf<LeadSource?>(null)
+    /** Free text — see the doc comment on [Property.responsibleAgent] for why this isn't a FK. */
+    var responsibleAgent by mutableStateOf("")
+    var lastContactAt by mutableStateOf<Long?>(null)
+    var visitStatus by mutableStateOf<VisitStatus?>(null)
+    var isConfidential by mutableStateOf(false)
 
     fun loadFrom(p: Property) {
         title = p.title
@@ -97,6 +126,27 @@ internal class CaseFormState {
         landZoning = p.landZoning.orEmpty()
         hasBusinessLicense = p.hasBusinessLicense
         ownerFlags = p.caseFlags.filter { it in OWNER_FLAGS }.toSet()
+        district = p.district.orEmpty()
+        latitude = p.latitude
+        longitude = p.longitude
+        legalDocumentType = p.legalDocumentType
+        ownershipType = p.ownershipType
+        depositAmount = p.depositAmount?.toString().orEmpty()
+        nextViewingAt = p.nextViewingAt
+        developerName = p.developerName.orEmpty()
+        expectedDeliveryDate = p.expectedDeliveryDate
+        constructionProgressPercent = p.constructionProgressPercent?.toString().orEmpty()
+        waterSource = p.waterSource
+        hasWellPermit = p.hasWellPermit
+        frontageWidth = p.frontageWidth?.toString().orEmpty()
+        leadSource = p.leadSource
+        responsibleAgent = p.responsibleAgent.orEmpty()
+        lastContactAt = p.lastContactAt
+        visitStatus = p.visitStatus
+        isConfidential = p.isConfidential
+        floorPreferenceOptions = p.floorPreferenceOptions.toSet()
+        viewPreferenceOptions = p.viewPreferenceOptions.toSet()
+        needsLoanFinancing = p.needsLoanFinancing
         budgetMin = p.budgetMin?.toString().orEmpty()
         budgetMax = p.budgetMax?.toString().orEmpty()
         desiredMinArea = p.desiredMinArea?.toString().orEmpty()
@@ -132,6 +182,19 @@ internal class CaseFormState {
         landZoning = ""
         hasBusinessLicense = null
         ownerFlags = emptySet()
+        district = ""
+        latitude = null
+        longitude = null
+        legalDocumentType = null
+        ownershipType = null
+        depositAmount = ""
+        nextViewingAt = null
+        developerName = ""
+        expectedDeliveryDate = null
+        constructionProgressPercent = ""
+        waterSource = null
+        hasWellPermit = null
+        frontageWidth = ""
     }
 
     /** The Client-Request-only counterpart of [resetOwnerOnlyFields]. */
@@ -149,6 +212,9 @@ internal class CaseFormState {
         maxMonthlyRent = ""
         requirementFlags = emptySet()
         rentalFlags = emptySet()
+        floorPreferenceOptions = emptySet()
+        viewPreferenceOptions = emptySet()
+        needsLoanFinancing = false
     }
 
     /**
@@ -181,19 +247,40 @@ internal class CaseFormState {
         mortgageStatus, titleDeedReady, reasonForSelling, viewingHours, keyHolder,
         paymentConditions, constructionAge, legalStatus, hiddenNotes, floor, totalFloors,
         landZoning, hasBusinessLicense, ownerFlags,
+        district, latitude, longitude, legalDocumentType, ownershipType, depositAmount,
+        nextViewingAt, developerName, expectedDeliveryDate, constructionProgressPercent,
+        waterSource, hasWellPermit, frontageWidth,
         budgetMin, budgetMax, desiredMinArea, desiredMaxArea, desiredBedrooms, preferredAreas,
         floorPreference, viewPreference, cashAvailable, maxDeposit, maxMonthlyRent,
-        requirementFlags, rentalFlags, expiryType, customExpiryAt
+        requirementFlags, rentalFlags, floorPreferenceOptions, viewPreferenceOptions,
+        needsLoanFinancing, expiryType, customExpiryAt,
+        leadSource, responsibleAgent, lastContactAt, visitStatus, isConfidential
     )
 
     companion object {
-        val OWNER_FLAGS = setOf(CaseFlag.VACANT, CaseFlag.NEGOTIABLE, CaseFlag.IMMEDIATE_SALE, CaseFlag.EXCHANGE_ACCEPTED)
+        val OWNER_FLAGS = setOf(
+            CaseFlag.VACANT, CaseFlag.NEGOTIABLE, CaseFlag.IMMEDIATE_SALE, CaseFlag.EXCHANGE_ACCEPTED,
+            // Amenities the property actually has — the owner-side mirror of AMENITY_REQUIREMENT_FLAGS
+            // below, see [com.realestate.app.data.amenityPairs] for how the two line up.
+            CaseFlag.PARKING_AVAILABLE, CaseFlag.ELEVATOR_AVAILABLE, CaseFlag.STORAGE_AVAILABLE,
+            CaseFlag.BALCONY_AVAILABLE, CaseFlag.GARDEN_YARD_AVAILABLE, CaseFlag.LUXURY_FINISH,
+            CaseFlag.FURNISHED_UNIT, CaseFlag.NEWLY_BUILT, CaseFlag.ACCESSIBILITY_READY
+        )
         val REQUIREMENT_FLAGS = setOf(
             CaseFlag.PARKING_REQUIRED, CaseFlag.ELEVATOR_REQUIRED, CaseFlag.STORAGE_REQUIRED,
             CaseFlag.BALCONY_REQUIRED, CaseFlag.GARDEN_REQUIRED, CaseFlag.LUXURY_REQUIRED,
             CaseFlag.FURNISHED_REQUIRED, CaseFlag.NEW_BUILDING_REQUIRED, CaseFlag.ACCESSIBILITY_REQUIRED,
             CaseFlag.LOAN_REQUIRED
         )
+        /** The subset of [REQUIREMENT_FLAGS] rendered as amenity chips — excludes [CaseFlag.LOAN_REQUIRED],
+         *  which now has its own [needsLoanFinancing] boolean instead of being a flag-in-a-list. */
+        val AMENITY_REQUIREMENT_FLAGS = REQUIREMENT_FLAGS - CaseFlag.LOAN_REQUIRED
+        /** The subset of [OWNER_FLAGS] that are amenities rather than listing-status flags —
+         *  rendered as its own "امکانات ملک" chip group, separate from VACANT/NEGOTIABLE/etc. */
+        val AMENITY_OWNER_FLAGS = OWNER_FLAGS - setOf(
+            CaseFlag.VACANT, CaseFlag.NEGOTIABLE, CaseFlag.IMMEDIATE_SALE, CaseFlag.EXCHANGE_ACCEPTED
+        )
+        val OWNER_STATUS_FLAGS = OWNER_FLAGS - AMENITY_OWNER_FLAGS
         val RENTAL_FLAGS = setOf(CaseFlag.FLEXIBLE_DEPOSIT, CaseFlag.FLEXIBLE_RENT, CaseFlag.CONVERSION_ALLOWED)
     }
 }

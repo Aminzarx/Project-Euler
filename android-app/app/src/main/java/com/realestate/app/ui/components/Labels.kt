@@ -41,10 +41,17 @@ import com.realestate.app.data.CasePriority
 import com.realestate.app.data.CaseTransactionType
 import com.realestate.app.data.CaseType
 import com.realestate.app.data.DealType
+import com.realestate.app.data.FloorPreferenceOption
+import com.realestate.app.data.LeadSource
+import com.realestate.app.data.LegalDocumentType
 import com.realestate.app.data.MortgageStatus
+import com.realestate.app.data.OwnershipType
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
 import com.realestate.app.data.RequestValidityType
+import com.realestate.app.data.ViewPreferenceOption
+import com.realestate.app.data.VisitStatus
+import com.realestate.app.data.WaterSource
 import com.realestate.app.data.property.TimelineEventType
 import com.realestate.app.ui.theme.extendedColors
 
@@ -162,6 +169,86 @@ fun CaseFlag.label(): String = when (this) {
     CaseFlag.FLEXIBLE_DEPOSIT -> "رهن قابل تعدیل"
     CaseFlag.FLEXIBLE_RENT -> "اجاره قابل تعدیل"
     CaseFlag.CONVERSION_ALLOWED -> "تبدیل رهن به اجاره"
+    CaseFlag.PARKING_AVAILABLE -> "پارکینگ"
+    CaseFlag.ELEVATOR_AVAILABLE -> "آسانسور"
+    CaseFlag.STORAGE_AVAILABLE -> "انباری"
+    CaseFlag.BALCONY_AVAILABLE -> "بالکن"
+    CaseFlag.GARDEN_YARD_AVAILABLE -> "حیاط/باغچه"
+    CaseFlag.LUXURY_FINISH -> "لوکس"
+    CaseFlag.FURNISHED_UNIT -> "مبله"
+    CaseFlag.NEWLY_BUILT -> "نوساز"
+    CaseFlag.ACCESSIBILITY_READY -> "دسترسی معلولین"
+}
+
+fun LegalDocumentType.label(): String = when (this) {
+    LegalDocumentType.SINGLE_PAGE_DEED -> "سند تک‌برگ"
+    LegalDocumentType.NOTARIZED_DEED -> "سند منگوله‌دار"
+    LegalDocumentType.SALE_AGREEMENT -> "قولنامه‌ای"
+    LegalDocumentType.POWER_OF_ATTORNEY -> "وکالتی"
+    LegalDocumentType.UNDER_REGISTRATION -> "در جریان ثبت"
+    LegalDocumentType.AGRICULTURAL_DEED -> "سند زراعی/نسقی"
+    LegalDocumentType.OTHER -> "سایر"
+}
+
+fun OwnershipType.label(): String = when (this) {
+    OwnershipType.SOLE_OWNER -> "مالک واحد"
+    OwnershipType.SHARED_OWNERSHIP -> "مشاع"
+    OwnershipType.POWER_OF_ATTORNEY_HOLDER -> "دارای وکالت"
+    OwnershipType.HEIR -> "وارث"
+    OwnershipType.OTHER -> "سایر"
+}
+
+fun WaterSource.label(): String = when (this) {
+    WaterSource.WELL -> "چاه"
+    WaterSource.QANAT -> "قنات"
+    WaterSource.RIVER_CANAL -> "رودخانه/نهر"
+    WaterSource.MUNICIPAL -> "آب شهری"
+    WaterSource.NONE -> "ندارد"
+    WaterSource.UNKNOWN -> "نامشخص"
+}
+
+fun LeadSource.label(): String = when (this) {
+    LeadSource.REFERRAL -> "معرفی"
+    LeadSource.PHONE_INQUIRY -> "تماس تلفنی"
+    LeadSource.SOCIAL_MEDIA -> "شبکه‌های اجتماعی"
+    LeadSource.WEBSITE -> "وب‌سایت"
+    LeadSource.WALK_IN -> "مراجعه حضوری"
+    LeadSource.SIGNBOARD -> "تابلو"
+    LeadSource.OTHER -> "سایر"
+}
+
+fun VisitStatus.label(): String = when (this) {
+    VisitStatus.NOT_SCHEDULED -> "برنامه‌ریزی نشده"
+    VisitStatus.SCHEDULED -> "زمان‌بندی شده"
+    VisitStatus.COMPLETED -> "انجام شده"
+    VisitStatus.CANCELLED -> "لغو شده"
+    VisitStatus.NO_SHOW -> "عدم حضور"
+}
+
+@Composable
+fun VisitStatus.color(): Color = when (this) {
+    VisitStatus.NOT_SCHEDULED -> MaterialTheme.colorScheme.onSurfaceVariant
+    VisitStatus.SCHEDULED -> MaterialTheme.extendedColors.info
+    VisitStatus.COMPLETED -> MaterialTheme.extendedColors.success
+    VisitStatus.CANCELLED -> MaterialTheme.extendedColors.danger
+    VisitStatus.NO_SHOW -> MaterialTheme.extendedColors.warning
+}
+
+fun FloorPreferenceOption.label(): String = when (this) {
+    FloorPreferenceOption.GROUND -> "همکف"
+    FloorPreferenceOption.LOW -> "پایین"
+    FloorPreferenceOption.MID -> "متوسط"
+    FloorPreferenceOption.HIGH -> "بالا"
+    FloorPreferenceOption.TOP_FLOOR -> "آخرین طبقه"
+    FloorPreferenceOption.ANY -> "فرقی ندارد"
+}
+
+fun ViewPreferenceOption.label(): String = when (this) {
+    ViewPreferenceOption.CITY -> "منظره شهر"
+    ViewPreferenceOption.NATURE_OR_SEA -> "طبیعت/دریا"
+    ViewPreferenceOption.PARK -> "پارک"
+    ViewPreferenceOption.STREET -> "خیابان"
+    ViewPreferenceOption.ANY -> "فرقی ندارد"
 }
 
 fun PropertyStatus.label(): String = when (this) {
