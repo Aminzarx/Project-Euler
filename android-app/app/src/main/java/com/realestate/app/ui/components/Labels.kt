@@ -18,6 +18,7 @@ import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material.icons.rounded.EventBusy
 import androidx.compose.material.icons.rounded.Factory
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.HourglassEmpty
 import androidx.compose.material.icons.rounded.LocationCity
 import androidx.compose.material.icons.rounded.Park
@@ -40,18 +41,24 @@ import com.realestate.app.data.CaseFlag
 import com.realestate.app.data.CasePriority
 import com.realestate.app.data.CaseTransactionType
 import com.realestate.app.data.CaseType
+import com.realestate.app.data.ClosingReason
+import com.realestate.app.data.CoolingSystem
 import com.realestate.app.data.DealType
 import com.realestate.app.data.FloorPreferenceOption
+import com.realestate.app.data.HeatingSystem
 import com.realestate.app.data.LeadSource
 import com.realestate.app.data.LegalDocumentType
 import com.realestate.app.data.MortgageStatus
 import com.realestate.app.data.OwnershipType
+import com.realestate.app.data.PropertyOrientation
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
 import com.realestate.app.data.RequestValidityType
+import com.realestate.app.data.StructureType
 import com.realestate.app.data.ViewPreferenceOption
 import com.realestate.app.data.VisitStatus
 import com.realestate.app.data.WaterSource
+import com.realestate.app.data.contact.PreferredContactTime
 import com.realestate.app.data.property.TimelineEventType
 import com.realestate.app.ui.theme.extendedColors
 
@@ -67,6 +74,9 @@ fun PropertyType.label(): String = when (this) {
     PropertyType.FARM -> "مزرعه"
     PropertyType.BUILDING -> "ساختمان"
     PropertyType.PROJECT -> "پروژه"
+    PropertyType.OLD_HOUSE -> "کلنگی"
+    PropertyType.SEMI_FINISHED_BUILDING -> "نیمه‌ساز"
+    PropertyType.TOWER -> "برج"
 }
 
 fun PropertyType.icon(): ImageVector = when (this) {
@@ -81,6 +91,9 @@ fun PropertyType.icon(): ImageVector = when (this) {
     PropertyType.FARM -> Icons.Rounded.Agriculture
     PropertyType.BUILDING -> Icons.Rounded.LocationCity
     PropertyType.PROJECT -> Icons.Rounded.Construction
+    PropertyType.OLD_HOUSE -> Icons.Rounded.Home
+    PropertyType.SEMI_FINISHED_BUILDING -> Icons.Rounded.Construction
+    PropertyType.TOWER -> Icons.Rounded.LocationCity
 }
 
 fun DealType.label(): String = when (this) {
@@ -117,6 +130,11 @@ fun CaseTransactionType.label(): String = when (this) {
     CaseTransactionType.PRE_PURCHASE -> "پیش‌خرید"
     CaseTransactionType.PROPERTY_EXCHANGE -> "معاوضه ملک"
     CaseTransactionType.INVESTMENT -> "سرمایه‌گذاری"
+    CaseTransactionType.INSTALLMENT_SALE -> "فروش اقساطی"
+    CaseTransactionType.SHORT_TERM_RENT -> "اجاره کوتاه‌مدت"
+    CaseTransactionType.DAILY_RENT -> "اجاره روزانه"
+    CaseTransactionType.EXCHANGE_WITH_VEHICLE -> "معاوضه با خودرو"
+    CaseTransactionType.EXCHANGE_WITH_LAND -> "معاوضه با زمین"
     CaseTransactionType.OTHER -> "سایر"
 }
 
@@ -205,6 +223,55 @@ fun WaterSource.label(): String = when (this) {
     WaterSource.MUNICIPAL -> "آب شهری"
     WaterSource.NONE -> "ندارد"
     WaterSource.UNKNOWN -> "نامشخص"
+}
+
+fun PropertyOrientation.label(): String = when (this) {
+    PropertyOrientation.NORTH -> "شمالی"
+    PropertyOrientation.SOUTH -> "جنوبی"
+    PropertyOrientation.EAST -> "شرقی"
+    PropertyOrientation.WEST -> "غربی"
+    PropertyOrientation.NORTH_EAST -> "شمال‌شرقی"
+    PropertyOrientation.NORTH_WEST -> "شمال‌غربی"
+    PropertyOrientation.SOUTH_EAST -> "جنوب‌شرقی"
+    PropertyOrientation.SOUTH_WEST -> "جنوب‌غربی"
+}
+
+fun StructureType.label(): String = when (this) {
+    StructureType.STEEL -> "فلزی"
+    StructureType.CONCRETE -> "بتنی"
+    StructureType.MASONRY -> "آجری/سنتی"
+    StructureType.OTHER -> "سایر"
+}
+
+fun HeatingSystem.label(): String = when (this) {
+    HeatingSystem.PACKAGE -> "پکیج"
+    HeatingSystem.CENTRAL_RADIATOR -> "شوفاژ مرکزی"
+    HeatingSystem.SPLIT_GAS -> "بخاری گازی/اسپلیت"
+    HeatingSystem.FLOOR_HEATING -> "گرمایش از کف"
+    HeatingSystem.NONE -> "ندارد"
+}
+
+fun CoolingSystem.label(): String = when (this) {
+    CoolingSystem.EVAPORATIVE_COOLER -> "کولر آبی"
+    CoolingSystem.SPLIT_AC -> "اسپلیت"
+    CoolingSystem.CENTRAL -> "سرمایش مرکزی"
+    CoolingSystem.NONE -> "ندارد"
+}
+
+fun ClosingReason.label(): String = when (this) {
+    ClosingReason.SOLD -> "فروخته شد"
+    ClosingReason.RENTED -> "اجاره داده شد"
+    ClosingReason.OWNER_CANCELLED -> "انصراف مالک"
+    ClosingReason.PRICE_TOO_HIGH -> "قیمت بالا بود"
+    ClosingReason.SOLD_BY_ANOTHER_AGENCY -> "توسط بنگاه دیگر انجام شد"
+    ClosingReason.OTHER -> "سایر"
+}
+
+fun PreferredContactTime.label(): String = when (this) {
+    PreferredContactTime.MORNING -> "صبح"
+    PreferredContactTime.AFTERNOON -> "بعدازظهر"
+    PreferredContactTime.EVENING -> "عصر/شب"
+    PreferredContactTime.ANYTIME -> "هر زمان"
 }
 
 fun LeadSource.label(): String = when (this) {

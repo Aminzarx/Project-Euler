@@ -5,17 +5,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.realestate.app.data.CaseFlag
 import com.realestate.app.data.CasePriority
+import com.realestate.app.data.ClosingReason
+import com.realestate.app.data.CoolingSystem
 import com.realestate.app.data.FloorPreferenceOption
+import com.realestate.app.data.HeatingSystem
 import com.realestate.app.data.LeadSource
 import com.realestate.app.data.LegalDocumentType
 import com.realestate.app.data.MortgageStatus
 import com.realestate.app.data.OwnershipType
 import com.realestate.app.data.Property
+import com.realestate.app.data.PropertyOrientation
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.RequestValidityType
+import com.realestate.app.data.StructureType
 import com.realestate.app.data.ViewPreferenceOption
 import com.realestate.app.data.VisitStatus
 import com.realestate.app.data.WaterSource
+import com.realestate.app.data.contact.PreferredContactTime
 
 /**
  * Every field Step 4's dynamic form can collect, held in one place instead of as ~40 separate
@@ -42,6 +48,12 @@ internal class CaseFormState {
      *  Stays null for a case whose contact was never picked (typed name/phone only), exactly
      *  preserving pre-Contact-entity behavior for anyone who ignores the picker. */
     var contactId by mutableStateOf<Long?>(null)
+    /** Only read at contact-creation time (see [ContactPickerField] and
+     *  PropertyViewModel.addProperty) — mirrors why [contactId] itself is create-only, so editing
+     *  an already-linked contact's reach-out channels isn't in scope here. */
+    var contactLandlinePhone by mutableStateOf("")
+    var contactWhatsappNumber by mutableStateOf("")
+    var contactPreferredContactTime by mutableStateOf<PreferredContactTime?>(null)
     var status by mutableStateOf(PropertyStatus.NEW)
     var priority by mutableStateOf(CasePriority.NORMAL)
     var tags by mutableStateOf<List<String>>(emptyList())
@@ -75,6 +87,19 @@ internal class CaseFormState {
     var waterSource by mutableStateOf<WaterSource?>(null)
     var hasWellPermit by mutableStateOf<Boolean?>(null)
     var frontageWidth by mutableStateOf("")
+    var streetWidth by mutableStateOf("")
+    var orientation by mutableStateOf<PropertyOrientation?>(null)
+    var hasNaturalLight by mutableStateOf<Boolean?>(null)
+    var unitsPerFloor by mutableStateOf("")
+    var totalUnits by mutableStateOf("")
+    var structureType by mutableStateOf<StructureType?>(null)
+    var heatingSystem by mutableStateOf<HeatingSystem?>(null)
+    var coolingSystem by mutableStateOf<CoolingSystem?>(null)
+    var hasCompletionCertificate by mutableStateOf<Boolean?>(null)
+    var hasBankMortgage by mutableStateOf<Boolean?>(null)
+    var existingLoanAmount by mutableStateOf("")
+    var isOwnershipTransferable by mutableStateOf<Boolean?>(null)
+    var closingReason by mutableStateOf<ClosingReason?>(null)
 
     // Client-request-only
     var budgetMin by mutableStateOf("")
@@ -93,6 +118,8 @@ internal class CaseFormState {
     var floorPreferenceOptions by mutableStateOf<Set<FloorPreferenceOption>>(emptySet())
     var viewPreferenceOptions by mutableStateOf<Set<ViewPreferenceOption>>(emptySet())
     var needsLoanFinancing by mutableStateOf(false)
+    var excludedFloorPreferences by mutableStateOf<Set<FloorPreferenceOption>>(emptySet())
+    var dealBreakerTags by mutableStateOf<List<String>>(emptyList())
 
     // Shared (both case types)
     var expiryType by mutableStateOf(RequestValidityType.NO_EXPIRATION)
@@ -146,6 +173,19 @@ internal class CaseFormState {
         waterSource = p.waterSource
         hasWellPermit = p.hasWellPermit
         frontageWidth = p.frontageWidth?.toString().orEmpty()
+        streetWidth = p.streetWidth?.toString().orEmpty()
+        orientation = p.orientation
+        hasNaturalLight = p.hasNaturalLight
+        unitsPerFloor = p.unitsPerFloor?.toString().orEmpty()
+        totalUnits = p.totalUnits?.toString().orEmpty()
+        structureType = p.structureType
+        heatingSystem = p.heatingSystem
+        coolingSystem = p.coolingSystem
+        hasCompletionCertificate = p.hasCompletionCertificate
+        hasBankMortgage = p.hasBankMortgage
+        existingLoanAmount = p.existingLoanAmount?.toString().orEmpty()
+        isOwnershipTransferable = p.isOwnershipTransferable
+        closingReason = p.closingReason
         leadSource = p.leadSource
         responsibleAgent = p.responsibleAgent.orEmpty()
         lastContactAt = p.lastContactAt
@@ -167,6 +207,8 @@ internal class CaseFormState {
         maxMonthlyRent = p.maxMonthlyRent?.toString().orEmpty()
         requirementFlags = p.caseFlags.filter { it in REQUIREMENT_FLAGS }.toSet()
         rentalFlags = p.caseFlags.filter { it in RENTAL_FLAGS }.toSet()
+        excludedFloorPreferences = p.excludedFloorPreferences.toSet()
+        dealBreakerTags = p.dealBreakerTags
         expiryType = p.expiryType
         customExpiryAt = p.customExpiryAt
     }
@@ -202,6 +244,19 @@ internal class CaseFormState {
         waterSource = null
         hasWellPermit = null
         frontageWidth = ""
+        streetWidth = ""
+        orientation = null
+        hasNaturalLight = null
+        unitsPerFloor = ""
+        totalUnits = ""
+        structureType = null
+        heatingSystem = null
+        coolingSystem = null
+        hasCompletionCertificate = null
+        hasBankMortgage = null
+        existingLoanAmount = ""
+        isOwnershipTransferable = null
+        closingReason = null
     }
 
     /** The Client-Request-only counterpart of [resetOwnerOnlyFields]. */
@@ -222,6 +277,8 @@ internal class CaseFormState {
         floorPreferenceOptions = emptySet()
         viewPreferenceOptions = emptySet()
         needsLoanFinancing = false
+        excludedFloorPreferences = emptySet()
+        dealBreakerTags = emptyList()
     }
 
     /**
@@ -250,6 +307,7 @@ internal class CaseFormState {
 
     private fun snapshot(): List<Any?> = listOf(
         title, description, price, area, rooms, city, address, contactName, contactPhone, contactId,
+        contactLandlinePhone, contactWhatsappNumber, contactPreferredContactTime,
         status, priority, tags, imageUri,
         mortgageStatus, titleDeedReady, reasonForSelling, viewingHours, keyHolder,
         paymentConditions, constructionAge, legalStatus, hiddenNotes, floor, totalFloors,
@@ -257,10 +315,13 @@ internal class CaseFormState {
         district, latitude, longitude, legalDocumentType, ownershipType, depositAmount,
         nextViewingAt, developerName, expectedDeliveryDate, constructionProgressPercent,
         waterSource, hasWellPermit, frontageWidth,
+        streetWidth, orientation, hasNaturalLight, unitsPerFloor, totalUnits,
+        structureType, heatingSystem, coolingSystem,
+        hasCompletionCertificate, hasBankMortgage, existingLoanAmount, isOwnershipTransferable, closingReason,
         budgetMin, budgetMax, desiredMinArea, desiredMaxArea, desiredBedrooms, preferredAreas,
         floorPreference, viewPreference, cashAvailable, maxDeposit, maxMonthlyRent,
         requirementFlags, rentalFlags, floorPreferenceOptions, viewPreferenceOptions,
-        needsLoanFinancing, expiryType, customExpiryAt,
+        needsLoanFinancing, excludedFloorPreferences, dealBreakerTags, expiryType, customExpiryAt,
         leadSource, responsibleAgent, lastContactAt, visitStatus, isConfidential
     )
 

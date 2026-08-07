@@ -13,6 +13,9 @@ class ContactRepository(private val dao: ContactDao) {
 
     suspend fun caseCountFor(contactId: Long): Int = dao.caseCountFor(contactId)
 
+    suspend fun activeCaseCountFor(contactId: Long): Int =
+        dao.activeCaseCountFor(contactId, com.realestate.app.data.terminalPropertyStatuses.map { it.name })
+
     suspend fun insert(contact: Contact): Long = dao.insert(contact)
 
     suspend fun update(contact: Contact) = dao.update(contact)

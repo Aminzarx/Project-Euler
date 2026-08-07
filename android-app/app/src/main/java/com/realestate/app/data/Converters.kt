@@ -1,6 +1,7 @@
 package com.realestate.app.data
 
 import androidx.room.TypeConverter
+import com.realestate.app.data.contact.PreferredContactTime
 import com.realestate.app.data.property.TimelineEventType
 import com.realestate.app.data.wallet.TransactionStatus
 import com.realestate.app.data.wallet.TransactionType
@@ -131,6 +132,42 @@ class Converters {
     @TypeConverter
     fun toViewPreferenceOptionList(value: String): List<ViewPreferenceOption> =
         if (value.isBlank()) emptyList() else value.split(TAG_DELIMITER).map { ViewPreferenceOption.valueOf(it) }
+
+    @TypeConverter
+    fun fromPropertyOrientation(value: PropertyOrientation?): String? = value?.name
+
+    @TypeConverter
+    fun toPropertyOrientation(value: String?): PropertyOrientation? = value?.let { PropertyOrientation.valueOf(it) }
+
+    @TypeConverter
+    fun fromStructureType(value: StructureType?): String? = value?.name
+
+    @TypeConverter
+    fun toStructureType(value: String?): StructureType? = value?.let { StructureType.valueOf(it) }
+
+    @TypeConverter
+    fun fromHeatingSystem(value: HeatingSystem?): String? = value?.name
+
+    @TypeConverter
+    fun toHeatingSystem(value: String?): HeatingSystem? = value?.let { HeatingSystem.valueOf(it) }
+
+    @TypeConverter
+    fun fromCoolingSystem(value: CoolingSystem?): String? = value?.name
+
+    @TypeConverter
+    fun toCoolingSystem(value: String?): CoolingSystem? = value?.let { CoolingSystem.valueOf(it) }
+
+    @TypeConverter
+    fun fromClosingReason(value: ClosingReason?): String? = value?.name
+
+    @TypeConverter
+    fun toClosingReason(value: String?): ClosingReason? = value?.let { ClosingReason.valueOf(it) }
+
+    @TypeConverter
+    fun fromPreferredContactTime(value: PreferredContactTime?): String? = value?.name
+
+    @TypeConverter
+    fun toPreferredContactTime(value: String?): PreferredContactTime? = value?.let { PreferredContactTime.valueOf(it) }
 
     companion object {
         private const val TAG_DELIMITER = "|||"

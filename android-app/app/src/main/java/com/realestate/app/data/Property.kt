@@ -7,7 +7,10 @@ import androidx.room.PrimaryKey
 
 enum class DealType { SALE, RENT }
 
-enum class PropertyType { APARTMENT, VILLA, LAND, OFFICE, SHOP, WAREHOUSE, INDUSTRIAL, GARDEN, FARM, BUILDING, PROJECT }
+enum class PropertyType {
+    APARTMENT, VILLA, LAND, OFFICE, SHOP, WAREHOUSE, INDUSTRIAL, GARDEN, FARM, BUILDING, PROJECT,
+    OLD_HOUSE, SEMI_FINISHED_BUILDING, TOWER
+}
 
 enum class PropertyStatus {
     NEW, READY, ACTIVE, NEGOTIATING, RESERVED, SOLD, RENTED, ARCHIVED,
@@ -27,10 +30,17 @@ enum class CaseType { OWNER, CLIENT_REQUEST }
 enum class PropertyFormShape { RESIDENTIAL, LAND, COMMERCIAL }
 
 fun PropertyType.formShape(): PropertyFormShape = when (this) {
-    PropertyType.APARTMENT, PropertyType.VILLA, PropertyType.BUILDING, PropertyType.PROJECT -> PropertyFormShape.RESIDENTIAL
+    PropertyType.APARTMENT, PropertyType.VILLA, PropertyType.BUILDING, PropertyType.PROJECT,
+    PropertyType.OLD_HOUSE, PropertyType.SEMI_FINISHED_BUILDING, PropertyType.TOWER -> PropertyFormShape.RESIDENTIAL
     PropertyType.LAND, PropertyType.GARDEN, PropertyType.FARM -> PropertyFormShape.LAND
     PropertyType.OFFICE, PropertyType.SHOP, PropertyType.WAREHOUSE, PropertyType.INDUSTRIAL -> PropertyFormShape.COMMERCIAL
 }
+
+/** Multi-unit residential buildings where "how many units share a floor / exist in total" is a
+ *  meaningful, commonly-asked spec — as opposed to a single-family [PropertyType.VILLA] or
+ *  [PropertyType.OLD_HOUSE], where the question doesn't apply. */
+fun PropertyType.hasMultipleUnits(): Boolean =
+    this in setOf(PropertyType.BUILDING, PropertyType.PROJECT, PropertyType.TOWER, PropertyType.APARTMENT)
 
 /** Replaces the old two-way [DealType] with the full set of transaction types a Case can be
  *  about. Not every value applies to every [CaseType] — see [CaseTransactionType.appliesTo]. Kept
@@ -38,7 +48,8 @@ fun PropertyType.formShape(): PropertyFormShape = when (this) {
  *  [Property.effectiveTransactionLabel] falls back to that for old data. */
 enum class CaseTransactionType {
     SALE, PURCHASE, FULL_MORTGAGE, RENT, MORTGAGE_AND_RENT,
-    CONSTRUCTION_PARTNERSHIP, PRE_SALE, PRE_PURCHASE, PROPERTY_EXCHANGE, INVESTMENT, OTHER
+    CONSTRUCTION_PARTNERSHIP, PRE_SALE, PRE_PURCHASE, PROPERTY_EXCHANGE, INVESTMENT, OTHER,
+    INSTALLMENT_SALE, SHORT_TERM_RENT, DAILY_RENT, EXCHANGE_WITH_VEHICLE, EXCHANGE_WITH_LAND
 }
 
 fun CaseTransactionType.appliesTo(caseType: CaseType): Boolean = when (caseType) {
@@ -46,17 +57,23 @@ fun CaseTransactionType.appliesTo(caseType: CaseType): Boolean = when (caseType)
     CaseType.CLIENT_REQUEST -> this in clientRequestTransactionTypes
 }
 
+/** [SHORT_TERM_RENT]/[DAILY_RENT] behave like [RENT] for pricing purposes (a per-period rent
+ *  figure, not a lump sum) — see the rent-like transactions set in CaseDetailsForm.kt. */
 val ownerTransactionTypes = listOf(
     CaseTransactionType.SALE, CaseTransactionType.FULL_MORTGAGE, CaseTransactionType.RENT,
     CaseTransactionType.MORTGAGE_AND_RENT, CaseTransactionType.CONSTRUCTION_PARTNERSHIP,
-    CaseTransactionType.PRE_SALE, CaseTransactionType.PROPERTY_EXCHANGE, CaseTransactionType.OTHER
+    CaseTransactionType.PRE_SALE, CaseTransactionType.PROPERTY_EXCHANGE,
+    CaseTransactionType.INSTALLMENT_SALE, CaseTransactionType.SHORT_TERM_RENT, CaseTransactionType.DAILY_RENT,
+    CaseTransactionType.EXCHANGE_WITH_VEHICLE, CaseTransactionType.EXCHANGE_WITH_LAND, CaseTransactionType.OTHER
 )
 
 val clientRequestTransactionTypes = listOf(
     CaseTransactionType.PURCHASE, CaseTransactionType.FULL_MORTGAGE, CaseTransactionType.RENT,
     CaseTransactionType.MORTGAGE_AND_RENT, CaseTransactionType.CONSTRUCTION_PARTNERSHIP,
     CaseTransactionType.PRE_PURCHASE, CaseTransactionType.INVESTMENT,
-    CaseTransactionType.PROPERTY_EXCHANGE, CaseTransactionType.OTHER
+    CaseTransactionType.PROPERTY_EXCHANGE,
+    CaseTransactionType.INSTALLMENT_SALE, CaseTransactionType.SHORT_TERM_RENT, CaseTransactionType.DAILY_RENT,
+    CaseTransactionType.EXCHANGE_WITH_VEHICLE, CaseTransactionType.EXCHANGE_WITH_LAND, CaseTransactionType.OTHER
 )
 
 /** Every boolean-ish status/requirement toggle a Case can carry, consolidated into one list
@@ -129,6 +146,25 @@ enum class FloorPreferenceOption { GROUND, LOW, MID, HIGH, TOP_FLOOR, ANY }
 
 /** Coarse view/outlook preference for a Client Request — same reasoning as [FloorPreferenceOption]. */
 enum class ViewPreferenceOption { CITY, NATURE_OR_SEA, PARK, STREET, ANY }
+
+enum class PropertyOrientation { NORTH, SOUTH, EAST, WEST, NORTH_EAST, NORTH_WEST, SOUTH_EAST, SOUTH_WEST }
+
+enum class StructureType { STEEL, CONCRETE, MASONRY, OTHER }
+
+enum class HeatingSystem { PACKAGE, CENTRAL_RADIATOR, SPLIT_GAS, FLOOR_HEATING, NONE }
+
+enum class CoolingSystem { EVAPORATIVE_COOLER, SPLIT_AC, CENTRAL, NONE }
+
+/** Why an Owner case left the active pipeline — recorded when its status moves to a terminal
+ *  value (SOLD/RENTED/CANCELLED/etc.), for reporting on close rates and lost-deal reasons. */
+enum class ClosingReason { SOLD, RENTED, OWNER_CANCELLED, PRICE_TOO_HIGH, SOLD_BY_ANOTHER_AGENCY, OTHER }
+
+/** [PropertyStatus] values that represent a Case leaving the active pipeline — the trigger for
+ *  prompting a [ClosingReason]. */
+val terminalPropertyStatuses = setOf(
+    PropertyStatus.SOLD, PropertyStatus.RENTED, PropertyStatus.ARCHIVED,
+    PropertyStatus.CONTRACT_SIGNED, PropertyStatus.CANCELLED, PropertyStatus.EXPIRED
+)
 
 /**
  * [Immutable] is load-bearing for scroll performance, not decoration. Every field is a `val` and the
@@ -283,7 +319,41 @@ data class Property(
     /** When true, this case is never included in shared/exported outputs (StoryCard, ad text,
      *  case-file share) — a stronger guarantee than [hiddenNotes], which only keeps one field
      *  private while still allowing the rest of the case to be shared. */
-    val isConfidential: Boolean = false
+    val isConfidential: Boolean = false,
+
+    // ---- Owner: expanded specifications (RESIDENTIAL formShape) ----
+    val streetWidth: Double? = null,
+    val orientation: PropertyOrientation? = null,
+    val hasNaturalLight: Boolean? = null,
+    val unitsPerFloor: Int? = null,
+    val totalUnits: Int? = null,
+    val structureType: StructureType? = null,
+    val heatingSystem: HeatingSystem? = null,
+    val coolingSystem: CoolingSystem? = null,
+
+    // ---- Owner: legal expansion ----
+    val hasCompletionCertificate: Boolean? = null,
+    val hasBankMortgage: Boolean? = null,
+    val existingLoanAmount: Long? = null,
+    val isOwnershipTransferable: Boolean? = null,
+
+    // ---- Owner: recorded once status moves to a terminal value — see [terminalPropertyStatuses] ----
+    val closingReason: ClosingReason? = null,
+
+    // ---- Client Request: explicit exclusions, distinct from [floorPreferenceOptions]/
+    // [caseFlags] requirements — "doesn't care about parking" and "will not accept ground floor"
+    // are different facts, and only the second was expressible before this field existed. ----
+    val excludedFloorPreferences: List<FloorPreferenceOption> = emptyList(),
+    /** Free-form dealbreakers that don't fit a structured option (e.g. "پرهیز از خیابان اصلی") —
+     *  reuses the same tag-list shape as [tags]/[preferredAreas] rather than inventing a new one. */
+    val dealBreakerTags: List<String> = emptyList(),
+
+    // ---- Contact info additions live on Contact (see data/contact/Contact.kt), not here — a
+    // landline/WhatsApp number belongs to the person, not to any one of their cases. ----
+
+    // ---- Owner: GPS capture metadata — when latitude/longitude was captured via the in-app
+    // "current location" button rather than typed/estimated, so a future map view can trust it. ----
+    val locationCapturedAt: Long? = null
 )
 
 /**

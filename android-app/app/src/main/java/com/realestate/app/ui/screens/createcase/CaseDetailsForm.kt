@@ -60,20 +60,28 @@ import com.realestate.app.data.CaseFlag
 import com.realestate.app.data.CasePriority
 import com.realestate.app.data.CaseTransactionType
 import com.realestate.app.data.CaseType
+import com.realestate.app.data.ClosingReason
+import com.realestate.app.data.CoolingSystem
 import com.realestate.app.data.contact.Contact
+import com.realestate.app.data.contact.PreferredContactTime
 import com.realestate.app.data.FloorPreferenceOption
+import com.realestate.app.data.HeatingSystem
 import com.realestate.app.data.LeadSource
 import com.realestate.app.data.LegalDocumentType
 import com.realestate.app.data.OwnershipType
 import com.realestate.app.data.PropertyFormShape
+import com.realestate.app.data.PropertyOrientation
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
 import com.realestate.app.data.RequestValidityType
+import com.realestate.app.data.StructureType
 import com.realestate.app.data.ViewPreferenceOption
 import com.realestate.app.data.VisitStatus
 import com.realestate.app.data.WaterSource
 import com.realestate.app.data.formShape
+import com.realestate.app.data.hasMultipleUnits
 import com.realestate.app.data.isValidIranianMobile
+import com.realestate.app.data.terminalPropertyStatuses
 import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.CollapsibleSection
 import com.realestate.app.ui.components.DropdownMenu
@@ -101,7 +109,8 @@ private val clientRequestStatuses = listOf(
 )
 
 private val rentLikeTransactions = setOf(
-    CaseTransactionType.RENT, CaseTransactionType.MORTGAGE_AND_RENT, CaseTransactionType.FULL_MORTGAGE
+    CaseTransactionType.RENT, CaseTransactionType.MORTGAGE_AND_RENT, CaseTransactionType.FULL_MORTGAGE,
+    CaseTransactionType.SHORT_TERM_RENT, CaseTransactionType.DAILY_RENT
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -114,8 +123,10 @@ internal fun CaseDetailsForm(
     isEditMode: Boolean,
     isSaving: Boolean,
     availableDistricts: List<String>,
+    allTags: List<String>,
     searchContacts: suspend (String) -> List<Contact>,
     caseCountForContact: suspend (Long) -> Int,
+    activeCaseCountForContact: suspend (Long) -> Int,
     onEditCaseType: () -> Unit,
     onEditTransactionType: () -> Unit,
     onEditPropertyType: () -> Unit,
@@ -124,16 +135,23 @@ internal fun CaseDetailsForm(
 ) {
     // Each case type accepts either one of two fields — never both — so the reason a disabled
     // Save button gives has to name both alternatives, not just one, or it reads as a lie once the
-    // agent fills the field it happened to omit.
+    // agent fills the field it happened to omit. A contact (name or phone) is required on every
+    // case regardless of type — a listing/request with no way to reach anyone isn't useful data,
+    // and Client Request cases already treat the contact itself as their identity.
+    val ownerTitleAddressFilled = state.address.isNotBlank() || state.title.isNotBlank()
+    val contactFilled = state.contactName.isNotBlank() || state.contactPhone.isNotBlank()
     val identityFilled = when (caseType) {
-        CaseType.OWNER -> state.address.isNotBlank() || state.title.isNotBlank()
-        CaseType.CLIENT_REQUEST -> state.contactName.isNotBlank() || state.contactPhone.isNotBlank()
+        CaseType.OWNER -> ownerTitleAddressFilled && contactFilled
+        CaseType.CLIENT_REQUEST -> contactFilled
     }
     val phoneValid = state.contactPhone.isBlank() || isValidIranianMobile(state.contactPhone)
     val isFormValid = identityFilled && phoneValid
     val disabledReason = when {
-        !identityFilled && caseType == CaseType.OWNER -> "عنوان پرونده یا آدرس را وارد کنید"
-        !identityFilled -> "نام مشتری یا شماره تماس را وارد کنید"
+        caseType == CaseType.OWNER && !ownerTitleAddressFilled && !contactFilled ->
+            "عنوان پرونده یا آدرس، و نام یا شماره تماس مالک را وارد کنید"
+        caseType == CaseType.OWNER && !ownerTitleAddressFilled -> "عنوان پرونده یا آدرس را وارد کنید"
+        caseType == CaseType.OWNER && !contactFilled -> "نام یا شماره تماس مالک را وارد کنید"
+        caseType == CaseType.CLIENT_REQUEST && !contactFilled -> "نام مشتری یا شماره تماس را وارد کنید"
         !phoneValid -> "شماره تماس معتبر نیست"
         else -> null
     }
@@ -173,9 +191,9 @@ internal fun CaseDetailsForm(
         Spacer(modifier = Modifier.height(Spacing.cardGap))
 
         if (caseType == CaseType.OWNER) {
-            OwnerSections(state, propertyType, transactionType, availableDistricts, searchContacts, caseCountForContact)
+            OwnerSections(state, propertyType, transactionType, availableDistricts, searchContacts, caseCountForContact, activeCaseCountForContact)
         } else {
-            ClientRequestSections(state, transactionType, availableDistricts, searchContacts, caseCountForContact)
+            ClientRequestSections(state, transactionType, availableDistricts, searchContacts, caseCountForContact, activeCaseCountForContact)
         }
 
         Spacer(modifier = Modifier.height(Spacing.cardGap))
@@ -185,7 +203,7 @@ internal fun CaseDetailsForm(
         Text("برچسب‌ها", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(Spacing.sm))
         AppCard(modifier = Modifier.fillMaxWidth()) {
-            TagEditor(tags = state.tags, onTagsChange = { state.tags = it })
+            TagEditor(tags = state.tags, onTagsChange = { state.tags = it }, suggestions = allTags)
         }
 
         Spacer(modifier = Modifier.height(Spacing.xl))
@@ -212,7 +230,8 @@ private fun OwnerSections(
     transactionType: CaseTransactionType?,
     availableDistricts: List<String>,
     searchContacts: suspend (String) -> List<Contact>,
-    caseCountForContact: suspend (Long) -> Int
+    caseCountForContact: suspend (Long) -> Int,
+    activeCaseCountForContact: suspend (Long) -> Int
 ) {
     // ---- Identity ----
     Text("اطلاعات مالک", style = MaterialTheme.typography.titleLarge)
@@ -227,8 +246,15 @@ private fun OwnerSections(
             onNameChange = { state.contactName = it },
             onPhoneChange = { state.contactPhone = it },
             onContactIdChange = { state.contactId = it },
+            landlinePhone = state.contactLandlinePhone,
+            whatsappNumber = state.contactWhatsappNumber,
+            preferredContactTime = state.contactPreferredContactTime,
+            onLandlinePhoneChange = { state.contactLandlinePhone = it },
+            onWhatsappNumberChange = { state.contactWhatsappNumber = it },
+            onPreferredContactTimeChange = { state.contactPreferredContactTime = it },
             searchContacts = searchContacts,
-            caseCountForContact = caseCountForContact
+            caseCountForContact = caseCountForContact,
+            activeCaseCountForContact = activeCaseCountForContact
         )
     }
 
@@ -317,6 +343,55 @@ private fun OwnerSections(
         }
     }
 
+    // ---- Dynamic: Expanded Specifications ----
+    if (propertyType.formShape() == PropertyFormShape.RESIDENTIAL) {
+        Spacer(modifier = Modifier.height(Spacing.sm))
+        CollapsibleSection(title = "مشخصات تکمیلی", subtitle = "جهت، نور، اسکلت، سیستم گرمایش/سرمایش") {
+            DecimalField(state::streetWidth, "عرض کوچه/خیابان (متر)")
+            if (propertyType.hasMultipleUnits()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    IntegerField(state::unitsPerFloor, "تعداد واحد در طبقه", modifier = Modifier.weight(1f))
+                    IntegerField(state::totalUnits, "تعداد کل واحدها", modifier = Modifier.weight(1f))
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text("جهت ملک", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(6.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PropertyOrientation.entries.forEach { option ->
+                    FilterChip(selected = state.orientation == option, onClick = { state.orientation = if (state.orientation == option) null else option }, label = { Text(option.label()) })
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            TriStateRow("نورگیر است", state.hasNaturalLight) { state.hasNaturalLight = it }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text("نوع اسکلت", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(6.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StructureType.entries.forEach { option ->
+                    FilterChip(selected = state.structureType == option, onClick = { state.structureType = if (state.structureType == option) null else option }, label = { Text(option.label()) })
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text("سیستم گرمایش", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(6.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                HeatingSystem.entries.forEach { option ->
+                    FilterChip(selected = state.heatingSystem == option, onClick = { state.heatingSystem = if (state.heatingSystem == option) null else option }, label = { Text(option.label()) })
+                }
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text("سیستم سرمایش", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(6.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                CoolingSystem.entries.forEach { option ->
+                    FilterChip(selected = state.coolingSystem == option, onClick = { state.coolingSystem = if (state.coolingSystem == option) null else option }, label = { Text(option.label()) })
+                }
+            }
+        }
+    }
+
     // ---- Dynamic: Project Details ----
     if (propertyType == PropertyType.PROJECT || transactionType == CaseTransactionType.PRE_SALE) {
         Spacer(modifier = Modifier.height(Spacing.sm))
@@ -363,8 +438,9 @@ private fun OwnerSections(
             }
         } else if (transactionType == CaseTransactionType.FULL_MORTGAGE) {
             MoneyField(label = "مبلغ رهن کامل (تومان)", value = state.depositAmount, onValueChange = { state.depositAmount = it }, modifier = Modifier.fillMaxWidth())
-        } else if (transactionType == CaseTransactionType.RENT) {
-            MoneyField(label = "اجاره ماهانه (تومان)", value = state.price, onValueChange = { state.price = it }, modifier = Modifier.fillMaxWidth())
+        } else if (transactionType == CaseTransactionType.RENT || transactionType == CaseTransactionType.SHORT_TERM_RENT || transactionType == CaseTransactionType.DAILY_RENT) {
+            val rentLabel = if (transactionType == CaseTransactionType.DAILY_RENT) "اجاره روزانه (تومان)" else "اجاره ماهانه (تومان)"
+            MoneyField(label = rentLabel, value = state.price, onValueChange = { state.price = it }, modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(8.dp))
             MoneyField(label = "مبلغ رهن (اختیاری، تومان)", value = state.depositAmount, onValueChange = { state.depositAmount = it }, modifier = Modifier.fillMaxWidth())
         } else {
@@ -430,6 +506,28 @@ private fun OwnerSections(
         }
         Spacer(modifier = Modifier.height(8.dp))
         LabeledField(state::legalStatus, "توضیحات حقوقی تکمیلی")
+        Spacer(modifier = Modifier.height(10.dp))
+        TriStateRow("پایان‌کار دارد", state.hasCompletionCertificate) { state.hasCompletionCertificate = it }
+        Spacer(modifier = Modifier.height(8.dp))
+        TriStateRow("در رهن بانک است", state.hasBankMortgage) { state.hasBankMortgage = it }
+        if (state.hasBankMortgage == true) {
+            Spacer(modifier = Modifier.height(8.dp))
+            MoneyField(label = "مانده وام (تومان)", value = state.existingLoanAmount, onValueChange = { state.existingLoanAmount = it }, modifier = Modifier.fillMaxWidth())
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        TriStateRow("قابل انتقال سند است", state.isOwnershipTransferable) { state.isOwnershipTransferable = it }
+    }
+
+    // ---- Closing reason — only relevant once the case has actually closed out ----
+    if (state.status in terminalPropertyStatuses) {
+        Spacer(modifier = Modifier.height(Spacing.sm))
+        CollapsibleSection(title = "دلیل بسته شدن پرونده", initiallyExpanded = true) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ClosingReason.entries.forEach { option ->
+                    FilterChip(selected = state.closingReason == option, onClick = { state.closingReason = if (state.closingReason == option) null else option }, label = { Text(option.label()) })
+                }
+            }
+        }
     }
 
     Spacer(modifier = Modifier.height(Spacing.sm))
@@ -452,7 +550,8 @@ private fun ClientRequestSections(
     transactionType: CaseTransactionType?,
     availableDistricts: List<String>,
     searchContacts: suspend (String) -> List<Contact>,
-    caseCountForContact: suspend (Long) -> Int
+    caseCountForContact: suspend (Long) -> Int,
+    activeCaseCountForContact: suspend (Long) -> Int
 ) {
     Text("اطلاعات مشتری", style = MaterialTheme.typography.titleLarge)
     Spacer(modifier = Modifier.height(Spacing.sm))
@@ -472,8 +571,15 @@ private fun ClientRequestSections(
             onNameChange = { state.contactName = it },
             onPhoneChange = { state.contactPhone = it },
             onContactIdChange = { state.contactId = it },
+            landlinePhone = state.contactLandlinePhone,
+            whatsappNumber = state.contactWhatsappNumber,
+            preferredContactTime = state.contactPreferredContactTime,
+            onLandlinePhoneChange = { state.contactLandlinePhone = it },
+            onWhatsappNumberChange = { state.contactWhatsappNumber = it },
+            onPreferredContactTimeChange = { state.contactPreferredContactTime = it },
             searchContacts = searchContacts,
-            caseCountForContact = caseCountForContact
+            caseCountForContact = caseCountForContact,
+            activeCaseCountForContact = activeCaseCountForContact
         )
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
@@ -570,6 +676,32 @@ private fun ClientRequestSections(
             flags = CaseFormState.AMENITY_REQUIREMENT_FLAGS.toList(),
             selected = state.requirementFlags,
             onToggle = { flag, isOn -> state.requirementFlags = if (isOn) state.requirementFlags + flag else state.requirementFlags - flag }
+        )
+    }
+
+    // ---- Exclusions/dealbreakers — what makes the customer say no, not just what they want ----
+    Spacer(modifier = Modifier.height(Spacing.sm))
+    CollapsibleSection(title = "استثنائات و موارد غیرقابل قبول", subtitle = "طبقاتی که مشتری قبول نمی‌کند و موارد حذف‌کننده دیگر") {
+        Text("طبقات غیرقابل قبول", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FloorPreferenceOption.entries.forEach { option ->
+                val isOn = option in state.excludedFloorPreferences
+                FilterChip(
+                    selected = isOn,
+                    onClick = {
+                        state.excludedFloorPreferences =
+                            if (isOn) state.excludedFloorPreferences - option else state.excludedFloorPreferences + option
+                    },
+                    label = { Text(option.label()) }
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        TagEditor(
+            tags = state.dealBreakerTags,
+            onTagsChange = { state.dealBreakerTags = it },
+            label = "افزودن مورد غیرقابل قبول (مثلاً بدون آسانسور)"
         )
     }
 
@@ -926,10 +1058,17 @@ private fun ContactPickerField(
     onNameChange: (String) -> Unit,
     onPhoneChange: (String) -> Unit,
     onContactIdChange: (Long?) -> Unit,
+    landlinePhone: String,
+    whatsappNumber: String,
+    preferredContactTime: PreferredContactTime?,
+    onLandlinePhoneChange: (String) -> Unit,
+    onWhatsappNumberChange: (String) -> Unit,
+    onPreferredContactTimeChange: (PreferredContactTime?) -> Unit,
     searchContacts: suspend (String) -> List<Contact>,
-    caseCountForContact: suspend (Long) -> Int
+    caseCountForContact: suspend (Long) -> Int,
+    activeCaseCountForContact: suspend (Long) -> Int
 ) {
-    var results by remember { mutableStateOf<List<Pair<Contact, Int>>>(emptyList()) }
+    var results by remember { mutableStateOf<List<ContactSuggestion>>(emptyList()) }
 
     LaunchedEffect(name, phone, contactId) {
         if (contactId != null) {
@@ -940,7 +1079,9 @@ private fun ContactPickerField(
         results = if (query.isBlank()) {
             emptyList()
         } else {
-            searchContacts(query).map { contact -> contact to caseCountForContact(contact.id) }
+            searchContacts(query).map { contact ->
+                ContactSuggestion(contact, caseCountForContact(contact.id), activeCaseCountForContact(contact.id))
+            }
         }
     }
 
@@ -976,12 +1117,55 @@ private fun ContactPickerField(
     if (contactId != null) {
         Spacer(modifier = Modifier.height(6.dp))
         AssistChip(onClick = { onContactIdChange(null) }, label = { Text("متصل به مخاطب ثبت‌شده · تغییر") })
-    } else if (results.isNotEmpty()) {
+    } else {
+        // Only relevant while a brand-new Contact is about to be created for this case (see
+        // PropertyViewModel.addProperty) — once linked to an existing contact, editing its reach-out
+        // channels is out of scope here, same reasoning as name/phone above.
+        var showMoreContactInfo by remember { mutableStateOf(false) }
+        Spacer(modifier = Modifier.height(6.dp))
+        TextButton(onClick = { showMoreContactInfo = !showMoreContactInfo }) {
+            Text(if (showMoreContactInfo) "بستن اطلاعات تماس بیشتر" else "افزودن اطلاعات تماس بیشتر (تلفن ثابت، واتس‌اپ، زمان تماس)")
+        }
+        if (showMoreContactInfo) {
+            OutlinedTextField(
+                value = landlinePhone,
+                onValueChange = onLandlinePhoneChange,
+                label = { Text("تلفن ثابت") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = whatsappNumber,
+                onValueChange = onWhatsappNumberChange,
+                label = { Text("شماره واتس‌اپ") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("زمان مناسب تماس", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(6.dp))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PreferredContactTime.entries.forEach { option ->
+                    FilterChip(
+                        selected = preferredContactTime == option,
+                        onClick = { onPreferredContactTimeChange(if (preferredContactTime == option) null else option) },
+                        label = { Text(option.label()) }
+                    )
+                }
+            }
+        }
+    }
+    if (results.isNotEmpty()) {
         Spacer(modifier = Modifier.height(8.dp))
         Text("مخاطبین مشابه", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(4.dp))
+        val dateFormatter = remember { SimpleDateFormat("yyyy/MM/dd", Locale.US) }
         Column {
-            results.take(5).forEach { (contact, caseCount) ->
+            results.take(5).forEach { suggestion ->
+                val contact = suggestion.contact
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -997,19 +1181,37 @@ private fun ContactPickerField(
                     Column {
                         Text(contact.fullName, style = MaterialTheme.typography.bodyMedium)
                         Text(contact.primaryPhone, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (contact.lastCaseAt != null) {
+                            Text(
+                                "آخرین فعالیت: ${dateFormatter.format(Date(contact.lastCaseAt))}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
-                    if (caseCount > 0) {
-                        Text(
-                            "$caseCount پرونده دیگر",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                    if (suggestion.totalCases > 0) {
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                "${suggestion.totalCases} پرونده",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            if (suggestion.activeCases > 0) {
+                                Text(
+                                    "${suggestion.activeCases} فعال",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.extendedColors.success
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
     }
 }
+
+private data class ContactSuggestion(val contact: Contact, val totalCases: Int, val activeCases: Int)
 
 /** A single-value text field with a tappable suggestion-chip row beneath it, sourced from every
  *  district ever typed on either side of the form (see [PropertyViewModel.availableDistricts]) —

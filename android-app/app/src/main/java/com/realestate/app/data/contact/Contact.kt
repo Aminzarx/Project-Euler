@@ -5,6 +5,9 @@ import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+/** When this contact prefers to be called — shown to the agent before they dial, not enforced. */
+enum class PreferredContactTime { MORNING, AFTERNOON, EVENING, ANYTIME }
+
 /**
  * A person, independent of any one Case — the record that lets "this owner has 3 listings" or
  * "this client submitted 2 requests over 6 months" be an actual question the app can answer,
@@ -33,6 +36,9 @@ data class Contact(
     val fullName: String,
     val primaryPhone: String,
     val secondaryPhone: String? = null,
+    val landlinePhone: String? = null,
+    val whatsappNumber: String? = null,
+    val preferredContactTime: PreferredContactTime? = null,
     val email: String? = null,
     val note: String? = null,
     val createdAt: Long = System.currentTimeMillis(),

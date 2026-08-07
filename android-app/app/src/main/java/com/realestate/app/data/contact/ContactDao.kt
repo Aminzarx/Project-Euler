@@ -34,6 +34,12 @@ interface ContactDao {
     @Query("SELECT COUNT(*) FROM properties WHERE contactId = :contactId")
     suspend fun caseCountFor(contactId: Long): Int
 
+    /** Same as [caseCountFor] but excludes cases whose status is terminal (sold/rented/cancelled/
+     *  etc — see [com.realestate.app.data.terminalPropertyStatuses]), so the picker can show
+     *  "still open" work instead of a lifetime total that never goes down. */
+    @Query("SELECT COUNT(*) FROM properties WHERE contactId = :contactId AND status NOT IN (:terminalStatuses)")
+    suspend fun activeCaseCountFor(contactId: Long, terminalStatuses: List<String>): Int
+
     @Insert
     suspend fun insert(contact: Contact): Long
 

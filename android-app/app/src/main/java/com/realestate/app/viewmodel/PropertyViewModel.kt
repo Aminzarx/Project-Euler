@@ -15,6 +15,7 @@ import com.realestate.app.data.code
 import com.realestate.app.data.matchesPriceRange
 import com.realestate.app.data.contact.Contact
 import com.realestate.app.data.contact.ContactRepository
+import com.realestate.app.data.contact.PreferredContactTime
 import com.realestate.app.data.datastore.CaseWizardDefaults
 import com.realestate.app.data.datastore.CaseWizardPreferencesRepository
 import com.realestate.app.data.datastore.SearchHistoryRepository
@@ -287,7 +288,12 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun addProperty(property: Property) = viewModelScope.launch {
+    fun addProperty(
+        property: Property,
+        newContactLandlinePhone: String? = null,
+        newContactWhatsappNumber: String? = null,
+        newContactPreferredContactTime: PreferredContactTime? = null
+    ) = viewModelScope.launch {
         // If the agent never picked an existing contact from the search results, a fresh Contact
         // is created automatically here so the table fills in on its own — the picker's search is
         // a dedup convenience, not a requirement, so a case with a typed name/phone still ends up
@@ -295,7 +301,13 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
         // already-saved case that still has no contactId is left alone, so re-editing a case never
         // spawns a new duplicate contact on every save.
         val resolved = if (property.contactId == null && (property.ownerName.isNotBlank() || property.ownerPhone.isNotBlank())) {
-            val contact = createContact(property.ownerName.ifBlank { "بدون نام" }, property.ownerPhone)
+            val contact = createContact(
+                property.ownerName.ifBlank { "بدون نام" },
+                property.ownerPhone,
+                newContactLandlinePhone,
+                newContactWhatsappNumber,
+                newContactPreferredContactTime
+            )
             property.copy(contactId = contact.id)
         } else {
             property
@@ -319,6 +331,15 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
                 "قیمت از $from به $to تومان تغییر کرد"
             )
         }
+        if (previous != null && previous.depositAmount != property.depositAmount) {
+            val from = previous.depositAmount?.let { NumberFormat.getNumberInstance(Locale.US).format(it) } ?: "نامشخص"
+            val to = property.depositAmount?.let { NumberFormat.getNumberInstance(Locale.US).format(it) } ?: "نامشخص"
+            extrasRepository.logEvent(
+                property.id,
+                TimelineEventType.PRICE_CHANGED,
+                "مبلغ رهن از $from به $to تومان تغییر کرد"
+            )
+        }
         bumpContactLastCaseAt(property.contactId)
         _saveEvents.emit("تغییرات ذخیره شد")
     }
@@ -337,10 +358,24 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
 
     suspend fun caseCountForContact(contactId: Long): Int = contactRepository.caseCountFor(contactId)
 
+    suspend fun activeCaseCountForContact(contactId: Long): Int = contactRepository.activeCaseCountFor(contactId)
+
     /** Creates a new [Contact] from the picker's inline "create new" path and returns it with its
      *  freshly-assigned id, ready to attach to the Case being saved. */
-    suspend fun createContact(fullName: String, phone: String): Contact {
-        val contact = Contact(fullName = fullName, primaryPhone = phone)
+    suspend fun createContact(
+        fullName: String,
+        phone: String,
+        landlinePhone: String? = null,
+        whatsappNumber: String? = null,
+        preferredContactTime: PreferredContactTime? = null
+    ): Contact {
+        val contact = Contact(
+            fullName = fullName,
+            primaryPhone = phone,
+            landlinePhone = landlinePhone?.ifBlank { null },
+            whatsappNumber = whatsappNumber?.ifBlank { null },
+            preferredContactTime = preferredContactTime
+        )
         val id = contactRepository.insert(contact)
         return contact.copy(id = id)
     }

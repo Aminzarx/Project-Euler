@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.room.withTransaction
 import com.realestate.app.data.AppDatabase
 import com.realestate.app.data.contact.Contact
+import com.realestate.app.data.contact.PreferredContactTime
 import com.realestate.app.data.toJson
 import com.realestate.app.data.toProperty
 import com.realestate.app.data.property.Note
@@ -194,6 +195,9 @@ private fun Contact.toJson(): JSONObject = JSONObject().apply {
     put("fullName", fullName)
     put("primaryPhone", primaryPhone)
     put("secondaryPhone", secondaryPhone ?: JSONObject.NULL)
+    put("landlinePhone", landlinePhone ?: JSONObject.NULL)
+    put("whatsappNumber", whatsappNumber ?: JSONObject.NULL)
+    put("preferredContactTime", preferredContactTime?.name ?: JSONObject.NULL)
     put("email", email ?: JSONObject.NULL)
     put("note", note ?: JSONObject.NULL)
     put("createdAt", createdAt)
@@ -206,6 +210,9 @@ private fun JSONObject.toContact(): Contact = Contact(
     fullName = getString("fullName"),
     primaryPhone = getString("primaryPhone"),
     secondaryPhone = if (isNull("secondaryPhone")) null else optString("secondaryPhone"),
+    landlinePhone = if (isNull("landlinePhone")) null else optString("landlinePhone"),
+    whatsappNumber = if (isNull("whatsappNumber")) null else optString("whatsappNumber"),
+    preferredContactTime = if (isNull("preferredContactTime")) null else PreferredContactTime.valueOf(getString("preferredContactTime")),
     email = if (isNull("email")) null else optString("email"),
     note = if (isNull("note")) null else optString("note"),
     createdAt = getLong("createdAt"),

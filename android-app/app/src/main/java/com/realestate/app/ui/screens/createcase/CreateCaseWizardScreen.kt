@@ -122,6 +122,7 @@ fun CreateCaseWizardScreen(
     // same kind of case over and over in one session.
     val wizardDefaults by viewModel.caseWizardDefaults.collectAsStateWithLifecycle()
     val availableDistricts by viewModel.availableDistricts.collectAsStateWithLifecycle()
+    val allTags by viewModel.allTags.collectAsStateWithLifecycle()
     LaunchedEffect(wizardDefaults) {
         if (isEditMode || caseTypeConfirmed) return@LaunchedEffect
         val suggestedCaseType = wizardDefaults.lastCaseType?.let { name ->
@@ -250,6 +251,8 @@ fun CreateCaseWizardScreen(
             floorPreferenceOptions = formState.floorPreferenceOptions.toList(),
             viewPreferenceOptions = formState.viewPreferenceOptions.toList(),
             needsLoanFinancing = formState.needsLoanFinancing,
+            excludedFloorPreferences = formState.excludedFloorPreferences.toList(),
+            dealBreakerTags = formState.dealBreakerTags,
             district = formState.district.trim().ifBlank { null },
             latitude = formState.latitude,
             longitude = formState.longitude,
@@ -263,6 +266,20 @@ fun CreateCaseWizardScreen(
             waterSource = formState.waterSource,
             hasWellPermit = formState.hasWellPermit,
             frontageWidth = formState.frontageWidth.toDoubleOrNull(),
+            streetWidth = formState.streetWidth.toDoubleOrNull(),
+            orientation = formState.orientation,
+            hasNaturalLight = formState.hasNaturalLight,
+            unitsPerFloor = formState.unitsPerFloor.toIntOrNull(),
+            totalUnits = formState.totalUnits.toIntOrNull(),
+            structureType = formState.structureType,
+            heatingSystem = formState.heatingSystem,
+            coolingSystem = formState.coolingSystem,
+            hasCompletionCertificate = formState.hasCompletionCertificate,
+            hasBankMortgage = formState.hasBankMortgage,
+            existingLoanAmount = formState.existingLoanAmount.toLongOrNull(),
+            isOwnershipTransferable = formState.isOwnershipTransferable,
+            closingReason = formState.closingReason,
+            locationCapturedAt = existing?.locationCapturedAt,
             leadSource = formState.leadSource,
             responsibleAgent = formState.responsibleAgent.trim().ifBlank { null },
             lastContactAt = formState.lastContactAt,
@@ -280,7 +297,12 @@ fun CreateCaseWizardScreen(
         if (isEditMode) {
             viewModel.updateProperty(property)
         } else {
-            viewModel.addProperty(property)
+            viewModel.addProperty(
+                property,
+                formState.contactLandlinePhone.trim().ifBlank { null },
+                formState.contactWhatsappNumber.trim().ifBlank { null },
+                formState.contactPreferredContactTime
+            )
         }
         onDone()
     }
@@ -375,8 +397,10 @@ fun CreateCaseWizardScreen(
                                 isEditMode = isEditMode,
                                 isSaving = isSaving,
                                 availableDistricts = availableDistricts,
+                                allTags = allTags,
                                 searchContacts = viewModel::searchContacts,
                                 caseCountForContact = viewModel::caseCountForContact,
+                                activeCaseCountForContact = viewModel::activeCaseCountForContact,
                                 onEditCaseType = { step = 1 },
                                 onEditTransactionType = { step = 2 },
                                 onEditPropertyType = { step = 3 },
@@ -447,7 +471,9 @@ private fun legacyDealTypeFor(transactionType: CaseTransactionType?): com.reales
     when (transactionType) {
         com.realestate.app.data.CaseTransactionType.RENT,
         com.realestate.app.data.CaseTransactionType.MORTGAGE_AND_RENT,
-        com.realestate.app.data.CaseTransactionType.FULL_MORTGAGE -> com.realestate.app.data.DealType.RENT
+        com.realestate.app.data.CaseTransactionType.FULL_MORTGAGE,
+        com.realestate.app.data.CaseTransactionType.SHORT_TERM_RENT,
+        com.realestate.app.data.CaseTransactionType.DAILY_RENT -> com.realestate.app.data.DealType.RENT
         else -> com.realestate.app.data.DealType.SALE
     }
 

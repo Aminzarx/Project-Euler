@@ -96,6 +96,24 @@ fun Property.toJson(): JSONObject = JSONObject().apply {
     put("lastContactAt", lastContactAt ?: JSONObject.NULL)
     put("visitStatus", visitStatus?.name ?: JSONObject.NULL)
     put("isConfidential", isConfidential)
+
+    // ---- CRM-practicality pass ----
+    put("streetWidth", streetWidth ?: JSONObject.NULL)
+    put("orientation", orientation?.name ?: JSONObject.NULL)
+    put("hasNaturalLight", hasNaturalLight ?: JSONObject.NULL)
+    put("unitsPerFloor", unitsPerFloor ?: JSONObject.NULL)
+    put("totalUnits", totalUnits ?: JSONObject.NULL)
+    put("structureType", structureType?.name ?: JSONObject.NULL)
+    put("heatingSystem", heatingSystem?.name ?: JSONObject.NULL)
+    put("coolingSystem", coolingSystem?.name ?: JSONObject.NULL)
+    put("hasCompletionCertificate", hasCompletionCertificate ?: JSONObject.NULL)
+    put("hasBankMortgage", hasBankMortgage ?: JSONObject.NULL)
+    put("existingLoanAmount", existingLoanAmount ?: JSONObject.NULL)
+    put("isOwnershipTransferable", isOwnershipTransferable ?: JSONObject.NULL)
+    put("closingReason", closingReason?.name ?: JSONObject.NULL)
+    put("excludedFloorPreferences", JSONArray(excludedFloorPreferences.map { it.name }))
+    put("dealBreakerTags", JSONArray(dealBreakerTags))
+    put("locationCapturedAt", locationCapturedAt ?: JSONObject.NULL)
 }
 
 fun JSONObject.toProperty(): Property = Property(
@@ -185,7 +203,26 @@ fun JSONObject.toProperty(): Property = Property(
     responsibleAgent = optStringOrNull("responsibleAgent"),
     lastContactAt = optLongOrNull("lastContactAt"),
     visitStatus = optEnumOrNull("visitStatus", VisitStatus::valueOf),
-    isConfidential = optBoolean("isConfidential", false)
+    isConfidential = optBoolean("isConfidential", false),
+
+    // ---- CRM-practicality pass ----
+    streetWidth = optDoubleOrNull("streetWidth"),
+    orientation = optEnumOrNull("orientation", PropertyOrientation::valueOf),
+    hasNaturalLight = optBooleanOrNull("hasNaturalLight"),
+    unitsPerFloor = optIntOrNull("unitsPerFloor"),
+    totalUnits = optIntOrNull("totalUnits"),
+    structureType = optEnumOrNull("structureType", StructureType::valueOf),
+    heatingSystem = optEnumOrNull("heatingSystem", HeatingSystem::valueOf),
+    coolingSystem = optEnumOrNull("coolingSystem", CoolingSystem::valueOf),
+    hasCompletionCertificate = optBooleanOrNull("hasCompletionCertificate"),
+    hasBankMortgage = optBooleanOrNull("hasBankMortgage"),
+    existingLoanAmount = optLongOrNull("existingLoanAmount"),
+    isOwnershipTransferable = optBooleanOrNull("isOwnershipTransferable"),
+    closingReason = optEnumOrNull("closingReason", ClosingReason::valueOf),
+    excludedFloorPreferences = optJSONArray("excludedFloorPreferences")
+        ?.let { arr -> (0 until arr.length()).map { FloorPreferenceOption.valueOf(arr.getString(it)) } } ?: emptyList(),
+    dealBreakerTags = optJSONArray("dealBreakerTags")?.let { arr -> (0 until arr.length()).map { arr.getString(it) } } ?: emptyList(),
+    locationCapturedAt = optLongOrNull("locationCapturedAt")
 )
 
 // ---- Small nullable-read helpers so every optional field above reads the same way whether the

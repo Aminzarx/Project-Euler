@@ -20,7 +20,7 @@ import com.realestate.app.data.wallet.WalletTransaction
 
 @Database(
     entities = [Property::class, WalletTransaction::class, Note::class, TimelineEvent::class, QuickNote::class, Contact::class],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -238,6 +238,40 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // CRM-practicality pass (see the "real-world workflow review" spec it implements) — expanded
+        // enums (transaction/property types) need no migration statement at all since they're new
+        // valid values for existing TEXT columns; everything below is additive nullable/defaulted
+        // columns on properties and contacts. Nothing from MIGRATION_9_10/10_11 is touched.
+        private val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Property: expanded specifications
+                db.execSQL("ALTER TABLE properties ADD COLUMN streetWidth REAL")
+                db.execSQL("ALTER TABLE properties ADD COLUMN orientation TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN hasNaturalLight INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN unitsPerFloor INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN totalUnits INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN structureType TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN heatingSystem TEXT")
+                db.execSQL("ALTER TABLE properties ADD COLUMN coolingSystem TEXT")
+                // Property: legal expansion
+                db.execSQL("ALTER TABLE properties ADD COLUMN hasCompletionCertificate INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN hasBankMortgage INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN existingLoanAmount INTEGER")
+                db.execSQL("ALTER TABLE properties ADD COLUMN isOwnershipTransferable INTEGER")
+                // Property: closing reason
+                db.execSQL("ALTER TABLE properties ADD COLUMN closingReason TEXT")
+                // Property: client-request exclusions
+                db.execSQL("ALTER TABLE properties ADD COLUMN excludedFloorPreferences TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE properties ADD COLUMN dealBreakerTags TEXT NOT NULL DEFAULT ''")
+                // Property: GPS capture metadata
+                db.execSQL("ALTER TABLE properties ADD COLUMN locationCapturedAt INTEGER")
+                // Contact: additional reach-out channels
+                db.execSQL("ALTER TABLE contacts ADD COLUMN landlinePhone TEXT")
+                db.execSQL("ALTER TABLE contacts ADD COLUMN whatsappNumber TEXT")
+                db.execSQL("ALTER TABLE contacts ADD COLUMN preferredContactTime TEXT")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -250,7 +284,7 @@ abstract class AppDatabase : RoomDatabase() {
                 ).addMigrations(
                     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
                     MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
-                    MIGRATION_10_11
+                    MIGRATION_10_11, MIGRATION_11_12
                 ).build().also { INSTANCE = it }
             }
         }
