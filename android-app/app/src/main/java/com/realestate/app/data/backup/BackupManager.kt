@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.room.withTransaction
 import com.realestate.app.data.AppDatabase
+import com.realestate.app.data.contact.Contact
 import com.realestate.app.data.toJson
 import com.realestate.app.data.toProperty
 import com.realestate.app.data.property.Note
@@ -18,17 +19,17 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-// Bumped for the Case redesign (data/Property.kt) — restoreBackup still reads version-1 files
-// fine (every new field is read with a has()/isNull() guard, defaulting exactly the way the
-// Room migration does for existing rows: caseType OWNER, everything else null/empty/its own
-// enum default).
-private const val BACKUP_FORMAT_VERSION = 2
+// Bumped for the Contact entity (data/contact/Contact.kt) — restoreBackup still reads version-1
+// and version-2 files fine; a backup without a "contacts" key simply restores zero contacts,
+// exactly like an old backup already restores zero notes/events for keys it predates.
+private const val BACKUP_FORMAT_VERSION = 3
 
 data class BackupResult(
     val propertyCount: Int,
     val noteCount: Int,
     val eventCount: Int,
     val transactionCount: Int,
+    val contactCount: Int,
     val sizeBytes: Long
 )
 
@@ -43,6 +44,7 @@ data class BackupPreview(
     val noteCount: Int,
     val eventCount: Int,
     val transactionCount: Int,
+    val contactCount: Int,
     val sizeBytes: Long
 )
 
@@ -67,6 +69,7 @@ class BackupManager(private val context: Context) {
         val notes = db.noteDao().getAllNotes().first()
         val events = db.timelineDao().getAllEvents().first()
         val transactions = db.walletDao().getAllTransactions().first()
+        val contacts = db.contactDao().getAllContacts().first()
 
         val json = JSONObject().apply {
             put("version", BACKUP_FORMAT_VERSION)
@@ -74,11 +77,12 @@ class BackupManager(private val context: Context) {
             put("notes", JSONArray(notes.map { it.toJson() }))
             put("timelineEvents", JSONArray(events.map { it.toJson() }))
             put("walletTransactions", JSONArray(transactions.map { it.toJson() }))
+            put("contacts", JSONArray(contacts.map { it.toJson() }))
         }
         val bytes = json.toString(2).toByteArray(Charsets.UTF_8)
         context.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
             ?: error("امکان نوشتن فایل پشتیبان وجود ندارد")
-        BackupResult(properties.size, notes.size, events.size, transactions.size, bytes.size.toLong())
+        BackupResult(properties.size, notes.size, events.size, transactions.size, contacts.size, bytes.size.toLong())
     }
 
     /** Reads and parses the file to report what it contains, without touching the database. */
@@ -91,6 +95,7 @@ class BackupManager(private val context: Context) {
             noteCount = json.optJSONArray("notes")?.length() ?: 0,
             eventCount = json.optJSONArray("timelineEvents")?.length() ?: 0,
             transactionCount = json.optJSONArray("walletTransactions")?.length() ?: 0,
+            contactCount = json.optJSONArray("contacts")?.length() ?: 0,
             sizeBytes = text.toByteArray(Charsets.UTF_8).size.toLong()
         )
     }
@@ -103,6 +108,7 @@ class BackupManager(private val context: Context) {
         val notes = json.optJSONArray("notes")?.toObjectList { it.toNote() } ?: emptyList()
         val events = json.optJSONArray("timelineEvents")?.toObjectList { it.toTimelineEvent() } ?: emptyList()
         val transactions = json.optJSONArray("walletTransactions")?.toObjectList { it.toWalletTransaction() } ?: emptyList()
+        val contacts = json.optJSONArray("contacts")?.toObjectList { it.toContact() } ?: emptyList()
 
         // Wrapped in a single database transaction so a crash or force-close mid-restore can't
         // leave the database half-wiped/half-restored — either the whole swap lands, or none of it does.
@@ -111,14 +117,16 @@ class BackupManager(private val context: Context) {
             db.noteDao().deleteAll()
             db.timelineDao().deleteAll()
             db.walletDao().deleteAll()
+            db.contactDao().deleteAll()
 
             db.propertyDao().insertAll(properties)
             db.noteDao().insertAll(notes)
             db.timelineDao().insertAll(events)
             db.walletDao().insertAll(transactions)
+            db.contactDao().insertAll(contacts)
         }
 
-        BackupResult(properties.size, notes.size, events.size, transactions.size, text.toByteArray(Charsets.UTF_8).size.toLong())
+        BackupResult(properties.size, notes.size, events.size, transactions.size, contacts.size, text.toByteArray(Charsets.UTF_8).size.toLong())
     }
 
     private fun readBackupText(uri: Uri): String =
@@ -178,4 +186,28 @@ private fun JSONObject.toWalletTransaction(): WalletTransaction = WalletTransact
     description = getString("description"),
     referenceId = if (isNull("referenceId")) null else getString("referenceId"),
     createdAt = getLong("createdAt")
+)
+
+private fun Contact.toJson(): JSONObject = JSONObject().apply {
+    put("id", id)
+    put("uid", uid)
+    put("fullName", fullName)
+    put("primaryPhone", primaryPhone)
+    put("secondaryPhone", secondaryPhone ?: JSONObject.NULL)
+    put("email", email ?: JSONObject.NULL)
+    put("note", note ?: JSONObject.NULL)
+    put("createdAt", createdAt)
+    put("lastCaseAt", lastCaseAt ?: JSONObject.NULL)
+}
+
+private fun JSONObject.toContact(): Contact = Contact(
+    id = getLong("id"),
+    uid = optString("uid", java.util.UUID.randomUUID().toString()),
+    fullName = getString("fullName"),
+    primaryPhone = getString("primaryPhone"),
+    secondaryPhone = if (isNull("secondaryPhone")) null else optString("secondaryPhone"),
+    email = if (isNull("email")) null else optString("email"),
+    note = if (isNull("note")) null else optString("note"),
+    createdAt = getLong("createdAt"),
+    lastCaseAt = if (isNull("lastCaseAt")) null else getLong("lastCaseAt")
 )

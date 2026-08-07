@@ -13,6 +13,8 @@ import com.realestate.app.data.CaseTransactionType
 import com.realestate.app.data.CaseType
 import com.realestate.app.data.code
 import com.realestate.app.data.matchesPriceRange
+import com.realestate.app.data.contact.Contact
+import com.realestate.app.data.contact.ContactRepository
 import com.realestate.app.data.datastore.CaseWizardDefaults
 import com.realestate.app.data.datastore.CaseWizardPreferencesRepository
 import com.realestate.app.data.datastore.SearchHistoryRepository
@@ -74,6 +76,7 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
         AppDatabase.getInstance(application).noteDao(),
         AppDatabase.getInstance(application).timelineDao()
     )
+    private val contactRepository = ContactRepository(AppDatabase.getInstance(application).contactDao())
     private val searchHistoryRepository = SearchHistoryRepository(application)
     private val securityPreferencesRepository = SecurityPreferencesRepository(application)
     private val caseWizardPreferencesRepository = CaseWizardPreferencesRepository(application)
@@ -285,8 +288,21 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun addProperty(property: Property) = viewModelScope.launch {
-        val id = repository.insert(property)
+        // If the agent never picked an existing contact from the search results, a fresh Contact
+        // is created automatically here so the table fills in on its own — the picker's search is
+        // a dedup convenience, not a requirement, so a case with a typed name/phone still ends up
+        // backed by a real Contact row either way. Only on *creation*: an update to an
+        // already-saved case that still has no contactId is left alone, so re-editing a case never
+        // spawns a new duplicate contact on every save.
+        val resolved = if (property.contactId == null && (property.ownerName.isNotBlank() || property.ownerPhone.isNotBlank())) {
+            val contact = createContact(property.ownerName.ifBlank { "بدون نام" }, property.ownerPhone)
+            property.copy(contactId = contact.id)
+        } else {
+            property
+        }
+        val id = repository.insert(resolved)
         extrasRepository.logEvent(id, TimelineEventType.CREATED, "ملک ثبت شد")
+        bumpContactLastCaseAt(resolved.contactId)
         _saveEvents.emit("پرونده ثبت شد")
     }
 
@@ -303,7 +319,30 @@ class PropertyViewModel(application: Application) : AndroidViewModel(application
                 "قیمت از $from به $to تومان تغییر کرد"
             )
         }
+        bumpContactLastCaseAt(property.contactId)
         _saveEvents.emit("تغییرات ذخیره شد")
+    }
+
+    private suspend fun bumpContactLastCaseAt(contactId: Long?) {
+        if (contactId == null) return
+        val contact = contactRepository.getContactById(contactId).first() ?: return
+        contactRepository.update(contact.copy(lastCaseAt = System.currentTimeMillis()))
+    }
+
+    /** Backs the Create Case wizard's contact picker search box — a plain suspend call rather
+     *  than an always-observed Flow, since the picker is a transient dialog, not a screen that
+     *  needs to react to contacts changing elsewhere while it's open. */
+    suspend fun searchContacts(query: String): List<Contact> =
+        if (query.isBlank()) contactRepository.allContacts.first().take(20) else contactRepository.search(query).first()
+
+    suspend fun caseCountForContact(contactId: Long): Int = contactRepository.caseCountFor(contactId)
+
+    /** Creates a new [Contact] from the picker's inline "create new" path and returns it with its
+     *  freshly-assigned id, ready to attach to the Case being saved. */
+    suspend fun createContact(fullName: String, phone: String): Contact {
+        val contact = Contact(fullName = fullName, primaryPhone = phone)
+        val id = contactRepository.insert(contact)
+        return contact.copy(id = id)
     }
 
     fun deleteProperty(property: Property) = viewModelScope.launch {

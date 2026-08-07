@@ -36,6 +36,12 @@ internal class CaseFormState {
     var address by mutableStateOf("")
     var contactName by mutableStateOf("")
     var contactPhone by mutableStateOf("")
+    /** Set by the contact picker (see CaseDetailsForm.kt's ContactPickerField) the moment an
+     *  existing contact is selected or a new one is created — resolved eagerly, not at save time,
+     *  so [CreateCaseWizardScreen.buildProperty] can read it synchronously like every other field.
+     *  Stays null for a case whose contact was never picked (typed name/phone only), exactly
+     *  preserving pre-Contact-entity behavior for anyone who ignores the picker. */
+    var contactId by mutableStateOf<Long?>(null)
     var status by mutableStateOf(PropertyStatus.NEW)
     var priority by mutableStateOf(CasePriority.NORMAL)
     var tags by mutableStateOf<List<String>>(emptyList())
@@ -108,6 +114,7 @@ internal class CaseFormState {
         address = p.address
         contactName = p.ownerName
         contactPhone = p.ownerPhone
+        contactId = p.contactId
         status = p.status
         priority = p.priority
         tags = p.tags
@@ -242,7 +249,7 @@ internal class CaseFormState {
     }
 
     private fun snapshot(): List<Any?> = listOf(
-        title, description, price, area, rooms, city, address, contactName, contactPhone,
+        title, description, price, area, rooms, city, address, contactName, contactPhone, contactId,
         status, priority, tags, imageUri,
         mortgageStatus, titleDeedReady, reasonForSelling, viewingHours, keyHolder,
         paymentConditions, constructionAge, legalStatus, hiddenNotes, floor, totalFloors,

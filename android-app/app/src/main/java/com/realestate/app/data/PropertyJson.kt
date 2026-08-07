@@ -22,6 +22,11 @@ fun Property.toJson(): JSONObject = JSONObject().apply {
     put("address", address)
     put("ownerName", ownerName)
     put("ownerPhone", ownerPhone)
+    // contactId deliberately NOT exported here: it's a local, per-device Contact.id (same
+    // portability problem Property.id itself has — see Property.uid's doc comment), meaningless
+    // on another device's Contact table. ownerName/ownerPhone (plain, portable strings) already
+    // carry the contact info across a cross-device export/import; an imported case simply starts
+    // with contactId = null and the agent can attach a local contact for it if they want to.
     put("dealType", dealType.name)
     put("propertyType", propertyType.name)
     put("status", status.name)

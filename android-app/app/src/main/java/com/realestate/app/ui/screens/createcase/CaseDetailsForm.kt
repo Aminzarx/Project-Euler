@@ -41,6 +41,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +60,7 @@ import com.realestate.app.data.CaseFlag
 import com.realestate.app.data.CasePriority
 import com.realestate.app.data.CaseTransactionType
 import com.realestate.app.data.CaseType
+import com.realestate.app.data.contact.Contact
 import com.realestate.app.data.FloorPreferenceOption
 import com.realestate.app.data.LeadSource
 import com.realestate.app.data.LegalDocumentType
@@ -112,6 +114,8 @@ internal fun CaseDetailsForm(
     isEditMode: Boolean,
     isSaving: Boolean,
     availableDistricts: List<String>,
+    searchContacts: suspend (String) -> List<Contact>,
+    caseCountForContact: suspend (Long) -> Int,
     onEditCaseType: () -> Unit,
     onEditTransactionType: () -> Unit,
     onEditPropertyType: () -> Unit,
@@ -169,9 +173,9 @@ internal fun CaseDetailsForm(
         Spacer(modifier = Modifier.height(Spacing.cardGap))
 
         if (caseType == CaseType.OWNER) {
-            OwnerSections(state, propertyType, transactionType, availableDistricts)
+            OwnerSections(state, propertyType, transactionType, availableDistricts, searchContacts, caseCountForContact)
         } else {
-            ClientRequestSections(state, transactionType, availableDistricts)
+            ClientRequestSections(state, transactionType, availableDistricts, searchContacts, caseCountForContact)
         }
 
         Spacer(modifier = Modifier.height(Spacing.cardGap))
@@ -206,15 +210,26 @@ private fun OwnerSections(
     state: CaseFormState,
     propertyType: PropertyType,
     transactionType: CaseTransactionType?,
-    availableDistricts: List<String>
+    availableDistricts: List<String>,
+    searchContacts: suspend (String) -> List<Contact>,
+    caseCountForContact: suspend (Long) -> Int
 ) {
     // ---- Identity ----
     Text("اطلاعات مالک", style = MaterialTheme.typography.titleLarge)
     Spacer(modifier = Modifier.height(Spacing.sm))
     AppCard(modifier = Modifier.fillMaxWidth()) {
-        LabeledField(state::contactName, "نام مالک")
-        Spacer(modifier = Modifier.height(8.dp))
-        PhoneField(state::contactPhone, "شماره تماس مالک")
+        ContactPickerField(
+            name = state.contactName,
+            phone = state.contactPhone,
+            contactId = state.contactId,
+            nameLabel = "نام مالک",
+            phoneLabel = "شماره تماس مالک",
+            onNameChange = { state.contactName = it },
+            onPhoneChange = { state.contactPhone = it },
+            onContactIdChange = { state.contactId = it },
+            searchContacts = searchContacts,
+            caseCountForContact = caseCountForContact
+        )
     }
 
     Spacer(modifier = Modifier.height(Spacing.cardGap))
@@ -435,7 +450,9 @@ private fun OwnerSections(
 private fun ClientRequestSections(
     state: CaseFormState,
     transactionType: CaseTransactionType?,
-    availableDistricts: List<String>
+    availableDistricts: List<String>,
+    searchContacts: suspend (String) -> List<Contact>,
+    caseCountForContact: suspend (Long) -> Int
 ) {
     Text("اطلاعات مشتری", style = MaterialTheme.typography.titleLarge)
     Spacer(modifier = Modifier.height(Spacing.sm))
@@ -446,14 +463,18 @@ private fun ClientRequestSections(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(6.dp))
-        OutlinedTextField(
-            value = state.contactName,
-            onValueChange = { state.contactName = it },
-            label = { Text("نام مشتری") },
-            modifier = Modifier.fillMaxWidth()
+        ContactPickerField(
+            name = state.contactName,
+            phone = state.contactPhone,
+            contactId = state.contactId,
+            nameLabel = "نام مشتری",
+            phoneLabel = "شماره تماس",
+            onNameChange = { state.contactName = it },
+            onPhoneChange = { state.contactPhone = it },
+            onContactIdChange = { state.contactId = it },
+            searchContacts = searchContacts,
+            caseCountForContact = caseCountForContact
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        PhoneField(state::contactPhone, "شماره تماس")
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(
             value = state.description,
@@ -703,27 +724,6 @@ private fun CompletenessHintMessage(hints: List<String>, modifier: Modifier = Mo
     }
 }
 
-/** A phone field that validates as an Iranian mobile number once something has been typed — blank
- *  is never an error here, since the phone is only one half of an OR requirement with the name
- *  field; only a *wrong* number, not a missing one, gets flagged inline. */
-@Composable
-private fun PhoneField(value: kotlin.reflect.KMutableProperty0<String>, label: String, modifier: Modifier = Modifier) {
-    val raw = value.get()
-    val isError = raw.isNotBlank() && !isValidIranianMobile(raw)
-    OutlinedTextField(
-        value = raw,
-        onValueChange = { value.set(normalizeDigits(it).filter { c -> c.isDigit() }.take(11)) },
-        label = { Text(label) },
-        singleLine = true,
-        isError = isError,
-        supportingText = if (isError) {
-            { Text("شماره موبایل باید ۱۱ رقم و با ۰۹ شروع شود") }
-        } else null,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-        modifier = modifier.fillMaxWidth()
-    )
-}
-
 @Composable
 private fun LabeledField(
     value: kotlin.reflect.KMutableProperty0<String>,
@@ -906,6 +906,107 @@ private fun DateField(label: String, valueMillis: Long?, onValueChange: (Long?) 
             }
         ) {
             DatePicker(state = pickerState)
+        }
+    }
+}
+
+/** Name + phone fields with a live search-and-reuse layer on top — typing a name or phone that
+ *  matches an existing [Contact] surfaces it below (with how many other cases already reference
+ *  it) so attaching the existing person is one tap instead of retyping and accidentally creating
+ *  a duplicate. Ignoring the suggestions entirely and just typing works exactly as it always did
+ *  — [onContactIdChange] simply never fires, and a fresh Contact is created automatically for the
+ *  case at save time (see PropertyViewModel.addProperty). */
+@Composable
+private fun ContactPickerField(
+    name: String,
+    phone: String,
+    contactId: Long?,
+    nameLabel: String,
+    phoneLabel: String,
+    onNameChange: (String) -> Unit,
+    onPhoneChange: (String) -> Unit,
+    onContactIdChange: (Long?) -> Unit,
+    searchContacts: suspend (String) -> List<Contact>,
+    caseCountForContact: suspend (Long) -> Int
+) {
+    var results by remember { mutableStateOf<List<Pair<Contact, Int>>>(emptyList()) }
+
+    LaunchedEffect(name, phone, contactId) {
+        if (contactId != null) {
+            results = emptyList()
+            return@LaunchedEffect
+        }
+        val query = phone.ifBlank { name }
+        results = if (query.isBlank()) {
+            emptyList()
+        } else {
+            searchContacts(query).map { contact -> contact to caseCountForContact(contact.id) }
+        }
+    }
+
+    OutlinedTextField(
+        value = name,
+        onValueChange = {
+            onNameChange(it)
+            if (contactId != null) onContactIdChange(null)
+        },
+        label = { Text(nameLabel) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    val phoneRaw = phone
+    val phoneError = phoneRaw.isNotBlank() && !isValidIranianMobile(phoneRaw)
+    OutlinedTextField(
+        value = phoneRaw,
+        onValueChange = {
+            onPhoneChange(normalizeDigits(it).filter { c -> c.isDigit() }.take(11))
+            if (contactId != null) onContactIdChange(null)
+        },
+        label = { Text(phoneLabel) },
+        singleLine = true,
+        isError = phoneError,
+        supportingText = if (phoneError) {
+            { Text("شماره موبایل باید ۱۱ رقم و با ۰۹ شروع شود") }
+        } else null,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+        modifier = Modifier.fillMaxWidth()
+    )
+
+    if (contactId != null) {
+        Spacer(modifier = Modifier.height(6.dp))
+        AssistChip(onClick = { onContactIdChange(null) }, label = { Text("متصل به مخاطب ثبت‌شده · تغییر") })
+    } else if (results.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("مخاطبین مشابه", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(4.dp))
+        Column {
+            results.take(5).forEach { (contact, caseCount) ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onNameChange(contact.fullName)
+                            onPhoneChange(contact.primaryPhone)
+                            onContactIdChange(contact.id)
+                        }
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(contact.fullName, style = MaterialTheme.typography.bodyMedium)
+                        Text(contact.primaryPhone, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (caseCount > 0) {
+                        Text(
+                            "$caseCount پرونده دیگر",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
         }
     }
 }

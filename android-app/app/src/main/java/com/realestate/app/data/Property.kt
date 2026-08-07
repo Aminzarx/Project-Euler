@@ -169,6 +169,11 @@ data class Property(
      *  than parallel owner/client name+phone pairs, since a Case only ever has one such contact. */
     val ownerName: String = "",
     val ownerPhone: String,
+    /** FK to [com.realestate.app.data.contact.Contact.id] — the write-side source of truth
+     *  [ownerName]/[ownerPhone] are snapshotted from at save time. Null for a case created before
+     *  the Contact picker existed, or one where the agent skipped the picker; [ownerName]/
+     *  [ownerPhone] still work exactly as before either way. */
+    val contactId: Long? = null,
     val dealType: DealType,
     val propertyType: PropertyType,
     val status: PropertyStatus = PropertyStatus.NEW,

@@ -7,6 +7,8 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.realestate.app.data.contact.Contact
+import com.realestate.app.data.contact.ContactDao
 import com.realestate.app.data.dealassistant.QuickNote
 import com.realestate.app.data.dealassistant.QuickNoteDao
 import com.realestate.app.data.property.Note
@@ -17,8 +19,8 @@ import com.realestate.app.data.wallet.WalletDao
 import com.realestate.app.data.wallet.WalletTransaction
 
 @Database(
-    entities = [Property::class, WalletTransaction::class, Note::class, TimelineEvent::class, QuickNote::class],
-    version = 10,
+    entities = [Property::class, WalletTransaction::class, Note::class, TimelineEvent::class, QuickNote::class, Contact::class],
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -28,6 +30,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun noteDao(): NoteDao
     abstract fun timelineDao(): TimelineDao
     abstract fun quickNoteDao(): QuickNoteDao
+    abstract fun contactDao(): ContactDao
 
     companion object {
         private val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -208,6 +211,33 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // Contact entity (see data/contact/Contact.kt) — a new table plus one nullable FK column
+        // on properties. Every existing case keeps its ownerName/ownerPhone exactly as before;
+        // contactId simply starts null for every row that predates the Contact picker.
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `contacts` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `uid` TEXT NOT NULL,
+                        `fullName` TEXT NOT NULL,
+                        `primaryPhone` TEXT NOT NULL,
+                        `secondaryPhone` TEXT,
+                        `email` TEXT,
+                        `note` TEXT,
+                        `createdAt` INTEGER NOT NULL,
+                        `lastCaseAt` INTEGER
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_contacts_uid` ON `contacts` (`uid`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_contacts_primaryPhone` ON `contacts` (`primaryPhone`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_contacts_fullName` ON `contacts` (`fullName`)")
+                db.execSQL("ALTER TABLE properties ADD COLUMN contactId INTEGER")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -219,7 +249,8 @@ abstract class AppDatabase : RoomDatabase() {
                     "real_estate.db"
                 ).addMigrations(
                     MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
-                    MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10
+                    MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
+                    MIGRATION_10_11
                 ).build().also { INSTANCE = it }
             }
         }
