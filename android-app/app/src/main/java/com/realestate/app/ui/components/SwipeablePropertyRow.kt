@@ -31,7 +31,6 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
-import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,7 +61,11 @@ import com.realestate.app.ui.theme.extendedColors
 /**
  * Compact, scannable property row supporting the app's core gestures in one place:
  * tap to open, long-press to enter multi-select, double-tap to favorite, and swipe
- * to call (toward the reading-start edge) or share (toward the end edge).
+ * right to call. (Swiping left is deliberately disabled — this row used to also swipe
+ * left for share, but in this app's RTL layout that swipe direction is [SwipeToDismissBoxValue.StartToEnd],
+ * which reads backwards to a Persian-reading user's intuition that a rightward drag
+ * should be the primary/positive action; removed rather than remapped, since the
+ * gesture wasn't needed once call-by-swipe covers the primary use case.)
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -74,22 +77,14 @@ fun SwipeablePropertyRow(
     onLongPress: () -> Unit,
     onToggleFavorite: () -> Unit,
     onCall: () -> Unit,
-    onShare: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val haptics = LocalHapticFeedback.current
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
-            when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onCall()
-                }
-                SwipeToDismissBoxValue.EndToStart -> {
-                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onShare()
-                }
-                SwipeToDismissBoxValue.Settled -> Unit
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                onCall()
             }
             false
         }
@@ -98,33 +93,41 @@ fun SwipeablePropertyRow(
     SwipeToDismissBox(
         state = dismissState,
         modifier = modifier,
-        enableDismissFromStartToEnd = !selectionMode,
+        // EndToStart is the swipe that's physically rightward in this app's RTL layout
+        // direction (see Theme.kt's LocalLayoutDirection override) — StartToEnd would be
+        // physically leftward, which is the direction being removed.
+        enableDismissFromStartToEnd = false,
         enableDismissFromEndToStart = !selectionMode,
         backgroundContent = {
-            val isCall = dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd
-            val isShare = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
+            val isCall = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
+            // A soft, low-alpha wash instead of a solid saturated fill reads calmer across the
+            // whole row height, while the icon keeps its own full-strength circular badge — that
+            // pairing (white on solid success) is the one that actually needs to hold up to
+            // WCAG AA, and it does (see Color.kt's contrast note); the backdrop around it is
+            // purely decorative and was never text, so it doesn't need the same ratio.
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(CardShape)
-                    .background(
-                        when {
-                            isCall -> MaterialTheme.extendedColors.success
-                            isShare -> MaterialTheme.colorScheme.primary
-                            else -> Color.Transparent
-                        }
-                    )
-                    .padding(horizontal = 24.dp),
-                contentAlignment = when {
-                    isCall -> Alignment.CenterStart
-                    isShare -> Alignment.CenterEnd
-                    else -> Alignment.Center
-                }
+                    .background(if (isCall) MaterialTheme.extendedColors.success.copy(alpha = 0.14f) else Color.Transparent)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.CenterEnd
             ) {
-                when {
-                    isCall -> Icon(Icons.Rounded.Call, contentDescription = "تماس", tint = Color.White)
-                    isShare -> Icon(Icons.Rounded.Share, contentDescription = "اشتراک‌گذاری", tint = Color.White)
-                    else -> Unit
+                if (isCall) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.extendedColors.success),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Rounded.Call,
+                            contentDescription = "تماس",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
         }

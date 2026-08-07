@@ -36,7 +36,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.realestate.app.data.Property
 import com.realestate.app.data.sortablePrice
 import com.realestate.app.ui.components.SwipeablePropertyRow
-import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
 
@@ -63,7 +62,6 @@ fun FavoritesScreen(
 ) {
     val favorites by viewModel.favoriteProperties.collectAsStateWithLifecycle()
     val folders by viewModel.favoriteFolders.collectAsStateWithLifecycle()
-    val agentPhone = profileViewModel.profile.collectAsStateWithLifecycle().value.mobileNumber
     var selectedFolder by remember { mutableStateOf<String?>(null) }
     var sortOption by remember { mutableStateOf(FavoriteSort.RECENT) }
 
@@ -124,7 +122,7 @@ fun FavoritesScreen(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
-                FavoritesList(visibleFavorites, onPropertyClick, viewModel, agentPhone)
+                FavoritesList(visibleFavorites, onPropertyClick, viewModel)
             }
         }
     }
@@ -134,8 +132,7 @@ fun FavoritesScreen(
 private fun FavoritesList(
     favorites: List<Property>,
     onPropertyClick: (Long) -> Unit,
-    viewModel: PropertyViewModel,
-    agentPhone: String
+    viewModel: PropertyViewModel
 ) {
     val context = LocalContext.current
     if (favorites.isEmpty()) {
@@ -163,14 +160,6 @@ private fun FavoritesList(
                         if (property.ownerPhone.isNotBlank()) {
                             context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${property.ownerPhone}")))
                         }
-                    },
-                    onShare = {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, buildShareMessage(property, agentPhone))
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری ملک"))
-                        viewModel.markShared(property)
                     }
                 )
             }

@@ -99,7 +99,6 @@ import com.realestate.app.data.passwordStrengthHelperText
 import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.GlassAlertDialog
 import com.realestate.app.ui.components.SwipeablePropertyRow
-import com.realestate.app.ui.components.buildShareMessage
 import com.realestate.app.ui.components.label
 import com.realestate.app.viewmodel.CaseTransferViewModel
 import com.realestate.app.viewmodel.ImportApplyState
@@ -126,7 +125,6 @@ fun PropertyListScreen(
 ) {
     val context = LocalContext.current
     val profile by profileViewModel.profile.collectAsStateWithLifecycle()
-    val agentPhone = profile.mobileNumber
     // What ends up in the encrypted bundle's metadata as "who made this" — agency name first
     // since that's what a colleague receiving the file would recognize, falling back to the
     // agent's own name, and finally blank (never a raw phone number or device identifier).
@@ -477,14 +475,6 @@ fun PropertyListScreen(
                                 if (property.ownerPhone.isNotBlank()) {
                                     context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${property.ownerPhone}")))
                                 }
-                            },
-                            onShare = {
-                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, buildShareMessage(property, agentPhone))
-                                }
-                                context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری ملک"))
-                                viewModel.markShared(property)
                             }
                         )
                     }
