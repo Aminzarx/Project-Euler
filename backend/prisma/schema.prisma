@@ -1,0 +1,207 @@
+// Referral Economy & Credit Wallet System — database schema.
+// See backend/docs/referral-system/Database.md for the full data dictionary and rationale.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TransactionType {
+  REGISTRATION_REWARD
+  SUBSCRIPTION_REWARD
+  MANUAL_ADJUSTMENT
+  CAMPAIGN_REWARD
+  PURCHASE
+  REFUND
+  EXPIRATION
+}
+
+enum SubscriptionStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  DELETED
+}
+
+/// A user of the real estate app. Referral relationships are modeled as a self-referencing
+/// tree via referrerId — unlimited width and depth, even though reward distribution (in the
+/// business logic layer) only ever looks at the first three ancestor levels.
+model User {
+  id                String    @id @default(uuid())
+  phoneNumber       String    @unique
+  referralCode      String    @unique
+  referrerId        String?
+  referrer          User?     @relation("ReferralTree", fields: [referrerId], references: [id])
+  referrals         User[]    @relation("ReferralTree")
+  deviceFingerprint String?
+  installationId    String?
+  ipAddress         String?
+  deviceModel       String?
+  operatingSystem   String?
+  status            UserStatus @default(ACTIVE)
+  phoneVerifiedAt   DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  wallet               Wallet?
+  subscriptions        Subscription[]
+  referralRelationship ReferralRelationship? @relation("ChildRelationship")
+  referralLogs         ReferralLog[]
+  walletTransactions   WalletTransaction[]   @relation("TransactionOwner")
+  rewardsSourced       WalletTransaction[]   @relation("TransactionSource")
+
+  @@index([referrerId])
+}
+
+/// Every user has exactly one credit wallet. Balances never leave the app (no cash withdrawal,
+/// no user-to-user transfer) — they only ever offset the price of something purchasable in-app.
+model Wallet {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  balance   Decimal  @default(0) @db.Decimal(14, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions WalletTransaction[]
+}
+
+/// An immutable ledger row for every credit movement. amount is signed: positive for a credit
+/// (reward, manual top-up, refund), negative for a debit (a wallet-funded purchase).
+model WalletTransaction {
+  id             String           @id @default(uuid())
+  walletId       String
+  wallet         Wallet           @relation(fields: [walletId], references: [id])
+  userId         String
+  user           User             @relation("TransactionOwner", fields: [userId], references: [id])
+  amount         Decimal          @db.Decimal(14, 2)
+  type           TransactionType
+  sourceUserId   String?
+  sourceUser     User?            @relation("TransactionSource", fields: [sourceUserId], references: [id])
+  level          Int?
+  referenceType  String?
+  referenceId    String?
+  description    String
+  campaignReward CampaignReward?
+  createdAt      DateTime         @default(now())
+
+  @@index([userId])
+  @@index([walletId])
+  @@index([type])
+}
+
+/// A monthly subscription purchase — may be paid partly or fully from the wallet, subject to
+/// that service's configured maxWalletUsagePercent (see ServiceWalletLimit).
+model Subscription {
+  id               String             @id @default(uuid())
+  userId           String
+  user             User               @relation(fields: [userId], references: [id])
+  status           SubscriptionStatus @default(PENDING)
+  priceAtPurchase  Decimal            @db.Decimal(14, 2)
+  walletAmountUsed Decimal            @default(0) @db.Decimal(14, 2)
+  cashAmountPaid   Decimal            @default(0) @db.Decimal(14, 2)
+  startedAt        DateTime?
+  expiresAt        DateTime?
+  createdAt        DateTime           @default(now())
+
+  @@index([userId])
+}
+
+/// A historical, append-only record of "this child applied this referral code from this parent
+/// at this time" — kept distinct from User.referrerId (the live pointer used for tree
+/// traversal) purely for audit purposes, since referrerId could in principle be corrected by an
+/// admin without losing the original history.
+model ReferralRelationship {
+  id           String   @id @default(uuid())
+  childId      String   @unique
+  child        User     @relation("ChildRelationship", fields: [childId], references: [id])
+  parentId     String
+  referralCode String
+  appliedAt    DateTime @default(now())
+
+  @@index([parentId])
+}
+
+/// Singleton row (id is always 1) holding every reward/pricing knob the PRD requires to be
+/// admin-configurable without a code change.
+model ReferralSettings {
+  id                        Int      @id @default(1)
+  subscriptionPrice         Decimal  @db.Decimal(14, 2)
+  baseAmount                Decimal  @db.Decimal(14, 2)
+  registrationRewardPercent Decimal  @db.Decimal(5, 2)
+  level1Percent             Decimal  @db.Decimal(5, 2)
+  level2Percent             Decimal  @db.Decimal(5, 2)
+  level3Percent             Decimal  @db.Decimal(5, 2)
+  maxReferralDepth          Int      @default(3)
+  updatedAt                 DateTime @updatedAt
+}
+
+/// One row per wallet-purchasable service (subscription, featured listing, AI credits, SMS
+/// packages, anything added later) — each independently caps how much of its price the wallet
+/// may cover.
+model ServiceWalletLimit {
+  id                    String   @id @default(uuid())
+  serviceKey            String   @unique
+  label                 String
+  maxWalletUsagePercent Decimal  @db.Decimal(5, 2)
+  updatedAt             DateTime @updatedAt
+}
+
+/// A time-boxed override of ReferralSettings' reward percentages — e.g. "double rewards this
+/// weekend". Only the fields that differ from the default need to be set; anything left null
+/// falls back to ReferralSettings. See CampaignEngine.getEffectiveSettings.
+model Campaign {
+  id                        String   @id @default(uuid())
+  name                      String
+  startsAt                  DateTime
+  endsAt                    DateTime
+  active                    Boolean  @default(true)
+  registrationRewardPercent Decimal? @db.Decimal(5, 2)
+  level1Percent             Decimal? @db.Decimal(5, 2)
+  level2Percent             Decimal? @db.Decimal(5, 2)
+  level3Percent             Decimal? @db.Decimal(5, 2)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  rewards CampaignReward[]
+
+  @@index([startsAt, endsAt])
+}
+
+/// Links a WalletTransaction back to the campaign that produced it, purely for reporting
+/// ("Campaign Statistics" on the admin dashboard).
+model CampaignReward {
+  id                  String            @id @default(uuid())
+  campaignId          String
+  campaign            Campaign          @relation(fields: [campaignId], references: [id])
+  walletTransactionId String            @unique
+  walletTransaction   WalletTransaction @relation(fields: [walletTransactionId], references: [id])
+  createdAt           DateTime          @default(now())
+
+  @@index([campaignId])
+}
+
+/// Analytics-only event log (registration, referral applied, subscription purchased, etc.).
+/// Per the PRD's fraud philosophy: this data informs future fraud detection, it never blocks a
+/// user by itself.
+model ReferralLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  event     String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([event])
+}

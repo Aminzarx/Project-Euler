@@ -1,0 +1,736 @@
+package com.realestate.app.ui.screens.createcase
+
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.PersonSearch
+import androidx.compose.material.icons.rounded.Storefront
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.realestate.app.data.CaseTransactionType
+import com.realestate.app.data.CaseType
+import com.realestate.app.data.Property
+import com.realestate.app.data.PropertyType
+import com.realestate.app.data.category
+import com.realestate.app.data.clientRequestTransactionTypes
+import com.realestate.app.data.compatibility.CompatibilityGrade
+import com.realestate.app.data.compatibility.TransactionPropertyCompatibility
+import com.realestate.app.data.ownerTransactionTypes
+import com.realestate.app.ui.components.AppCard
+import com.realestate.app.ui.components.CardShape
+import com.realestate.app.ui.components.ConfirmationDialog
+import com.realestate.app.ui.components.color
+import com.realestate.app.ui.components.icon
+import com.realestate.app.ui.components.label
+import com.realestate.app.ui.theme.Spacing
+import com.realestate.app.ui.theme.extendedColors
+import com.realestate.app.viewmodel.PropertyViewModel
+
+/**
+ * Replaces AddEditPropertyScreen as the app's single entry point for creating or editing a
+ * record. The core idea (see data/Property.kt): every record is a Case — either an [CaseType.OWNER]
+ * listing or a [CaseType.CLIENT_REQUEST] — and the form that follows is assembled from only the
+ * fields that case actually needs, never a single generic property form.
+ *
+ * New cases walk Steps 1→4 in order. Editing an existing case jumps straight to Step 4 (its
+ * identity is already known), with the three Step 1-3 choices shown as tappable chips that jump
+ * back if the agent needs to correct one.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CreateCaseWizardScreen(
+    propertyId: Long?,
+    viewModel: PropertyViewModel,
+    onDone: () -> Unit
+) {
+    val context = LocalContext.current
+    val isEditMode = propertyId != null
+    val existing by if (propertyId != null) {
+        viewModel.getPropertyById(propertyId).collectAsStateWithLifecycle(initialValue = null)
+    } else {
+        remember { mutableStateOf<Property?>(null) }
+    }
+    var hasLoadedOnce by remember(propertyId) { mutableStateOf(propertyId == null) }
+    LaunchedEffect(propertyId) {
+        if (propertyId != null) viewModel.getPropertyById(propertyId).collect { hasLoadedOnce = true }
+    }
+
+    var step by rememberSaveable { mutableStateOf(if (isEditMode) 4 else 1) }
+    var caseType by rememberSaveable { mutableStateOf<CaseType?>(null) }
+    var transactionType by rememberSaveable { mutableStateOf<CaseTransactionType?>(null) }
+    var propertyType by rememberSaveable { mutableStateOf<PropertyType?>(null) }
+    val formState = remember { CaseFormState() }
+    var loadedIntoForm by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+    var showExitConfirm by remember { mutableStateOf(false) }
+    // Whether the agent has actually tapped a Case-type card yet, vs. it only being highlighted as
+    // a suggestion below — the suggestion must never look identical to a real, made choice.
+    var caseTypeConfirmed by rememberSaveable { mutableStateOf(isEditMode) }
+    var transactionTypeConfirmed by rememberSaveable { mutableStateOf(isEditMode) }
+
+    // Smart defaults: a brand-new case starts with the agent's last choices pre-highlighted (never
+    // auto-advanced past) instead of a blank slate, since most agents overwhelmingly create the
+    // same kind of case over and over in one session.
+    val wizardDefaults by viewModel.caseWizardDefaults.collectAsStateWithLifecycle()
+    val availableDistricts by viewModel.availableDistricts.collectAsStateWithLifecycle()
+    val allTags by viewModel.allTags.collectAsStateWithLifecycle()
+    LaunchedEffect(wizardDefaults) {
+        if (isEditMode || caseTypeConfirmed) return@LaunchedEffect
+        val suggestedCaseType = wizardDefaults.lastCaseType?.let { name ->
+            runCatching { CaseType.valueOf(name) }.getOrNull()
+        }
+        if (suggestedCaseType != null) {
+            caseType = suggestedCaseType
+            val suggestedTransactionName = if (suggestedCaseType == CaseType.OWNER) {
+                wizardDefaults.lastOwnerTransactionType
+            } else {
+                wizardDefaults.lastClientTransactionType
+            }
+            transactionType = suggestedTransactionName?.let { name ->
+                runCatching { CaseTransactionType.valueOf(name) }.getOrNull()
+            }
+        }
+    }
+
+    LaunchedEffect(existing) {
+        val p = existing
+        if (p != null && !loadedIntoForm) {
+            caseType = p.caseType
+            transactionType = p.transactionType
+            propertyType = p.propertyType
+            formState.loadFrom(p)
+            loadedIntoForm = true
+            // The record as stored is the "no unsaved changes" reference point — opening a case and
+            // backing straight out must not warn about losing anything.
+            formState.markClean()
+        }
+    }
+
+    // For a brand-new case the empty form is the reference point. Set from a side effect rather
+    // than at construction so reading the fields never subscribes the wizard to them.
+    LaunchedEffect(Unit) {
+        if (!isEditMode) formState.markClean()
+    }
+
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (_: SecurityException) {
+                // برخی منابع اجازه دسترسی دائمی نمی‌دهند؛ عکس فقط تا پایان این نشست قابل نمایش خواهد بود
+            }
+            formState.imageUri = uri.toString()
+        }
+    }
+
+    fun goBack() {
+        when {
+            // While editing, steps 1-3 are a detour taken from a chip on the form — back returns to
+            // the form rather than abandoning the whole edit.
+            isEditMode && step < 4 -> step = 4
+            // While creating, stepping back keeps everything already typed, so there is nothing to
+            // warn about.
+            !isEditMode && step > 1 -> step -= 1
+            // Anything left really does leave the screen. Ask first if that would throw work away.
+            formState.isDirty() -> showExitConfirm = true
+            else -> onDone()
+        }
+    }
+
+    BackHandler(onBack = ::goBack)
+
+    fun buildProperty(): Property {
+        val resolvedCaseType = caseType ?: CaseType.OWNER
+        val flags = (formState.ownerFlags + formState.requirementFlags + formState.rentalFlags)
+        return Property(
+            id = propertyId ?: 0,
+            title = formState.title.trim().ifBlank {
+                if (resolvedCaseType == CaseType.OWNER) formState.address.trim() else formState.contactName.trim()
+            },
+            description = formState.description.trim(),
+            price = formState.price.toLongOrNull() ?: 0,
+            area = formState.area.toDoubleOrNull() ?: 0.0,
+            rooms = formState.rooms.toIntOrNull() ?: 0,
+            city = formState.city.trim(),
+            address = formState.address.trim(),
+            ownerName = formState.contactName.trim(),
+            ownerPhone = formState.contactPhone.trim(),
+            contactId = formState.contactId,
+            dealType = legacyDealTypeFor(transactionType),
+            propertyType = propertyType ?: PropertyType.APARTMENT,
+            status = formState.status,
+            tags = formState.tags,
+            imageUri = formState.imageUri,
+            isFavorite = existing?.isFavorite ?: false,
+            isPinned = existing?.isPinned ?: false,
+            favoriteFolder = existing?.favoriteFolder,
+            dateAdded = existing?.dateAdded ?: System.currentTimeMillis(),
+            lastViewedAt = existing?.lastViewedAt,
+            lastSharedAt = existing?.lastSharedAt,
+            viewCount = existing?.viewCount ?: 0,
+            followUpAt = existing?.followUpAt,
+            caseType = resolvedCaseType,
+            transactionType = transactionType,
+            caseFlags = flags.toList(),
+            priority = formState.priority,
+            expiryType = formState.expiryType,
+            customExpiryAt = formState.customExpiryAt,
+            mortgageStatus = formState.mortgageStatus,
+            titleDeedReady = formState.titleDeedReady,
+            reasonForSelling = formState.reasonForSelling.trim().ifBlank { null },
+            viewingHours = formState.viewingHours.trim().ifBlank { null },
+            keyHolder = formState.keyHolder.trim().ifBlank { null },
+            paymentConditions = formState.paymentConditions.trim().ifBlank { null },
+            constructionAge = formState.constructionAge.toIntOrNull(),
+            legalStatus = formState.legalStatus.trim().ifBlank { null },
+            hiddenNotes = formState.hiddenNotes.trim().ifBlank { null },
+            floor = formState.floor.toIntOrNull(),
+            totalFloors = formState.totalFloors.toIntOrNull(),
+            landZoning = formState.landZoning.trim().ifBlank { null },
+            hasBusinessLicense = formState.hasBusinessLicense,
+            budgetMin = formState.budgetMin.toLongOrNull(),
+            budgetMax = formState.budgetMax.toLongOrNull(),
+            desiredMinArea = formState.desiredMinArea.toDoubleOrNull(),
+            desiredMaxArea = formState.desiredMaxArea.toDoubleOrNull(),
+            desiredBedrooms = formState.desiredBedrooms.toIntOrNull(),
+            preferredAreas = formState.preferredAreas,
+            floorPreference = formState.floorPreference.trim().ifBlank { null },
+            viewPreference = formState.viewPreference.trim().ifBlank { null },
+            cashAvailable = formState.cashAvailable.toLongOrNull(),
+            maxDeposit = formState.maxDeposit.toLongOrNull(),
+            maxMonthlyRent = formState.maxMonthlyRent.toLongOrNull(),
+            floorPreferenceOptions = formState.floorPreferenceOptions.toList(),
+            viewPreferenceOptions = formState.viewPreferenceOptions.toList(),
+            needsLoanFinancing = formState.needsLoanFinancing,
+            excludedFloorPreferences = formState.excludedFloorPreferences.toList(),
+            dealBreakerTags = formState.dealBreakerTags,
+            district = formState.district.trim().ifBlank { null },
+            latitude = formState.latitude,
+            longitude = formState.longitude,
+            legalDocumentType = formState.legalDocumentType,
+            ownershipType = formState.ownershipType,
+            depositAmount = formState.depositAmount.toLongOrNull(),
+            nextViewingAt = formState.nextViewingAt,
+            developerName = formState.developerName.trim().ifBlank { null },
+            expectedDeliveryDate = formState.expectedDeliveryDate,
+            constructionProgressPercent = formState.constructionProgressPercent.toIntOrNull(),
+            waterSource = formState.waterSource,
+            hasWellPermit = formState.hasWellPermit,
+            frontageWidth = formState.frontageWidth.toDoubleOrNull(),
+            streetWidth = formState.streetWidth.toDoubleOrNull(),
+            orientation = formState.orientation,
+            hasNaturalLight = formState.hasNaturalLight,
+            unitsPerFloor = formState.unitsPerFloor.toIntOrNull(),
+            totalUnits = formState.totalUnits.toIntOrNull(),
+            structureType = formState.structureType,
+            heatingSystem = formState.heatingSystem,
+            coolingSystem = formState.coolingSystem,
+            hasCompletionCertificate = formState.hasCompletionCertificate,
+            hasBankMortgage = formState.hasBankMortgage,
+            existingLoanAmount = formState.existingLoanAmount.toLongOrNull(),
+            isOwnershipTransferable = formState.isOwnershipTransferable,
+            closingReason = formState.closingReason,
+            locationCapturedAt = existing?.locationCapturedAt,
+            leadSource = formState.leadSource,
+            responsibleAgent = formState.responsibleAgent.trim().ifBlank { null },
+            lastContactAt = formState.lastContactAt,
+            visitStatus = formState.visitStatus,
+            isConfidential = formState.isConfidential
+        )
+    }
+
+    fun save() {
+        if (isSaving) return
+        isSaving = true
+        val property = buildProperty()
+        // The confirmation itself is shown by RealEstateApp's shell (see PropertyViewModel.saveEvents)
+        // once this screen has already popped off the back stack, not here.
+        if (isEditMode) {
+            viewModel.updateProperty(property)
+        } else {
+            viewModel.addProperty(
+                property,
+                formState.contactLandlinePhone.trim().ifBlank { null },
+                formState.contactWhatsappNumber.trim().ifBlank { null },
+                formState.contactPreferredContactTime
+            )
+        }
+        onDone()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stepTitle(step, isEditMode)) },
+                navigationIcon = {
+                    IconButton(onClick = ::goBack) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "بازگشت")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        if (isEditMode && !hasLoadedOnce) {
+            Box(modifier = Modifier.padding(padding).fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@Scaffold
+        }
+
+        Column(modifier = Modifier.padding(padding).fillMaxSize()) {
+            if (!isEditMode) {
+                WizardProgressHeader(step = step, stepTitle = stepTitle(step, isEditMode = false))
+            }
+
+            AnimatedContent(
+                targetState = step,
+                transitionSpec = {
+                    if (targetState >= initialState) {
+                        (slideInHorizontally(tween(280)) { it / 3 } + fadeIn(tween(280))) togetherWith
+                            (slideOutHorizontally(tween(280)) { -it / 3 } + fadeOut(tween(200)))
+                    } else {
+                        (slideInHorizontally(tween(280)) { -it / 3 } + fadeIn(tween(280))) togetherWith
+                            (slideOutHorizontally(tween(280)) { it / 3 } + fadeOut(tween(200)))
+                    }
+                },
+                label = "create-case-step"
+            ) { currentStep ->
+                when (currentStep) {
+                    1 -> CaseTypeStep(
+                        selected = caseType,
+                        confirmed = caseTypeConfirmed,
+                        onSelect = { picked ->
+                            // A real, deliberate switch away from a type already in the form loses
+                            // that type's fields — no point carrying an owner's key-holder notes
+                            // into a client request no one will ever see them on.
+                            val previous = caseType
+                            if (caseTypeConfirmed && previous != null && previous != picked) {
+                                when (previous) {
+                                    CaseType.OWNER -> formState.resetOwnerOnlyFields()
+                                    CaseType.CLIENT_REQUEST -> formState.resetClientRequestOnlyFields()
+                                }
+                                transactionType = null
+                                transactionTypeConfirmed = false
+                            }
+                            caseType = picked
+                            caseTypeConfirmed = true
+                            viewModel.recordCaseTypeUsed(picked)
+                            step = 2
+                        }
+                    )
+                    2 -> {
+                        val type = caseType
+                        if (type != null) {
+                            TransactionTypeStep(
+                                caseType = type,
+                                selected = transactionType,
+                                onSelect = {
+                                    transactionType = it
+                                    transactionTypeConfirmed = true
+                                    viewModel.recordTransactionTypeUsed(type, it)
+                                    step = 3
+                                }
+                            )
+                        }
+                    }
+                    3 -> PropertyTypeStep(
+                        transactionType = transactionType,
+                        selected = propertyType,
+                        onSelect = { propertyType = it; step = 4 }
+                    )
+                    else -> {
+                        val type = caseType
+                        if (type != null) {
+                            CaseDetailsForm(
+                                state = formState,
+                                caseType = type,
+                                transactionType = transactionType,
+                                propertyType = propertyType ?: PropertyType.APARTMENT,
+                                isEditMode = isEditMode,
+                                isSaving = isSaving,
+                                availableDistricts = availableDistricts,
+                                allTags = allTags,
+                                searchContacts = viewModel::searchContacts,
+                                caseCountForContact = viewModel::caseCountForContact,
+                                activeCaseCountForContact = viewModel::activeCaseCountForContact,
+                                onEditCaseType = { step = 1 },
+                                onEditTransactionType = { step = 2 },
+                                onEditPropertyType = { step = 3 },
+                                onPickImage = { imagePicker.launch("image/*") },
+                                onSave = ::save
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showExitConfirm) {
+            ConfirmationDialog(
+                title = "خروج بدون ذخیره؟",
+                text = "تغییراتی که وارد کرده‌اید ذخیره نشده و از دست می‌رود.",
+                confirmLabel = "خروج بدون ذخیره",
+                danger = true,
+                onConfirm = onDone,
+                onDismiss = { showExitConfirm = false }
+            )
+        }
+    }
+}
+
+/** "گام ۲ از ۴ · نوع معامله" plus a percentage — a bare progress bar told the agent *some* progress
+ *  had been made but not where they stood or what was left; this answers both at a glance. */
+@Composable
+private fun WizardProgressHeader(step: Int, stepTitle: String) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.screen, vertical = 8.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "گام $step از ۴ · $stepTitle",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                "${step * 25}٪",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        LinearProgressIndicator(
+            progress = { step / 4f },
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+private fun stepTitle(step: Int, isEditMode: Boolean): String = when {
+    isEditMode -> "ویرایش پرونده"
+    step == 1 -> "چه می‌خواهید ثبت کنید؟"
+    step == 2 -> "نوع معامله"
+    step == 3 -> "نوع ملک"
+    else -> "جزئیات پرونده"
+}
+
+/** [DealType] predates the Case redesign and several legacy screens (StoryCard, ad-text, price
+ *  formatting) still read it directly — this keeps them working by mapping every transaction type
+ *  onto whichever of SALE/RENT it reads closest to, rather than rewriting every such screen in
+ *  this pass. See ARCHITECTURE notes in AboutScreen/PropertyDetailScreen for the follow-up. */
+private fun legacyDealTypeFor(transactionType: CaseTransactionType?): com.realestate.app.data.DealType =
+    when (transactionType) {
+        com.realestate.app.data.CaseTransactionType.RENT,
+        com.realestate.app.data.CaseTransactionType.MORTGAGE_AND_RENT,
+        com.realestate.app.data.CaseTransactionType.FULL_MORTGAGE,
+        com.realestate.app.data.CaseTransactionType.SHORT_TERM_RENT,
+        com.realestate.app.data.CaseTransactionType.DAILY_RENT -> com.realestate.app.data.DealType.RENT
+        else -> com.realestate.app.data.DealType.SALE
+    }
+
+@Composable
+private fun CaseTypeStep(selected: CaseType?, confirmed: Boolean, onSelect: (CaseType) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(Spacing.screen),
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            "چه می‌خواهید ثبت کنید؟",
+            style = MaterialTheme.typography.headlineSmall
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            "هر پرونده یا مربوط به یک مالک است یا یک درخواست از سمت مشتری.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (selected != null && !confirmed) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "بر اساس آخرین پرونده‌ای که ثبت کردید پیشنهاد شده — می‌توانید تغییر دهید",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        Spacer(modifier = Modifier.height(Spacing.lg))
+        CaseTypeCard(
+            icon = Icons.Rounded.Storefront,
+            title = "مالک",
+            subtitle = "مشتری صاحب ملکی است که می‌خواهد بفروشد، اجاره دهد یا واگذار کند.",
+            selected = selected == CaseType.OWNER,
+            suggested = selected == CaseType.OWNER && !confirmed,
+            onClick = { onSelect(CaseType.OWNER) }
+        )
+        Spacer(modifier = Modifier.height(Spacing.md))
+        CaseTypeCard(
+            icon = Icons.Rounded.PersonSearch,
+            title = "درخواست مشتری",
+            subtitle = "مشتری به دنبال ملکی برای خرید، رهن یا اجاره است.",
+            selected = selected == CaseType.CLIENT_REQUEST,
+            suggested = selected == CaseType.CLIENT_REQUEST && !confirmed,
+            onClick = { onSelect(CaseType.CLIENT_REQUEST) }
+        )
+    }
+}
+
+@Composable
+private fun CaseTypeCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    suggested: Boolean,
+    onClick: () -> Unit
+) {
+    AppCard(
+        onClick = onClick,
+        contentPadding = PaddingValues(Spacing.lg),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (selected) {
+                    Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CardShape)
+                } else {
+                    Modifier
+                }
+            )
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.extendedColors.accent.copy(alpha = 0.15f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(30.dp),
+                    tint = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                )
+            }
+            Spacer(modifier = Modifier.width(Spacing.md))
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(title, style = MaterialTheme.typography.titleLarge)
+                    if (suggested) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            shape = MaterialTheme.shapes.extraSmall
+                        ) {
+                            Text(
+                                "پیشنهادی",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (selected) {
+                Icon(
+                    Icons.Rounded.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TransactionTypeStep(
+    caseType: CaseType,
+    selected: CaseTransactionType?,
+    onSelect: (CaseTransactionType) -> Unit
+) {
+    val options = if (caseType == CaseType.OWNER) ownerTransactionTypes else clientRequestTransactionTypes
+    Column(modifier = Modifier.fillMaxSize().padding(Spacing.screen)) {
+        Text("نوع معامله مورد نظر چیست؟", style = MaterialTheme.typography.titleLarge)
+        Spacer(modifier = Modifier.height(Spacing.md))
+        // Same 2-column grid as the Property Type step (below) rather than a list of full-width
+        // rows — the two selection steps back to back should read as one visual language, not two.
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            items(options, key = { it.name }) { type ->
+                val isSelected = selected == type
+                AppCard(
+                    onClick = { onSelect(type) },
+                    contentPadding = PaddingValues(Spacing.md),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CardShape) else Modifier)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(type.label(), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        if (isSelected) {
+                            Icon(
+                                Icons.Rounded.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Which [PropertyType]s to offer and how to group them for a given [transactionType] — see
+ *  data/compatibility/TransactionPropertyCompatibility.kt. Types graded NOT_APPLICABLE are left out
+ *  entirely (Phase 1/2 Step 4: prevented at the source, not flagged after the fact); everything
+ *  else stays selectable, grouped by [com.realestate.app.data.PropertyCategory] so the list reads
+ *  as a handful of relevant groups instead of one flat wall of 18 cards. With no transaction type
+ *  chosen yet (shouldn't normally happen — Step 2 precedes Step 3 — but kept safe for direct
+ *  navigation) every type is shown, ungrouped, exactly as before this change. */
+@Composable
+private fun PropertyTypeStep(
+    transactionType: CaseTransactionType?,
+    selected: PropertyType?,
+    onSelect: (PropertyType) -> Unit
+) {
+    val grouped = remember(transactionType) {
+        val visible = if (transactionType != null) {
+            TransactionPropertyCompatibility.selectablePropertyTypes(transactionType)
+        } else {
+            PropertyType.entries
+        }
+        visible.groupBy { it.category() }.entries.sortedBy { it.key.ordinal }
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(Spacing.screen)) {
+        Text("نوع ملک چیست؟", style = MaterialTheme.typography.titleLarge)
+        if (transactionType != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "بر اساس «${transactionType.label()}» — فقط انواع مرتبط نمایش داده می‌شود",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.height(Spacing.md))
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            grouped.forEach { (category, types) ->
+                if (grouped.size > 1) {
+                    item(key = "header-${category.name}", span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            category.label(),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
+                        )
+                    }
+                }
+                items(types, key = { it.name }) { type ->
+                    val compatibility = transactionType?.let { TransactionPropertyCompatibility.evaluate(it, type) }
+                    AppCard(
+                        onClick = { onSelect(type) },
+                        contentPadding = PaddingValues(Spacing.md),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                            Icon(
+                                type.icon(),
+                                contentDescription = null,
+                                tint = if (selected == type) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(type.label(), style = MaterialTheme.typography.titleSmall)
+                            // NOT_APPLICABLE never reaches here (already filtered out of [grouped]);
+                            // only CONDITIONAL/USUALLY_NOT_APPLICABLE get a badge — FULLY_SUPPORTED
+                            // is the silent default and shows nothing, matching Phase 1 Finding #8.
+                            if (compatibility != null && compatibility.grade != CompatibilityGrade.FULLY_SUPPORTED) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    compatibility.grade.label(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = compatibility.grade.color()
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

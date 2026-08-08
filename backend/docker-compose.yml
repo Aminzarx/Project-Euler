@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: referral
+      POSTGRES_PASSWORD: referral
+      POSTGRES_DB: referral_economy
+    # Not published to the host/internet — only `api` needs to reach it, over the compose
+    # network's internal DNS (`postgres:5432`). Publishing this on a public VPS would expose the
+    # default referral/referral credentials to the open internet.
+    volumes:
+      - referral_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U referral"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://referral:referral@postgres:5432/referral_economy?schema=public"
+      PORT: "4000"
+      ADMIN_API_KEY: "${ADMIN_API_KEY:-change-me}"
+    # No published port here either — only reachable through Caddy (below), which is the one
+    # thing that terminates public traffic. Debugging locally on the server: `docker compose exec
+    # api sh` or temporarily add "127.0.0.1:4000:4000" rather than exposing it to 0.0.0.0.
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  referral_postgres_data:
+  caddy_data:
+  caddy_config:

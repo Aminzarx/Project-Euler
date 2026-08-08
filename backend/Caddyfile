@@ -1,0 +1,3 @@
+api.zarandix.ir {
+	reverse_proxy api:4000
+}

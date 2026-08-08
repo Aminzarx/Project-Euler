@@ -1,0 +1,279 @@
+package com.realestate.app.ui.components
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.PushPin
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.realestate.app.data.Property
+import com.realestate.app.ui.theme.extendedColors
+
+/**
+ * Compact, scannable property row supporting the app's core gestures in one place:
+ * tap to open, long-press to enter multi-select, double-tap to favorite, and swipe
+ * right to call. (Swiping left is deliberately disabled — this row used to also swipe
+ * left for share, but in this app's RTL layout that swipe direction is [SwipeToDismissBoxValue.StartToEnd],
+ * which reads backwards to a Persian-reading user's intuition that a rightward drag
+ * should be the primary/positive action; removed rather than remapped, since the
+ * gesture wasn't needed once call-by-swipe covers the primary use case.)
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+fun SwipeablePropertyRow(
+    property: Property,
+    selectionMode: Boolean,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onCall: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptics = LocalHapticFeedback.current
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                onCall()
+            }
+            false
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = modifier,
+        // EndToStart is the swipe that's physically rightward in this app's RTL layout
+        // direction (see Theme.kt's LocalLayoutDirection override) — StartToEnd would be
+        // physically leftward, which is the direction being removed.
+        enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = !selectionMode,
+        backgroundContent = {
+            val isCall = dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
+            // A soft, low-alpha wash instead of a solid saturated fill reads calmer across the
+            // whole row height, while the icon keeps its own full-strength circular badge — that
+            // pairing (white on solid success) is the one that actually needs to hold up to
+            // WCAG AA, and it does (see Color.kt's contrast note); the backdrop around it is
+            // purely decorative and was never text, so it doesn't need the same ratio.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CardShape)
+                    .background(if (isCall) MaterialTheme.extendedColors.success.copy(alpha = 0.14f) else Color.Transparent)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                if (isCall) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.extendedColors.success),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Rounded.Call,
+                            contentDescription = "تماس",
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+    ) {
+        // A subtle tint (not a loud fill) so a whole screen of selected rows still reads as a
+        // list, not a wall of color — paired with the existing checkmark icon, which stays the
+        // primary "this is selected" signal.
+        val containerColor by animateColorAsState(
+            targetValue = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface,
+            animationSpec = tween(200),
+            label = "selection-tint"
+        )
+        AppCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = {
+                        if (selectionMode) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onClick()
+                    },
+                    onLongClick = onLongPress,
+                    onDoubleClick = onToggleFavorite
+                ),
+            contentPadding = PaddingValues(10.dp),
+            containerColor = containerColor
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Entering selection mode is a state every row transitions into at once (one
+                // long-press selects the first card, but the mode itself applies app-wide), so
+                // the indicator on every *other* row should visibly grow in rather than pop —
+                // that's what actually reads as "you just entered a different mode" instead of a
+                // layout jump.
+                AnimatedVisibility(
+                    visible = selectionMode,
+                    enter = fadeIn(tween(200)) + expandHorizontally(tween(200)),
+                    exit = fadeOut(tween(150)) + shrinkHorizontally(tween(150))
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (isSelected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                            contentDescription = null,
+                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(MaterialTheme.shapes.small)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    if (property.imageUri != null) {
+                        AsyncImage(
+                            model = property.imageUri,
+                            contentDescription = property.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(
+                            Icons.Rounded.Home,
+                            contentDescription = null,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+                    // Owner listing vs. client request is the one distinction that isn't already
+                    // visible elsewhere on this row (status is the colored dot, favorite/pin are
+                    // their own icons) — a corner badge on the thumbnail keeps it scannable in a
+                    // mixed list without touching the title/subtitle layout.
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(2.dp)
+                            .size(18.dp)
+                            .clip(CircleShape)
+                            .background(property.caseType.color())
+                            .border(1.5.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            property.caseType.icon(),
+                            contentDescription = property.caseType.label(),
+                            tint = Color.White,
+                            modifier = Modifier.size(11.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(property.status.color())
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = property.title,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        if (property.isPinned) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                Icons.Rounded.PushPin,
+                                contentDescription = "سنجاق‌شده",
+                                modifier = Modifier.size(12.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    Text(
+                        text = formatCaseRowSubtitle(property),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (!selectionMode) {
+                    var justToggled by remember { mutableStateOf(false) }
+                    val scale by animateFloatAsState(
+                        targetValue = if (justToggled) 1.25f else 1f,
+                        animationSpec = tween(150),
+                        label = "favorite-pop",
+                        finishedListener = { justToggled = false }
+                    )
+                    IconButton(onClick = {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        justToggled = true
+                        onToggleFavorite()
+                    }) {
+                        Icon(
+                            if (property.isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            contentDescription = if (property.isFavorite) "حذف از علاقه‌مندی‌ها" else "افزودن به علاقه‌مندی‌ها",
+                            tint = if (property.isFavorite) MaterialTheme.extendedColors.danger else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp).graphicsLayer { scaleX = scale; scaleY = scale }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
