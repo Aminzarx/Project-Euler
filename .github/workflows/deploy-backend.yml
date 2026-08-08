@@ -3,6 +3,14 @@ name: Deploy Backend to VPS
 # Runs from GitHub's own runners (which have normal internet access) rather than any sandboxed
 # agent session — this is the actual network hop that reaches the VPS. Auto-deploys on every push
 # to main that touches backend/, and can always be re-run by hand from the Actions tab.
+#
+# Target: an isolated, unprivileged Docker container (no docker socket inside it, so no nested
+# Docker/Compose here) with a 1GB RAM cap — see backend/README.md's "Deploying" section for the
+# full picture. The app runs as a plain Node process under pm2, backed by a PostgreSQL server
+# installed directly in the container via apt. Public HTTPS is NOT handled by this workflow: the
+# container has no way to bind a host-level port 80/443 itself, so a reverse proxy + TLS cert on
+# the host (outside this workflow's reach) is what actually exposes the app on
+# https://api.zarandix.ir/ — see the README for the exact config to hand to whoever manages that.
 on:
   push:
     branches: [main]
@@ -14,6 +22,11 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      # Internal port the app listens on inside the container — not published to the internet by
+      # this workflow (see the file header). Change via the optional BACKEND_PORT repo variable if
+      # it ever conflicts with something else already running in the container.
+      APP_PORT: ${{ vars.BACKEND_PORT || 4000 }}
     steps:
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -25,12 +38,14 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           envs: ADMIN_API_KEY_SECRET
+          command_timeout: 15m
           script_stop: true
           script: |
             set -e
-            APP_DIR="${VPS_APP_DIR:-/opt/referral-backend}"
+            APP_DIR="${VPS_APP_DIR:-$HOME/referral-backend}"
             REPO_URL="https://github.com/${{ github.repository }}.git"
             BRANCH="main"
+            APP_PORT="${{ env.APP_PORT }}"
 
             mkdir -p "$APP_DIR"
             cd "$APP_DIR"
@@ -42,11 +57,36 @@ jobs:
               git reset --hard "origin/$BRANCH"
             fi
 
+            # --- PostgreSQL (no Docker available in this container — installed directly) ---
+            if ! command -v psql >/dev/null 2>&1; then
+              sudo apt-get update -y
+              sudo apt-get install -y postgresql
+            fi
+            sudo service postgresql start || sudo pg_ctlcluster "$(pg_lsclusters -h | awk '{print $1}' | head -1)" "$(pg_lsclusters -h | awk '{print $2}' | head -1)" start || true
+
+            # Password is generated once on first deploy and reused on every later deploy — never
+            # printed to the workflow log, never a GitHub secret you have to manage.
+            PG_PASSWORD_FILE="$APP_DIR/.pg_password"
+            if [ ! -f "$PG_PASSWORD_FILE" ]; then
+              (umask 077 && openssl rand -hex 24 > "$PG_PASSWORD_FILE")
+            fi
+            PG_PASSWORD="$(cat "$PG_PASSWORD_FILE")"
+
+            sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='referral'" | grep -q 1 || \
+              sudo -u postgres psql -c "CREATE ROLE referral LOGIN PASSWORD '${PG_PASSWORD}';"
+            sudo -u postgres psql -c "ALTER ROLE referral WITH PASSWORD '${PG_PASSWORD}';"
+            sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='referral_economy'" | grep -q 1 || \
+              sudo -u postgres createdb -O referral referral_economy
+
+            # --- App ---
             cd backend
 
             if [ ! -f .env ]; then
               cp .env.example .env
             fi
+
+            sed -i "s|^DATABASE_URL=.*|DATABASE_URL=\"postgresql://referral:${PG_PASSWORD}@localhost:5432/referral_economy?schema=public\"|" .env
+            sed -i "s|^PORT=.*|PORT=${APP_PORT}|" .env
 
             # Only ever writes ADMIN_API_KEY if the workflow was actually given one via the
             # ADMIN_API_KEY GitHub secret — never blanks out a value set by hand on the server.
@@ -58,13 +98,27 @@ jobs:
               fi
             fi
 
-            docker compose up -d --build
-            docker compose ps
+            npm ci
+            npx prisma generate
+            npx prisma migrate deploy
+            npm run build
+
+            command -v pm2 >/dev/null 2>&1 || sudo npm install -g pm2
+
+            pm2 restart referral-backend --update-env 2>/dev/null || \
+              pm2 start dist/server.js --name referral-backend --cwd "$APP_DIR/backend" --update-env
+            pm2 save
 
       - name: Health check
         if: always()
         continue-on-error: true
-        run: |
-          sleep 5
-          curl -fsS "https://${{ vars.BACKEND_DOMAIN || 'api.zarandix.ir' }}/health" || \
-            echo "Health check failed — Caddy may still be obtaining its TLS certificate on first deploy (can take up to a minute), or DNS for the domain isn't pointing at this VPS yet. Check the deploy step's logs above."
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          script: |
+            sleep 3
+            curl -fsS "http://127.0.0.1:${{ env.APP_PORT }}/health" && echo "" && pm2 status referral-backend || \
+              echo "Health check failed on the container's own loopback — check 'pm2 logs referral-backend' on the server."

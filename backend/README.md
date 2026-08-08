@@ -59,8 +59,8 @@ PostgreSQL 14+ instance.
 
 **Your own VPS, via GitHub Actions (`.github/workflows/deploy-backend.yml`):** the workflow SSHes
 into your server (from GitHub's runners, not from any sandboxed agent session — that's the whole
-reason this path exists) and runs `docker compose up -d --build` there on every push to `main` that
-touches `backend/`, or on demand from the Actions tab. It expects:
+reason this path exists) on every push to `main` that touches `backend/`, or on demand from the
+Actions tab. It expects:
 
 | Secret/Variable | Where | Purpose |
 | --- | --- | --- |
@@ -69,20 +69,49 @@ touches `backend/`, or on demand from the Actions tab. It expects:
 | `VPS_USER` | Secret | The SSH user to deploy as |
 | `VPS_SSH_PRIVATE_KEY` | Secret | Private half of a key pair whose public half is in that user's `~/.ssh/authorized_keys` — **use a dedicated deploy key, not your personal one** |
 | `ADMIN_API_KEY` | Secret, optional | If set, the workflow writes it into the server's `backend/.env` on every deploy; if unset, whatever's already in `.env` on the server is left alone |
-| `BACKEND_DOMAIN` | Variable, optional | Used only for the post-deploy health-check curl; defaults to `api.zarandix.ir` |
+| `BACKEND_PORT` | Variable, optional | Local port the app listens on inside the server/container; defaults to `4000` |
 
-The server needs Docker and the Docker Compose plugin installed, a user with permission to run
-`docker compose`, and ports 80/443 open in its firewall; everything else (cloning the repo, writing
-`.env`, building the image, running migrations) the workflow handles.
+Two deployment shapes are supported, depending on what the target actually has:
 
-**HTTPS:** `docker-compose.yml` runs a [Caddy](https://caddyserver.com/) reverse proxy in front of
-the API (see `Caddyfile`) that automatically obtains and renews a real Let's Encrypt certificate
-for `api.zarandix.ir` — no manual cert handling. This requires a DNS **A record** for
-`api.zarandix.ir` pointing at the VPS's IP *before* the first deploy (Caddy needs to complete an
-HTTP-01 challenge on port 80 to issue the certificate). Neither Postgres (`5432`) nor the API
-(`4000`) are published to the host directly — Caddy is the only public entry point, reached over
-HTTPS. To point the app at a different domain, edit the hostname in `Caddyfile` and the health
--check curl above.
+**A) A real VPS with Docker** — use `docker-compose.yml` (Postgres + API + a
+[Caddy](https://caddyserver.com/) reverse proxy that gets a real, auto-renewing Let's Encrypt
+certificate for `api.zarandix.ir`). Needs Docker + the Compose plugin installed and ports 80/443
+open. `docker compose up -d --build` is the whole deploy.
+
+**B) An unprivileged sandbox container with no Docker socket** (this project's actual deploy
+target — see your own container's onboarding docs for exactly what it does/doesn't allow) — this
+is what `deploy-backend.yml` is written for. No Docker is available *inside* the container, so it
+installs PostgreSQL directly via `apt`, builds the app with plain `npm`/`tsc`, and runs it as a
+Node process supervised by [pm2](https://pm2.keymetrics.io/) (auto-restart on crash, `pm2 save` so
+it can be resurrected, `pm2 logs referral-backend` / `pm2 status` for troubleshooting). A random
+Postgres password is generated once on first deploy and reused after that — it's never printed to
+the workflow log or stored as a GitHub secret.
+
+**HTTPS in shape B is *not* handled by this workflow** — the container has no way to bind a
+host-level port 80/443 itself, so there is no ACME challenge this workflow can complete. Getting
+`https://api.zarandix.ir/` actually working over the internet needs one manual, one-time step from
+whoever administers the host: a reverse-proxy vhost (with a real cert, e.g. via `certbot --nginx`)
+forwarding `api.zarandix.ir` to wherever the host already routes traffic into this container, on
+the app's internal port (`4000` by default — see `BACKEND_PORT` above). For example, on the host:
+
+```nginx
+server {
+    listen 80;
+    server_name api.zarandix.ir;
+    location / {
+        proxy_pass http://<however-the-host-reaches-this-container>:4000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+followed by `certbot --nginx -d api.zarandix.ir` to add TLS. A DNS **A record** for
+`api.zarandix.ir` pointing at that host's public IP needs to exist first. Everything else
+(cloning, installing dependencies, migrations, building, starting/restarting the app) is fully
+automated by the workflow — this proxy step is the one piece no workflow running inside the
+container can reach.
 
 > This backend was designed and built in an environment with no hosting credentials, deploy
 > connector, or raw network egress available (only an allowlisted HTTPS proxy — no SSH, no
