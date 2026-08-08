@@ -8,7 +8,12 @@ export const usersRouter = Router();
 
 const registerSchema = z.object({
   phoneNumber: z.string().min(3),
-  referralCode: z.string().min(4).max(12).optional(),
+  referralCode: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .length(8, 'Referral code must be 8 characters')
+    .regex(/^[A-Z0-9]{8}$/, 'Referral code must be 8 uppercase letters/digits'),
   deviceFingerprint: z.string().optional(),
   installationId: z.string().optional(),
   ipAddress: z.string().optional(),
@@ -16,8 +21,8 @@ const registerSchema = z.object({
   operatingSystem: z.string().optional()
 });
 
-/** POST /api/users/register — creates the user (and, if a referral code was supplied, applies it
- *  immediately). This does NOT grant the registration reward yet — see /verify-phone. */
+/** POST /api/users/register — a referral code is mandatory (see BusinessRules.md) and is applied
+ *  immediately on success. This does NOT grant the registration reward yet — see /verify-phone. */
 usersRouter.post(
   '/register',
   validateBody(registerSchema),

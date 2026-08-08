@@ -27,6 +27,12 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  DELETED
+}
+
 /// A user of the real estate app. Referral relationships are modeled as a self-referencing
 /// tree via referrerId — unlimited width and depth, even though reward distribution (in the
 /// business logic layer) only ever looks at the first three ancestor levels.
@@ -42,6 +48,7 @@ model User {
   ipAddress         String?
   deviceModel       String?
   operatingSystem   String?
+  status            UserStatus @default(ACTIVE)
   phoneVerifiedAt   DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

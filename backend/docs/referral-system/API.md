@@ -66,7 +66,9 @@ shipping. Referral **QR code** generation is a client-side concern (encode `refe
 
 ### `GET /api/referral/validate/:code`
 
-`{ "valid": true, "ownerId": "uuid" }` or `{ "valid": false, "ownerId": null }`.
+`{ "valid": true }` or `{ "valid": false }`. `valid` reflects both existence and eligibility — a
+code belonging to a BLOCKED/DELETED user reads as `valid: false`. The owning user's internal ID
+is intentionally never exposed here (avoids ID enumeration via this public endpoint).
 
 ### `POST /api/referral/apply`
 

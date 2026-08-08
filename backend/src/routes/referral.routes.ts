@@ -12,7 +12,7 @@ referralRouter.get(
   '/validate/:code',
   asyncHandler(async (req, res) => {
     const owner = await engines.referral.validateReferralCode(req.params.code);
-    res.json({ valid: Boolean(owner), ownerId: owner?.id ?? null });
+    res.json({ valid: owner != null && owner.status === 'ACTIVE' });
   })
 );
 

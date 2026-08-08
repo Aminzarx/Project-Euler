@@ -11,7 +11,8 @@ import type {
   ReferralLog,
   Subscription,
   TransactionType,
-  SubscriptionStatus
+  SubscriptionStatus,
+  UserStatus
 } from '@prisma/client';
 import type {
   CampaignRepository,
@@ -36,7 +37,15 @@ import type {
  * (src/__tests__/*) so business logic can be verified without a running Postgres instance. Not
  * used by the actual server — see src/repositories/prisma for that.
  */
-export function createMemoryRepositories(): Repositories {
+/** Test-only escape hatch beyond the UserRepository interface — lets unit tests flip a user's
+ *  status (e.g. to BLOCKED) without adding a status-mutation method to the shared repository
+ *  contract, which would otherwise force the Prisma-backed repo to implement it too even though
+ *  status changes are a future admin action, not a caller-supplied field. */
+export interface MemoryRepositories extends Repositories {
+  __setUserStatusForTesting(userId: string, status: UserStatus): void;
+}
+
+export function createMemoryRepositories(): MemoryRepositories {
   const users = new Map<string, User>();
   const wallets = new Map<string, Wallet>();
   const walletsByUser = new Map<string, string>();
@@ -82,6 +91,7 @@ export function createMemoryRepositories(): Repositories {
         ipAddress: input.ipAddress ?? null,
         deviceModel: input.deviceModel ?? null,
         operatingSystem: input.operatingSystem ?? null,
+        status: 'ACTIVE',
         phoneVerifiedAt: null,
         createdAt: now,
         updatedAt: now
@@ -390,6 +400,11 @@ export function createMemoryRepositories(): Repositories {
     campaigns: campaignRepo,
     campaignRewards: campaignRewardRepo,
     referralLogs: referralLogRepo,
-    subscriptions: subscriptionRepo
+    subscriptions: subscriptionRepo,
+    __setUserStatusForTesting(userId: string, status: UserStatus) {
+      const user = users.get(userId);
+      if (!user) throw new Error(`User ${userId} not found`);
+      users.set(userId, { ...user, status, updatedAt: new Date() });
+    }
   };
 }
