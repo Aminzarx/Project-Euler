@@ -186,7 +186,7 @@ object TransactionPropertyCompatibility {
         (CaseTransactionType.MORTGAGE_AND_RENT to PropertyType.OLD_HOUSE) to
             r(C, "فقط در صورت قابل‌سکونت بودن ممکن است."),
         (CaseTransactionType.CONSTRUCTION_PARTNERSHIP to PropertyType.OLD_HOUSE) to
-            r(G, "هدف کلاسیک و رایج‌ترین مورد مشارکت در ساخت."),
+            r(G),
         (CaseTransactionType.PRE_SALE to PropertyType.OLD_HOUSE) to
             r(N, "کلنگی ورودی بازسازی است، نه خروجی ساخت."),
         (CaseTransactionType.INVESTMENT to PropertyType.OLD_HOUSE) to
@@ -211,7 +211,7 @@ object TransactionPropertyCompatibility {
         (CaseTransactionType.CONSTRUCTION_PARTNERSHIP to PropertyType.SEMI_FINISHED_BUILDING) to
             r(C, "به‌جای تخریب و بازسازی، مشارکت با هدف «تکمیل ساخت» معنا پیدا می‌کند."),
         (CaseTransactionType.PRE_SALE to PropertyType.SEMI_FINISHED_BUILDING) to
-            r(G, "خرید و فروش واحد در حال ساخت، کاربرد رایج و مستقیم."),
+            r(G),
         (CaseTransactionType.PROPERTY_EXCHANGE to PropertyType.SEMI_FINISHED_BUILDING) to
             r(C, "ممکن ولی کمتر رایج، به دلیل دشواری ارزش‌گذاری ملک نیمه‌تمام."),
         (CaseTransactionType.INVESTMENT to PropertyType.SEMI_FINISHED_BUILDING) to
