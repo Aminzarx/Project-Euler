@@ -66,5 +66,5 @@ jobs:
         continue-on-error: true
         run: |
           sleep 5
-          curl -fsS "http://${{ secrets.VPS_HOST }}:${{ vars.BACKEND_PORT || 4000 }}/health" || \
-            echo "Health check failed or port not publicly reachable — check the deploy step's logs above and confirm the port/firewall on the VPS."
+          curl -fsS "https://${{ vars.BACKEND_DOMAIN || 'api.zarandix.ir' }}/health" || \
+            echo "Health check failed — Caddy may still be obtaining its TLS certificate on first deploy (can take up to a minute), or DNS for the domain isn't pointing at this VPS yet. Check the deploy step's logs above."

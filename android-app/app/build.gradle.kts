@@ -15,15 +15,15 @@ android {
         versionCode = (System.getenv("APP_VERSION_CODE") ?: "1").toInt()
         versionName = "1.0"
 
-        // The referral/registration backend (see /backend at the repo root). 10.0.2.2 is the
-        // Android emulator's alias for the host machine's localhost, matching that project's
-        // default `PORT=4000` — correct for local development only. A real deployment must
-        // override this via `-PapiBaseUrl=https://...` (gradle.properties or CI env), never by
-        // editing this default in place.
+        // The referral/registration backend (see /backend at the repo root), deployed at
+        // https://api.zarandix.ir/ (see backend/docker-compose.yml's Caddy service for the
+        // HTTPS setup). Override for local emulator development via
+        // `-PapiBaseUrl=http://10.0.2.2:4000/` (gradle.properties or CI env) rather than editing
+        // this default in place.
         buildConfigField(
             "String",
             "API_BASE_URL",
-            "\"${(project.findProperty("apiBaseUrl") as String? ?: "http://10.0.2.2:4000/")}\""
+            "\"${(project.findProperty("apiBaseUrl") as String? ?: "https://api.zarandix.ir/")}\""
         )
     }
 

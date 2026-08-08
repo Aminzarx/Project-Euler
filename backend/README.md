@@ -69,11 +69,20 @@ touches `backend/`, or on demand from the Actions tab. It expects:
 | `VPS_USER` | Secret | The SSH user to deploy as |
 | `VPS_SSH_PRIVATE_KEY` | Secret | Private half of a key pair whose public half is in that user's `~/.ssh/authorized_keys` — **use a dedicated deploy key, not your personal one** |
 | `ADMIN_API_KEY` | Secret, optional | If set, the workflow writes it into the server's `backend/.env` on every deploy; if unset, whatever's already in `.env` on the server is left alone |
-| `BACKEND_PORT` | Variable, optional | Used only for the post-deploy health-check curl; defaults to `4000` |
+| `BACKEND_DOMAIN` | Variable, optional | Used only for the post-deploy health-check curl; defaults to `api.zarandix.ir` |
 
-The server needs Docker and the Docker Compose plugin installed and a user with permission to run
-`docker compose`; everything else (cloning the repo, writing `.env`, building the image, running
-migrations) the workflow handles.
+The server needs Docker and the Docker Compose plugin installed, a user with permission to run
+`docker compose`, and ports 80/443 open in its firewall; everything else (cloning the repo, writing
+`.env`, building the image, running migrations) the workflow handles.
+
+**HTTPS:** `docker-compose.yml` runs a [Caddy](https://caddyserver.com/) reverse proxy in front of
+the API (see `Caddyfile`) that automatically obtains and renews a real Let's Encrypt certificate
+for `api.zarandix.ir` — no manual cert handling. This requires a DNS **A record** for
+`api.zarandix.ir` pointing at the VPS's IP *before* the first deploy (Caddy needs to complete an
+HTTP-01 challenge on port 80 to issue the certificate). Neither Postgres (`5432`) nor the API
+(`4000`) are published to the host directly — Caddy is the only public entry point, reached over
+HTTPS. To point the app at a different domain, edit the hostname in `Caddyfile` and the health
+-check curl above.
 
 > This backend was designed and built in an environment with no hosting credentials, deploy
 > connector, or raw network egress available (only an allowlisted HTTPS proxy — no SSH, no
