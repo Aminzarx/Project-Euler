@@ -21,6 +21,8 @@ private object Keys {
     val MOBILE_NUMBER = stringPreferencesKey("mobile_number")
     val DEVICE_ID = stringPreferencesKey("device_id")
     val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
+    val USER_ID = stringPreferencesKey("user_id")
+    val REFERRAL_CODE = stringPreferencesKey("referral_code")
 
     val FULL_NAME = stringPreferencesKey("full_name")
     val AGENCY_NAME = stringPreferencesKey("agency_name")
@@ -51,14 +53,20 @@ private object Keys {
 }
 
 /**
- * Local session store. Persists which mobile number is signed in on this device.
- * Real cross-device single-session enforcement (rejecting a second device for the
- * same number) requires a backend service to arbitrate between devices; that part
- * is intentionally left as a seam ([DeviceSessionValidator]) rather than faked here.
+ * Local session store. Persists which mobile number is signed in on this device, plus the
+ * backend-issued identity ([userId], [referralCode]) that registration returns — see
+ * data/auth/PhoneAuthService.kt for where that identity comes from. Real cross-device
+ * single-session enforcement (rejecting a second device for the same number) requires a backend
+ * service to arbitrate between devices; that part is intentionally left as a seam
+ * ([DeviceSessionValidator]) rather than faked here.
  */
 class SessionManager(private val context: Context) {
     val isLoggedIn: Flow<Boolean> = context.appDataStore.data.map { it[Keys.IS_LOGGED_IN] ?: false }
     val mobileNumber: Flow<String?> = context.appDataStore.data.map { it[Keys.MOBILE_NUMBER] }
+    val userId: Flow<String?> = context.appDataStore.data.map { it[Keys.USER_ID] }
+    /** This account's own referral code, as returned by the backend at registration — the code
+     *  the Profile screen's "دعوت از دوستان" section shows for the signed-in user to share. */
+    val referralCode: Flow<String?> = context.appDataStore.data.map { it[Keys.REFERRAL_CODE] }
 
     suspend fun getOrCreateDeviceId(): String {
         val existing = context.appDataStore.data.first()[Keys.DEVICE_ID]
@@ -68,10 +76,24 @@ class SessionManager(private val context: Context) {
         return newId
     }
 
+    /** Legacy sign-in path (mobile number + device id only, no backend identity) — kept for the
+     *  dormant OTP flow (see AuthViewModel.verifyOtp) until it's wired to a real backend call of
+     *  its own. Prefer [login] with a userId/referralCode for the active registration path. */
     suspend fun login(mobile: String, deviceId: String) {
         context.appDataStore.edit { prefs ->
             prefs[Keys.MOBILE_NUMBER] = mobile
             prefs[Keys.DEVICE_ID] = deviceId
+            prefs[Keys.IS_LOGGED_IN] = true
+        }
+    }
+
+    /** Sign-in with the identity the referral-gated registration backend returned — see
+     *  data/auth/PhoneAuthService.kt's RegistrationResult.Success. */
+    suspend fun login(mobile: String, userId: String, referralCode: String) {
+        context.appDataStore.edit { prefs ->
+            prefs[Keys.MOBILE_NUMBER] = mobile
+            prefs[Keys.USER_ID] = userId
+            prefs[Keys.REFERRAL_CODE] = referralCode
             prefs[Keys.IS_LOGGED_IN] = true
         }
     }

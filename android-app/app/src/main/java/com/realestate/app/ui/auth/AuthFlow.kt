@@ -24,7 +24,8 @@ fun AuthFlow(viewModel: AuthViewModel) {
             AuthStep.PHONE -> PhoneEntryScreen(
                 state = state,
                 onMobileChange = viewModel::updateMobileNumber,
-                onSubmit = viewModel::sendOtp
+                onReferralCodeChange = viewModel::updateReferralCode,
+                onSubmit = viewModel::register
             )
 
             AuthStep.OTP -> OtpVerificationScreen(

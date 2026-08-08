@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,6 +37,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -43,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,12 +54,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.realestate.app.data.DealType
 import com.realestate.app.data.PropertyStatus
+import com.realestate.app.data.auth.AuthenticationState
 import com.realestate.app.data.datastore.completionPercent
 import com.realestate.app.data.datastore.missingFieldSuggestions
 import com.realestate.app.ui.STORE_URL
@@ -73,6 +80,7 @@ import com.realestate.app.viewmodel.AuthViewModel
 import com.realestate.app.viewmodel.ProfileViewModel
 import com.realestate.app.viewmodel.PropertyViewModel
 import com.realestate.app.viewmodel.WalletViewModel
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -96,7 +104,11 @@ fun ProfileScreen(
     val allProperties by propertyViewModel.allProperties.collectAsStateWithLifecycle()
     val favoriteProperties by propertyViewModel.favoriteProperties.collectAsStateWithLifecycle()
     val recentActivities by propertyViewModel.recentActivities.collectAsStateWithLifecycle()
+    val authState by authViewModel.authenticationState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+    val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     var showMenu by remember { mutableStateOf(false) }
     var showLogoutConfirm by remember { mutableStateOf(false) }
 
@@ -138,7 +150,8 @@ fun ProfileScreen(
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -280,6 +293,55 @@ fun ProfileScreen(
                         modifier = Modifier.weight(1f),
                         onClick = onOpenWallet
                     )
+                }
+
+                val authenticated = authState as? AuthenticationState.Authenticated
+                if (authenticated != null) {
+                    Spacer(modifier = Modifier.height(Spacing.xl))
+                    Text("دعوت از دوستان", style = MaterialTheme.typography.titleLarge)
+                    Spacer(modifier = Modifier.height(Spacing.md))
+                    AppCard(modifier = Modifier.fillMaxWidth()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.PersonAdd, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Text(
+                                "کد معرف شما:",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            authenticated.referralCode,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AppTextButton(
+                                text = "کپی",
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    clipboardManager.setText(AnnotatedString(authenticated.referralCode))
+                                    coroutineScope.launch { snackbarHostState.showSnackbar("کد معرف کپی شد") }
+                                }
+                            )
+                            AppTextButton(
+                                text = "اشتراک‌گذاری",
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(
+                                            Intent.EXTRA_TEXT,
+                                            "با کد معرف من در برنامه مدیریت املاک عضو شو: ${authenticated.referralCode}"
+                                        )
+                                    }
+                                    context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری کد معرف"))
+                                }
+                            )
+                        }
+                    }
                 }
 
                 if (upcomingFollowUps.isNotEmpty()) {

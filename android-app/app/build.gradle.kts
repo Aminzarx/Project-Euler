@@ -14,6 +14,17 @@ android {
         targetSdk = 34
         versionCode = (System.getenv("APP_VERSION_CODE") ?: "1").toInt()
         versionName = "1.0"
+
+        // The referral/registration backend (see /backend at the repo root). 10.0.2.2 is the
+        // Android emulator's alias for the host machine's localhost, matching that project's
+        // default `PORT=4000` — correct for local development only. A real deployment must
+        // override this via `-PapiBaseUrl=https://...` (gradle.properties or CI env), never by
+        // editing this default in place.
+        buildConfigField(
+            "String",
+            "API_BASE_URL",
+            "\"${(project.findProperty("apiBaseUrl") as String? ?: "http://10.0.2.2:4000/")}\""
+        )
     }
 
     signingConfigs {
@@ -101,6 +112,11 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     implementation("com.google.zxing:core:3.5.3")
+
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
     testImplementation("junit:junit:4.13.2")
     // The app's own org.json usage (Property JSON, export/import) compiles against Android's
