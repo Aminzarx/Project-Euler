@@ -50,6 +50,7 @@ import com.realestate.app.data.LeadSource
 import com.realestate.app.data.LegalDocumentType
 import com.realestate.app.data.MortgageStatus
 import com.realestate.app.data.OwnershipType
+import com.realestate.app.data.PropertyCategory
 import com.realestate.app.data.PropertyOrientation
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
@@ -58,6 +59,7 @@ import com.realestate.app.data.StructureType
 import com.realestate.app.data.ViewPreferenceOption
 import com.realestate.app.data.VisitStatus
 import com.realestate.app.data.WaterSource
+import com.realestate.app.data.compatibility.CompatibilityGrade
 import com.realestate.app.data.contact.PreferredContactTime
 import com.realestate.app.data.property.TimelineEventType
 import com.realestate.app.ui.theme.extendedColors
@@ -77,6 +79,10 @@ fun PropertyType.label(): String = when (this) {
     PropertyType.OLD_HOUSE -> "کلنگی"
     PropertyType.SEMI_FINISHED_BUILDING -> "نیمه‌ساز"
     PropertyType.TOWER -> "برج"
+    PropertyType.LAND_BUILDABLE -> "زمین قابل‌ساخت"
+    PropertyType.LAND_AGRICULTURAL -> "زمین کشاورزی"
+    PropertyType.LAND_COMMERCIAL -> "زمین تجاری"
+    PropertyType.LAND_INDUSTRIAL -> "زمین صنعتی"
 }
 
 fun PropertyType.icon(): ImageVector = when (this) {
@@ -94,6 +100,37 @@ fun PropertyType.icon(): ImageVector = when (this) {
     PropertyType.OLD_HOUSE -> Icons.Rounded.Home
     PropertyType.SEMI_FINISHED_BUILDING -> Icons.Rounded.Construction
     PropertyType.TOWER -> Icons.Rounded.LocationCity
+    PropertyType.LAND_BUILDABLE -> Icons.Rounded.Terrain
+    PropertyType.LAND_AGRICULTURAL -> Icons.Rounded.Agriculture
+    PropertyType.LAND_COMMERCIAL -> Icons.Rounded.Business
+    PropertyType.LAND_INDUSTRIAL -> Icons.Rounded.Factory
+}
+
+fun PropertyCategory.label(): String = when (this) {
+    PropertyCategory.RESIDENTIAL -> "مسکونی"
+    PropertyCategory.LAND -> "زمین"
+    PropertyCategory.AGRICULTURAL -> "کشاورزی"
+    PropertyCategory.COMMERCIAL -> "تجاری"
+    PropertyCategory.INDUSTRIAL -> "صنعتی"
+    PropertyCategory.PROJECT -> "پروژه"
+}
+
+/** Short, agent-facing label for a [CompatibilityGrade] — used as the small warning badge on
+ *  Property Type options the picker still allows selecting (CONDITIONAL/USUALLY_NOT_APPLICABLE),
+ *  per the Phase 1/2 rule that only NOT_APPLICABLE is actually hidden from the picker. */
+fun CompatibilityGrade.label(): String = when (this) {
+    CompatibilityGrade.FULLY_SUPPORTED -> "کاملاً سازگار"
+    CompatibilityGrade.CONDITIONAL -> "با شرط"
+    CompatibilityGrade.USUALLY_NOT_APPLICABLE -> "کاربرد نامتداول"
+    CompatibilityGrade.NOT_APPLICABLE -> "کاربرد ندارد"
+}
+
+@Composable
+fun CompatibilityGrade.color(): Color = when (this) {
+    CompatibilityGrade.FULLY_SUPPORTED -> MaterialTheme.colorScheme.primary
+    CompatibilityGrade.CONDITIONAL -> MaterialTheme.extendedColors.warning
+    CompatibilityGrade.USUALLY_NOT_APPLICABLE -> MaterialTheme.extendedColors.warning
+    CompatibilityGrade.NOT_APPLICABLE -> MaterialTheme.extendedColors.danger
 }
 
 fun DealType.label(): String = when (this) {

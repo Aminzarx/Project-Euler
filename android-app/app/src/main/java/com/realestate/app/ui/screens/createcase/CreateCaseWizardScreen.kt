@@ -27,7 +27,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.item
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -64,11 +66,15 @@ import com.realestate.app.data.CaseTransactionType
 import com.realestate.app.data.CaseType
 import com.realestate.app.data.Property
 import com.realestate.app.data.PropertyType
+import com.realestate.app.data.category
 import com.realestate.app.data.clientRequestTransactionTypes
+import com.realestate.app.data.compatibility.CompatibilityGrade
+import com.realestate.app.data.compatibility.TransactionPropertyCompatibility
 import com.realestate.app.data.ownerTransactionTypes
 import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.CardShape
 import com.realestate.app.ui.components.ConfirmationDialog
+import com.realestate.app.ui.components.color
 import com.realestate.app.ui.components.icon
 import com.realestate.app.ui.components.label
 import com.realestate.app.ui.theme.Spacing
@@ -383,6 +389,7 @@ fun CreateCaseWizardScreen(
                         }
                     }
                     3 -> PropertyTypeStep(
+                        transactionType = transactionType,
                         selected = propertyType,
                         onSelect = { propertyType = it; step = 4 }
                     )
@@ -645,31 +652,83 @@ private fun TransactionTypeStep(
     }
 }
 
+/** Which [PropertyType]s to offer and how to group them for a given [transactionType] — see
+ *  data/compatibility/TransactionPropertyCompatibility.kt. Types graded NOT_APPLICABLE are left out
+ *  entirely (Phase 1/2 Step 4: prevented at the source, not flagged after the fact); everything
+ *  else stays selectable, grouped by [com.realestate.app.data.PropertyCategory] so the list reads
+ *  as a handful of relevant groups instead of one flat wall of 18 cards. With no transaction type
+ *  chosen yet (shouldn't normally happen — Step 2 precedes Step 3 — but kept safe for direct
+ *  navigation) every type is shown, ungrouped, exactly as before this change. */
 @Composable
-private fun PropertyTypeStep(selected: PropertyType?, onSelect: (PropertyType) -> Unit) {
+private fun PropertyTypeStep(
+    transactionType: CaseTransactionType?,
+    selected: PropertyType?,
+    onSelect: (PropertyType) -> Unit
+) {
+    val grouped = remember(transactionType) {
+        val visible = if (transactionType != null) {
+            TransactionPropertyCompatibility.selectablePropertyTypes(transactionType)
+        } else {
+            PropertyType.entries
+        }
+        visible.groupBy { it.category() }.entries.sortedBy { it.key.ordinal }
+    }
+
     Column(modifier = Modifier.fillMaxSize().padding(Spacing.screen)) {
         Text("نوع ملک چیست؟", style = MaterialTheme.typography.titleLarge)
+        if (transactionType != null) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "بر اساس «${transactionType.label()}» — فقط انواع مرتبط نمایش داده می‌شود",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         Spacer(modifier = Modifier.height(Spacing.md))
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             horizontalArrangement = Arrangement.spacedBy(Spacing.sm),
             verticalArrangement = Arrangement.spacedBy(Spacing.sm)
         ) {
-            items(PropertyType.entries, key = { it.name }) { type ->
-                AppCard(
-                    onClick = { onSelect(type) },
-                    contentPadding = PaddingValues(Spacing.md),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                        Icon(
-                            type.icon(),
-                            contentDescription = null,
-                            tint = if (selected == type) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(32.dp)
+            grouped.forEach { (category, types) ->
+                if (grouped.size > 1) {
+                    item(key = "header-${category.name}", span = { GridItemSpan(maxLineSpan) }) {
+                        Text(
+                            category.label(),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(type.label(), style = MaterialTheme.typography.titleSmall)
+                    }
+                }
+                items(types, key = { it.name }) { type ->
+                    val compatibility = transactionType?.let { TransactionPropertyCompatibility.evaluate(it, type) }
+                    AppCard(
+                        onClick = { onSelect(type) },
+                        contentPadding = PaddingValues(Spacing.md),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                            Icon(
+                                type.icon(),
+                                contentDescription = null,
+                                tint = if (selected == type) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(type.label(), style = MaterialTheme.typography.titleSmall)
+                            // NOT_APPLICABLE never reaches here (already filtered out of [grouped]);
+                            // only CONDITIONAL/USUALLY_NOT_APPLICABLE get a badge — FULLY_SUPPORTED
+                            // is the silent default and shows nothing, matching Phase 1 Finding #8.
+                            if (compatibility != null && compatibility.grade != CompatibilityGrade.FULLY_SUPPORTED) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    compatibility.grade.label(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = compatibility.grade.color()
+                                )
+                            }
+                        }
                     }
                 }
             }

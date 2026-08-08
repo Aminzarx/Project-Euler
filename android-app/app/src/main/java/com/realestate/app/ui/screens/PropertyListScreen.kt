@@ -93,6 +93,8 @@ import com.realestate.app.data.PasswordStrengthLevel
 import com.realestate.app.data.Property
 import com.realestate.app.data.PropertyStatus
 import com.realestate.app.data.PropertyType
+import com.realestate.app.data.compatibility.CompatibilityGrade
+import com.realestate.app.data.compatibility.TransactionPropertyCompatibility
 import com.realestate.app.data.evaluatePasswordStrength
 import com.realestate.app.data.matchesPriceRange
 import com.realestate.app.data.passwordStrengthHelperText
@@ -100,6 +102,7 @@ import com.realestate.app.ui.components.AppCard
 import com.realestate.app.ui.components.GlassAlertDialog
 import com.realestate.app.ui.components.SwipeablePropertyRow
 import com.realestate.app.ui.components.label
+import com.realestate.app.ui.theme.extendedColors
 import com.realestate.app.viewmodel.CaseTransferViewModel
 import com.realestate.app.viewmodel.ImportApplyState
 import com.realestate.app.viewmodel.ImportPreviewState
@@ -815,7 +818,8 @@ private fun ImportPreviewDialog(
                                     checked = property.uid in selectedUids,
                                     onCheckedChange = { checked ->
                                         selectedUids = if (checked) selectedUids + property.uid else selectedUids - property.uid
-                                    }
+                                    },
+                                    unusualCombinationNote = property.unusualCombinationNote()
                                 )
                             }
                         }
@@ -829,7 +833,8 @@ private fun ImportPreviewDialog(
                                     onCheckedChange = { checked ->
                                         val uid = update.updated.uid
                                         selectedUids = if (checked) selectedUids + uid else selectedUids - uid
-                                    }
+                                    },
+                                    unusualCombinationNote = update.updated.unusualCombinationNote()
                                 )
                             }
                         }
@@ -877,8 +882,26 @@ private fun ImportSectionLabel(text: String) {
     )
 }
 
+/** Import-time counterpart of the same check the Create Case picker and edit form already do —
+ *  see Phase 1/2 Step 6: a bundle imported from another device/agent can legitimately carry a
+ *  transaction×property combination this app would no longer offer by default (e.g. an older
+ *  export, or a deliberately unusual real case) and it must still import cleanly; this only
+ *  surfaces it in the preview so the agent notices, never blocks [planImport]. */
+private fun Property.unusualCombinationNote(): String? {
+    val type = transactionType ?: return null
+    val result = TransactionPropertyCompatibility.evaluate(type, propertyType)
+    if (result.grade == CompatibilityGrade.FULLY_SUPPORTED) return null
+    return result.note
+}
+
 @Composable
-private fun SelectableImportRow(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun SelectableImportRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    unusualCombinationNote: String? = null
+) {
     val displayTitle = title.ifBlank { "بدون عنوان" }
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -887,16 +910,28 @@ private fun SelectableImportRow(title: String, subtitle: String, checked: Boolea
             .clickable { onCheckedChange(!checked) }
             .padding(vertical = 4.dp)
             .semantics(mergeDescendants = true) {
-                contentDescription = "$displayTitle، $subtitle، ${if (checked) "انتخاب شده" else "انتخاب نشده"}"
+                contentDescription = "$displayTitle، $subtitle، ${if (checked) "انتخاب شده" else "انتخاب نشده"}" +
+                    (unusualCombinationNote?.let { "، ترکیب غیرمعمول: $it" } ?: "")
             }
     ) {
         Checkbox(checked = checked, onCheckedChange = onCheckedChange)
         Spacer(modifier = Modifier.width(4.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(displayTitle, style = MaterialTheme.typography.bodyMedium)
             if (subtitle.isNotBlank()) {
                 Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+        // Never blocks the import itself (see Phase 1/2 Step 6: unusual combinations coming from an
+        // import file must be accepted and handled gracefully, never silently rejected) — just flags
+        // it so the agent notices before confirming.
+        if (unusualCombinationNote != null) {
+            Icon(
+                Icons.Rounded.Warning,
+                contentDescription = "ترکیب غیرمعمول: $unusualCombinationNote",
+                tint = MaterialTheme.extendedColors.warning,
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }

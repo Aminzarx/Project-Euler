@@ -9,7 +9,12 @@ enum class DealType { SALE, RENT }
 
 enum class PropertyType {
     APARTMENT, VILLA, LAND, OFFICE, SHOP, WAREHOUSE, INDUSTRIAL, GARDEN, FARM, BUILDING, PROJECT,
-    OLD_HOUSE, SEMI_FINISHED_BUILDING, TOWER
+    OLD_HOUSE, SEMI_FINISHED_BUILDING, TOWER,
+    // ---- Land, split by intended use (see PropertyCategory doc) — added alongside the original
+    // LAND rather than replacing it, so every case created before this split keeps working
+    // unchanged; LAND itself now reads as "land, use unspecified" and behaves like
+    // LAND_BUILDABLE for compatibility purposes (see TransactionPropertyCompatibility). ----
+    LAND_BUILDABLE, LAND_AGRICULTURAL, LAND_COMMERCIAL, LAND_INDUSTRIAL
 }
 
 enum class PropertyStatus {
@@ -32,8 +37,48 @@ enum class PropertyFormShape { RESIDENTIAL, LAND, COMMERCIAL }
 fun PropertyType.formShape(): PropertyFormShape = when (this) {
     PropertyType.APARTMENT, PropertyType.VILLA, PropertyType.BUILDING, PropertyType.PROJECT,
     PropertyType.OLD_HOUSE, PropertyType.SEMI_FINISHED_BUILDING, PropertyType.TOWER -> PropertyFormShape.RESIDENTIAL
-    PropertyType.LAND, PropertyType.GARDEN, PropertyType.FARM -> PropertyFormShape.LAND
+    PropertyType.LAND, PropertyType.GARDEN, PropertyType.FARM,
+    PropertyType.LAND_BUILDABLE, PropertyType.LAND_AGRICULTURAL,
+    PropertyType.LAND_COMMERCIAL, PropertyType.LAND_INDUSTRIAL -> PropertyFormShape.LAND
     PropertyType.OFFICE, PropertyType.SHOP, PropertyType.WAREHOUSE, PropertyType.INDUSTRIAL -> PropertyFormShape.COMMERCIAL
+}
+
+/**
+ * The grouping layer above [PropertyType] that [TransactionPropertyCompatibility] rules are
+ * defined against — see the Phase 2 architecture review. Deliberately *not* stored on [Property]:
+ * every [PropertyType] belongs to exactly one category for the whole life of the app, so this is a
+ * pure derived function (same pattern as [formShape]), never a migration.
+ */
+enum class PropertyCategory { RESIDENTIAL, LAND, AGRICULTURAL, COMMERCIAL, INDUSTRIAL, PROJECT }
+
+fun PropertyType.category(): PropertyCategory = when (this) {
+    PropertyType.APARTMENT, PropertyType.VILLA, PropertyType.BUILDING, PropertyType.TOWER,
+    PropertyType.OLD_HOUSE, PropertyType.SEMI_FINISHED_BUILDING -> PropertyCategory.RESIDENTIAL
+    PropertyType.LAND, PropertyType.LAND_BUILDABLE, PropertyType.LAND_AGRICULTURAL,
+    PropertyType.LAND_COMMERCIAL, PropertyType.LAND_INDUSTRIAL -> PropertyCategory.LAND
+    PropertyType.GARDEN, PropertyType.FARM -> PropertyCategory.AGRICULTURAL
+    PropertyType.OFFICE, PropertyType.SHOP -> PropertyCategory.COMMERCIAL
+    PropertyType.WAREHOUSE, PropertyType.INDUSTRIAL -> PropertyCategory.INDUSTRIAL
+    PropertyType.PROJECT -> PropertyCategory.PROJECT
+}
+
+/**
+ * How far along construction this [PropertyType] normally is — the axis Phase 1/2 found actually
+ * explains most of the CONSTRUCTION_PARTNERSHIP/PRE_SALE compatibility differences, hiding today
+ * inside type names like [PropertyType.OLD_HOUSE]/[PropertyType.SEMI_FINISHED_BUILDING]. Kept as a
+ * derived function rather than a stored field for the same reason as [category]: nothing in the
+ * app today needs the same [PropertyType] to carry two different stages (an under-construction
+ * apartment unit inside a [PropertyType.PROJECT] is recorded as the PROJECT case, not a separate
+ * APARTMENT case) — if that stops being true, this is the seam where a real stored
+ * `constructionStage` column would replace it, one migration, without touching call sites.
+ */
+enum class ConstructionStage { READY, UNDER_CONSTRUCTION, SHELL, DEMOLISHABLE }
+
+fun PropertyType.constructionStage(): ConstructionStage = when (this) {
+    PropertyType.OLD_HOUSE -> ConstructionStage.DEMOLISHABLE
+    PropertyType.SEMI_FINISHED_BUILDING -> ConstructionStage.SHELL
+    PropertyType.PROJECT -> ConstructionStage.UNDER_CONSTRUCTION
+    else -> ConstructionStage.READY
 }
 
 /** Multi-unit residential buildings where "how many units share a floor / exist in total" is a

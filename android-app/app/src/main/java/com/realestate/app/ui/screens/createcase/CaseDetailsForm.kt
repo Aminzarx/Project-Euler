@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.AddAPhoto
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -62,6 +63,8 @@ import com.realestate.app.data.CaseTransactionType
 import com.realestate.app.data.CaseType
 import com.realestate.app.data.ClosingReason
 import com.realestate.app.data.CoolingSystem
+import com.realestate.app.data.compatibility.CompatibilityGrade
+import com.realestate.app.data.compatibility.TransactionPropertyCompatibility
 import com.realestate.app.data.contact.Contact
 import com.realestate.app.data.contact.PreferredContactTime
 import com.realestate.app.data.FloorPreferenceOption
@@ -156,6 +159,13 @@ internal fun CaseDetailsForm(
         else -> null
     }
 
+    // Unusual transaction×property combinations never block Save — the picker in Step 3 already
+    // keeps NOT_APPLICABLE combinations from being newly chosen (see TransactionPropertyCompatibility),
+    // but a case created before this rule existed, or one whose transaction type was changed after
+    // the fact via the chip above, can still carry one. Per Phase 1/2 Step 5, editing such a case
+    // must keep working — this is a nudge, not a gate.
+    val compatibility = transactionType?.let { TransactionPropertyCompatibility.evaluate(it, propertyType) }
+
     // Non-blocking data-quality nudges — never disable Save (an agent legitimately creating a
     // case before every detail is settled is a normal workflow this app already supports), but
     // surface what's missing so it doesn't silently stay missing forever.
@@ -163,6 +173,9 @@ internal fun CaseDetailsForm(
         if (state.city.isBlank()) add("شهر مشخص نشده")
         if (state.description.isNotBlank() && state.description.trim().length < 10) {
             add("توضیحات خیلی کوتاه است")
+        }
+        if (compatibility != null && compatibility.grade != CompatibilityGrade.FULLY_SUPPORTED && compatibility.note != null) {
+            add("ترکیب «${transactionType.label()} + ${propertyType.label()}» غیرمعمول است: ${compatibility.note}")
         }
     }
 
@@ -183,7 +196,13 @@ internal fun CaseDetailsForm(
                 onClick = onEditTransactionType,
                 label = { Text(transactionType?.label() ?: "نوع معامله؟") }
             )
-            AssistChip(onClick = onEditPropertyType, label = { Text(propertyType.label()) })
+            AssistChip(
+                onClick = onEditPropertyType,
+                label = { Text(propertyType.label()) },
+                trailingIcon = if (compatibility != null && compatibility.grade != CompatibilityGrade.FULLY_SUPPORTED) {
+                    { Icon(Icons.Rounded.Warning, contentDescription = "ترکیب غیرمعمول", tint = compatibility.grade.color(), modifier = Modifier.size(16.dp)) }
+                } else null
+            )
         }
         Spacer(modifier = Modifier.height(Spacing.md))
 
