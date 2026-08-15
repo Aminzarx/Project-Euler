@@ -1,0 +1,118 @@
+name: Deploy Wedding Invitation to VPS
+
+# Runs from GitHub's own runners (which have normal internet access) rather than any sandboxed
+# agent session — this is the actual network hop that reaches the VPS. Deploys on every push to
+# main or this feature branch that touches wedding/, and can always be re-run by hand from the
+# Actions tab.
+#
+# Target: an isolated, unprivileged Docker container (no docker socket inside it) with a 1GB RAM
+# cap — same box as deploy-backend.yml. The app runs as a plain Node process (`next start`) under
+# pm2. Public HTTPS/routing is NOT handled by this workflow: the container has no way to bind a
+# host-level port 80/443 or edit the real zarandix.ir vhost, so a reverse-proxy rule on the host
+# (outside this workflow's reach) is what actually exposes the app at https://zarandix.ir/Wedding —
+# see wedding/docs/README.md and hand the internal port below to whoever manages that.
+on:
+  push:
+    branches: [main, claude/run-prompt-1ubxsy]
+    paths:
+      - "wedding/**"
+      - ".github/workflows/deploy-wedding.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      # Internal port the app listens on inside the container — not published to the internet by
+      # this workflow (see the file header). Change via the optional WEDDING_PORT repo variable if
+      # it ever conflicts with something else already running in the container.
+      APP_PORT: ${{ vars.WEDDING_PORT || 4100 }}
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SMS_PROVIDER_VALUE: ${{ vars.SMS_PROVIDER }}
+          KAVENEGAR_API_KEY_SECRET: ${{ secrets.KAVENEGAR_API_KEY }}
+          KAVENEGAR_SENDER_SECRET: ${{ secrets.KAVENEGAR_SENDER }}
+          MELIPAYAMAK_USERNAME_SECRET: ${{ secrets.MELIPAYAMAK_USERNAME }}
+          MELIPAYAMAK_PASSWORD_SECRET: ${{ secrets.MELIPAYAMAK_PASSWORD }}
+          MELIPAYAMAK_SENDER_SECRET: ${{ secrets.MELIPAYAMAK_SENDER }}
+          FARAZSMS_API_KEY_SECRET: ${{ secrets.FARAZSMS_API_KEY }}
+          FARAZSMS_SENDER_SECRET: ${{ secrets.FARAZSMS_SENDER }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          envs: SMS_PROVIDER_VALUE,KAVENEGAR_API_KEY_SECRET,KAVENEGAR_SENDER_SECRET,MELIPAYAMAK_USERNAME_SECRET,MELIPAYAMAK_PASSWORD_SECRET,MELIPAYAMAK_SENDER_SECRET,FARAZSMS_API_KEY_SECRET,FARAZSMS_SENDER_SECRET
+          command_timeout: 15m
+          script_stop: true
+          script: |
+            set -e
+            APP_DIR="${VPS_APP_DIR:-$HOME/wedding-invitation}"
+            REPO_URL="https://github.com/${{ github.repository }}.git"
+            BRANCH="${{ github.ref_name }}"
+            APP_PORT="${{ env.APP_PORT }}"
+
+            mkdir -p "$APP_DIR"
+            cd "$APP_DIR"
+
+            if [ ! -d .git ]; then
+              git clone --branch "$BRANCH" --depth 1 "$REPO_URL" .
+            else
+              git fetch --depth 1 origin "$BRANCH"
+              git reset --hard "origin/$BRANCH"
+            fi
+
+            cd wedding
+
+            # .env is untracked (gitignored) so it survives every redeploy via git reset --hard.
+            # Only created once, from .env.example, and never blindly overwritten afterward.
+            if [ ! -f .env ]; then
+              cp .env.example .env
+            fi
+
+            # Each secret/variable only ever overwrites its line when the workflow was actually
+            # given a non-empty value — never blanks out something set by hand on the server.
+            set_env_var() {
+              key="$1"; value="$2"
+              [ -z "$value" ] && return 0
+              if grep -q "^${key}=" .env; then
+                sed -i "s|^${key}=.*|${key}=${value}|" .env
+              else
+                echo "${key}=${value}" >> .env
+              fi
+            }
+
+            set_env_var "SMS_PROVIDER" "$SMS_PROVIDER_VALUE"
+            set_env_var "KAVENEGAR_API_KEY" "$KAVENEGAR_API_KEY_SECRET"
+            set_env_var "KAVENEGAR_SENDER" "$KAVENEGAR_SENDER_SECRET"
+            set_env_var "MELIPAYAMAK_USERNAME" "$MELIPAYAMAK_USERNAME_SECRET"
+            set_env_var "MELIPAYAMAK_PASSWORD" "$MELIPAYAMAK_PASSWORD_SECRET"
+            set_env_var "MELIPAYAMAK_SENDER" "$MELIPAYAMAK_SENDER_SECRET"
+            set_env_var "FARAZSMS_API_KEY" "$FARAZSMS_API_KEY_SECRET"
+            set_env_var "FARAZSMS_SENDER" "$FARAZSMS_SENDER_SECRET"
+
+            npm ci
+            NODE_OPTIONS="--max-old-space-size=768" npm run build
+
+            command -v pm2 >/dev/null 2>&1 || sudo npm install -g pm2
+
+            pm2 restart wedding-invitation --update-env 2>/dev/null || \
+              pm2 start npm --name wedding-invitation --cwd "$APP_DIR/wedding" -- run start -- -p "$APP_PORT"
+            pm2 save
+
+      - name: Health check
+        if: always()
+        continue-on-error: true
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          script: |
+            sleep 5
+            curl -fsS -o /dev/null -w "HTTP %{http_code}\n" "http://127.0.0.1:${{ env.APP_PORT }}/Wedding" && \
+              pm2 status wedding-invitation || \
+              echo "Health check failed on the container's own loopback — check 'pm2 logs wedding-invitation' on the server."
