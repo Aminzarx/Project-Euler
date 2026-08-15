@@ -47,63 +47,19 @@ jobs:
           envs: SMS_PROVIDER_VALUE,KAVENEGAR_API_KEY_SECRET,KAVENEGAR_SENDER_SECRET,MELIPAYAMAK_USERNAME_SECRET,MELIPAYAMAK_PASSWORD_SECRET,MELIPAYAMAK_SENDER_SECRET,FARAZSMS_API_KEY_SECRET,FARAZSMS_SENDER_SECRET
           command_timeout: 15m
           script_stop: true
+          # Deliberately just single-line commands here, no multi-line if/fi or function
+          # defs: appleboy/ssh-action's script_stop mode injects an exit-code check after
+          # every newline, which fires on a false `if` test before `then`/`else` ever run.
+          # All the real (and more complex) logic lives in wedding/scripts/deploy.sh instead,
+          # which this just clones/updates and then executes as a single script.
           script: |
-            set -ex
             APP_DIR="${VPS_APP_DIR:-$HOME/wedding-invitation}"
             REPO_URL="https://github.com/${{ github.repository }}.git"
             BRANCH="${{ github.ref_name }}"
-            APP_PORT="${{ env.APP_PORT }}"
-
-            whoami; pwd; git --version; node -v; npm -v
-            curl -fsSI https://github.com >/dev/null && echo "github reachable" || echo "github UNREACHABLE"
-
             mkdir -p "$APP_DIR"
-            cd "$APP_DIR"
-
-            if [ ! -d .git ]; then
-              git clone --branch "$BRANCH" --depth 1 "$REPO_URL" .
-            else
-              git fetch --depth 1 origin "$BRANCH"
-              git reset --hard "origin/$BRANCH"
-            fi
-
-            cd wedding
-
-            # .env is untracked (gitignored) so it survives every redeploy via git reset --hard.
-            # Only created once, from .env.example, and never blindly overwritten afterward.
-            if [ ! -f .env ]; then
-              cp .env.example .env
-            fi
-
-            # Each secret/variable only ever overwrites its line when the workflow was actually
-            # given a non-empty value — never blanks out something set by hand on the server.
-            set_env_var() {
-              key="$1"; value="$2"
-              [ -z "$value" ] && return 0
-              if grep -q "^${key}=" .env; then
-                sed -i "s|^${key}=.*|${key}=${value}|" .env
-              else
-                echo "${key}=${value}" >> .env
-              fi
-            }
-
-            set_env_var "SMS_PROVIDER" "$SMS_PROVIDER_VALUE"
-            set_env_var "KAVENEGAR_API_KEY" "$KAVENEGAR_API_KEY_SECRET"
-            set_env_var "KAVENEGAR_SENDER" "$KAVENEGAR_SENDER_SECRET"
-            set_env_var "MELIPAYAMAK_USERNAME" "$MELIPAYAMAK_USERNAME_SECRET"
-            set_env_var "MELIPAYAMAK_PASSWORD" "$MELIPAYAMAK_PASSWORD_SECRET"
-            set_env_var "MELIPAYAMAK_SENDER" "$MELIPAYAMAK_SENDER_SECRET"
-            set_env_var "FARAZSMS_API_KEY" "$FARAZSMS_API_KEY_SECRET"
-            set_env_var "FARAZSMS_SENDER" "$FARAZSMS_SENDER_SECRET"
-
-            npm ci
-            NODE_OPTIONS="--max-old-space-size=768" npm run build
-
-            command -v pm2 >/dev/null 2>&1 || sudo npm install -g pm2
-
-            pm2 restart wedding-invitation --update-env 2>/dev/null || \
-              pm2 start npm --name wedding-invitation --cwd "$APP_DIR/wedding" -- run start -- -p "$APP_PORT"
-            pm2 save
+            (cd "$APP_DIR" && git rev-parse --git-dir) >/dev/null 2>&1 || git clone --branch "$BRANCH" --depth 1 "$REPO_URL" "$APP_DIR"
+            cd "$APP_DIR" && git fetch --depth 1 origin "$BRANCH" && git reset --hard "origin/$BRANCH"
+            APP_PORT="${{ env.APP_PORT }}" bash "$APP_DIR/wedding/scripts/deploy.sh"
 
       - name: Health check
         if: always()
