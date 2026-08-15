@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-calligraphy: 'Noto Nastaliq Urdu', serif;
+  --font-persian: 'Vazirmatn', sans-serif;
+  --font-serif: 'Cormorant Garamond', serif;
+
+  color-scheme: light;
+}
+
+@layer base {
+  * {
+    @apply border-champagne-200/60;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-ivory-50 text-ink-600 antialiased;
+    background-image: radial-gradient(120% 90% at 50% -10%, rgba(227, 192, 129, 0.14) 0%, rgba(255, 253, 248, 0) 55%);
+  }
+
+  ::selection {
+    @apply bg-persiangold-300/40 text-ink-700;
+  }
+
+  :focus-visible {
+    outline: 2px solid theme('colors.persiangold.400');
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .glass-panel {
+    background: linear-gradient(155deg, rgba(255, 253, 248, 0.72), rgba(251, 246, 234, 0.45));
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid rgba(227, 192, 129, 0.35);
+  }
+
+  .gold-hairline {
+    background: linear-gradient(90deg, transparent, rgba(205, 160, 84, 0.7), transparent);
+    height: 1px;
+  }
+
+  .text-gold-shimmer {
+    background: linear-gradient(90deg, #b3873e 0%, #e3c081 25%, #fff6df 50%, #e3c081 75%, #b3873e 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
