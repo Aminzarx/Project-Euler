@@ -57,8 +57,9 @@ jobs:
             REPO_URL="https://github.com/${{ github.repository }}.git"
             BRANCH="${{ github.ref_name }}"
             mkdir -p "$APP_DIR"
+            find "$APP_DIR/.git" -name '*.lock' -delete 2>/dev/null || true
             (cd "$APP_DIR" && git rev-parse --git-dir) >/dev/null 2>&1 || git clone --branch "$BRANCH" --depth 1 "$REPO_URL" "$APP_DIR"
-            cd "$APP_DIR" && git fetch --depth 1 origin "$BRANCH" && git reset --hard "origin/$BRANCH"
+            (cd "$APP_DIR" && git fetch --depth 1 origin "$BRANCH" && git reset --hard "origin/$BRANCH") || (rm -rf "$APP_DIR" && git clone --branch "$BRANCH" --depth 1 "$REPO_URL" "$APP_DIR")
             APP_PORT="${{ env.APP_PORT }}" bash "$APP_DIR/wedding/scripts/deploy.sh"
 
       - name: Health check
