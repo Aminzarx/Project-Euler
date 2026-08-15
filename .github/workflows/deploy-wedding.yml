@@ -48,11 +48,14 @@ jobs:
           command_timeout: 15m
           script_stop: true
           script: |
-            set -e
+            set -ex
             APP_DIR="${VPS_APP_DIR:-$HOME/wedding-invitation}"
             REPO_URL="https://github.com/${{ github.repository }}.git"
             BRANCH="${{ github.ref_name }}"
             APP_PORT="${{ env.APP_PORT }}"
+
+            whoami; pwd; git --version; node -v; npm -v
+            curl -fsSI https://github.com >/dev/null && echo "github reachable" || echo "github UNREACHABLE"
 
             mkdir -p "$APP_DIR"
             cd "$APP_DIR"
