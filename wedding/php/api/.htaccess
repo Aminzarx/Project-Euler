@@ -1,0 +1,8 @@
+# Lets the frontend call /Wedding/api/rsvp and /Wedding/api/guestbook with no
+# extension — identical to the Node deployment's route paths — while this PHP
+# path actually serves rsvp.php / guestbook.php. Keeps the React code (fetch
+# calls via lib/config.ts) 100% shared between both deployment targets.
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^rsvp/?$ rsvp.php [L]
+RewriteRule ^guestbook/?$ guestbook.php [L]

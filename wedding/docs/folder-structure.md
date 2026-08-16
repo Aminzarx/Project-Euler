@@ -35,6 +35,13 @@ wedding/
 │       └── providers/                # kavenegar, melipayamak, farazsms, none
 ├── data/                        # JSON-file persistence (git-ignored, dev/self-host only)
 ├── public/audio/                 # wedding-song.mp3 goes here (not committed)
+├── php/                            # PHP twin of app/api/*, for the FTP/static deploy path
+│   ├── config.php                   # SMS provider + recipients (edited directly on the server)
+│   ├── lib/                          # Sms.php, Store.php, Validate.php — mirror lib/sms, lib/store
+│   ├── api/                           # rsvp.php, guestbook.php + .htaccess rewrite
+│   └── data/                           # JSON persistence for the PHP path (git-ignored)
+├── scripts/
+│   └── build-static.sh             # produces wedding/out/ — see docs/ftp-deploy.md
 ├── docs/                          # you are here
 └── ...config files (tailwind, next, tsconfig, postcss)
 ```

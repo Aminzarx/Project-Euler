@@ -24,6 +24,10 @@ To move to Postgres/Prisma/Supabase/etc.:
 
 No other file needs to change — `notifyRsvpBySms()` is provider-agnostic.
 
+**If you also use the FTP/static deploy path**, mirror the same provider in
+`wedding/php/lib/Sms.php` (add a `case` in the `switch` + a `sendYourProvider()` method) and
+its config shape in `wedding/php/config.php`, so both backends support it identically.
+
 ## Add a new section to the invitation
 
 1. Build the component under the appropriate `components/<domain>/` folder (create a

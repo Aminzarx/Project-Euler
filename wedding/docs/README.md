@@ -11,6 +11,7 @@ TypeScript, Tailwind CSS and Framer Motion, deployed at `zarandix.ir/Wedding`.
 - [Animation System](./animation-system.md)
 - [Motion Guidelines](./motion-guidelines.md)
 - [Component Library](./component-library.md)
+- [FTP Deployment Guide](./ftp-deploy.md)
 - [Future Extension Guide](./future-extension.md)
 
 ## Quick start
@@ -27,10 +28,27 @@ in every environment (see `next.config.mjs`) to match the production URL.
 
 ## Deploying
 
-**Your own VPS, via GitHub Actions (`.github/workflows/deploy-wedding.yml`):** the workflow
-SSHes into your server (from GitHub's runners, not from any sandboxed agent session — that's
-the whole reason this path exists) on every push to `main`/this branch that touches `wedding/`,
-or on demand from the Actions tab. It reuses the same four VPS secrets as
+There are two independent deployment paths. Same design, same components, same RSVP/guestbook
+behavior either way — they differ only in how the backend runs.
+
+### Option A — FTP / shared hosting (static build + PHP), recommended if that's what you have
+
+No server access, no Node.js required on the host — just a folder you upload. See
+[FTP Deployment Guide](./ftp-deploy.md) for the full walkthrough. Short version:
+
+```bash
+cd wedding
+npm run build:static
+```
+
+This produces `wedding/out/` — upload its entire contents into a `/Wedding` folder on your
+host, then edit the uploaded `config.php` to set your SMS provider and API keys.
+
+### Option B — Your own VPS, via GitHub Actions (`.github/workflows/deploy-wedding.yml`)
+
+The workflow SSHes into your server (from GitHub's runners, not from any sandboxed agent
+session — that's the whole reason this path exists) on every push to `main`/this branch that
+touches `wedding/`, or on demand from the Actions tab. It reuses the same four VPS secrets as
 `deploy-backend.yml`:
 
 | Secret/Variable | Where | Purpose |
@@ -45,13 +63,12 @@ or on demand from the Actions tab. It reuses the same four VPS secrets as
 | `MELIPAYAMAK_USERNAME` / `MELIPAYAMAK_PASSWORD` / `MELIPAYAMAK_SENDER` | Secrets, optional | Only needed once `SMS_PROVIDER=melipayamak` |
 | `FARAZSMS_API_KEY` / `FARAZSMS_SENDER` | Secrets, optional | Only needed once `SMS_PROVIDER=farazsms` |
 
-The app runs under `pm2` as `wedding-invitation`, built with `next build`/`next start` (not a
-static export — the RSVP and guestbook API routes need a running Node process). **This workflow
-does not, and cannot, make the site reachable at `https://zarandix.ir/Wedding`** — the sandboxed
-container it deploys into has no way to bind host ports 80/443 or edit the real vhost. Once
-deployed, hand the internal port (`WEDDING_PORT`, default `4100`) to whoever manages that host so
-they can add a reverse-proxy rule from `zarandix.ir/Wedding` to `127.0.0.1:<port>` inside the
-container.
+The app runs under `pm2` as `wedding-invitation`, built with `next build`/`next start`. **This
+workflow does not, and cannot, make the site reachable at `https://zarandix.ir/Wedding`** — the
+sandboxed container it deploys into has no way to bind host ports 80/443 or edit the real vhost.
+Once deployed, hand the internal port (`WEDDING_PORT`, default `4100`) to whoever manages that
+host so they can add a reverse-proxy rule from `zarandix.ir/Wedding` to `127.0.0.1:<port>` inside
+the container.
 
 ## Keep this folder current
 

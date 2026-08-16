@@ -1,0 +1,11 @@
+# Blocks direct HTTP access to the raw JSON data files. Nothing links to this
+# folder, but this is defense-in-depth in case of directory listing or a guessed URL.
+# Apache 2.4+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+# Apache 2.2 fallback
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+</IfModule>
